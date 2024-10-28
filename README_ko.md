@@ -45,7 +45,7 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
 - *did-communication-sdk-aos-1.0.0.jar*
 
 각 SDK가 사용하는 타사 라이브러리에 대한 자체 라이선스는 해당 링크를 참고해주세요. <br>
-[Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/LICENSE-dependencies.md)
+[Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)
 
 <br>
 
