@@ -46,7 +46,7 @@ The Android SDK is referred to as `did-client-sdk-aos` below.
 
 Please refer to the respective links for their own licenses for third-party libraries used by each SDK.
 <br>
-[Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/LICENSE-dependencies.md)
+[Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)
 
 <br>
 
