@@ -83,11 +83,11 @@ public class SettingsExpandableActivity extends AppCompatActivity {
         ArrayList<HashMap<String, String>> childListB = new ArrayList<>();
 
         HashMap<String, String> childBA = new HashMap<>();
-        childBA.put("data", "Setting up a fignerprint for Signing");
+        childBA.put("data", "Setting up a fingnerprint for Signing");
         childListB.add(childBA);
 
         HashMap<String, String> childBB = new HashMap<>();
-        childBB.put("data", "Setting up a fignerprint for Unlock");
+        childBB.put("data", "Setting up a fingnerprint for Unlock");
         childListB.add(childBB);
 
         childData.add(childListB);

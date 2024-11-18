@@ -46,11 +46,11 @@ public class Constants {
     public final static String PIN_INPUT_TEXT = "Please input a PIN";
     public final static String PIN_REGISTER_LOCK_TEXT = "Please register a Unlock PIN";
     public final static String PIN_INPUT_LOCK_TEXT = "Please input a Unlock PIN";
-    public final static String PIN_NOT_MATCH_TEXT = "PIN number does not match!!!!!!!!!";
+    public final static String PIN_NOT_MATCH_TEXT = "PIN does not match";
     public final static String PIN_CHANGE_TEXT = "Please input new PIN";
     public final static String PIN_RE_ENTER_TEXT = "Please re-enter your PIN";
     // dialog message
-    public final static String DIALOG_MESSAGE_SET_LOCK = "Would you like to set the Wallet for lock type ?";
+    public final static String DIALOG_MESSAGE_SET_LOCK = "Would you like to set the Wallet for lock type?";
 
     // intent Key
     public final static String INTENT_IS_REGISTRATION = "IS_REGISTRATION"; // true: reg, false: auth
