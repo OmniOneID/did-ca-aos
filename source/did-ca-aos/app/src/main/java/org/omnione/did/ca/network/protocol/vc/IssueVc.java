@@ -57,6 +57,7 @@ import org.omnione.did.sdk.utility.DataModels.MultibaseType;
 import org.omnione.did.sdk.wallet.WalletApi;
 
 import org.json.JSONObject;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletErrorCode;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -144,8 +145,10 @@ public class IssueVc {
                 });
 
     }
-    public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) {
+    public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) throws WalletException {
         String _M210_RequestIssueVc = M210_RequestIssueVc(txId, serverToken, refId, profile, signedDIDAuth);
+        if(_M210_RequestIssueVc.isEmpty())
+            throw new WalletException(WalletErrorCode.ERR_CODE_WALLET_ISSUE_CREDENTIAL_FAIL);
         String api6 = "/tas/api/v1/confirm-issue-vc"; //VC 발급 완료
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
@@ -210,6 +213,7 @@ public class IssueVc {
 
         final String[] resultHolder = new String[1];
         final CountDownLatch latch = new CountDownLatch(1);
+        resultHolder[0] = "";
 
         new Thread(new Runnable() {
             @Override

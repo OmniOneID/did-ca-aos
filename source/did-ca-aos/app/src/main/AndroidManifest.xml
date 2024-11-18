@@ -52,7 +52,10 @@
             android:name="org.omnione.did.ca.ui.SettingsActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
-
+        <activity
+            android:name="org.omnione.did.ca.ui.SettingsExpandableActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
         <service
             android:name=".push.PushMessagingService"
             android:exported="false">

@@ -56,6 +56,8 @@ public class PinActivity extends AppCompatActivity {
     boolean isRegistration = false;
     int authenticationType = 0;
     boolean isResister = false;
+    boolean isChange = false;
+    String oldPin = "";
     WalletApi walletApi;
     ProgressCircle progressCircle;
     @Override
@@ -95,6 +97,12 @@ public class PinActivity extends AppCompatActivity {
                                 break;
                             case Constants.PIN_TYPE_USE_KEY:
                                 useKeyAuthenticatePin();
+                                break;
+                            case Constants.PIN_TYPE_CHANGE_SIGNING_PIN:
+                                changeSigningPin();
+                                break;
+                            case Constants.PIN_TYPE_CHANGE_UNLOCK_PIN:
+                                changeUnlockPin();
                                 break;
                             default:
                                 break;
@@ -144,6 +152,11 @@ public class PinActivity extends AppCompatActivity {
             }
         }
 
+        if(authenticationType == Constants.PIN_TYPE_CHANGE_UNLOCK_PIN ||
+            authenticationType == Constants.PIN_TYPE_STATUS_UNLOCK) {
+            TextView message = findViewById(R.id.status_text);
+            message.setText(Constants.PIN_INPUT_LOCK_TEXT);
+        }
         delBtn = findViewById(R.id.button_delete);
         cancelBtn = findViewById(R.id.button_cancel);
         for(int i=0;i<=9; i++){
@@ -163,7 +176,6 @@ public class PinActivity extends AppCompatActivity {
     private void setLockRegisterPin(){
         if(isResister) {
             TextView message = findViewById(R.id.status_text);
-            Preference.savePin(PinActivity.this, Constants.PREFERENCE_LOCK_PIN, password);
             message.setText(Constants.PIN_INPUT_LOCK_TEXT);
             for (int i = 0; i <= 5; i++) {
                 pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
@@ -206,7 +218,6 @@ public class PinActivity extends AppCompatActivity {
             isResister = false;
         } else {
             if (tempPassword.equals(password)) {
-                Preference.savePin(PinActivity.this, Constants.PREFERENCE_KEY_PIN, password);
                 Intent resultIntent = new Intent();
                 resultIntent.putExtra("reg", Constants.PIN_TYPE_REG_KEY);
                 resultIntent.putExtra("pin", tempPassword);
@@ -240,21 +251,114 @@ public class PinActivity extends AppCompatActivity {
     private void useKeyAuthenticatePin(){
         progressCircle = new ProgressCircle(this);
         progressCircle.show();
-        if(Preference.loadPin(PinActivity.this, Constants.PREFERENCE_KEY_PIN).equals(password)){
-            Intent resultIntent = new Intent();
-            resultIntent.putExtra("reg", Constants.PIN_TYPE_USE_KEY);
-            resultIntent.putExtra("pin", password);
-            setResult(Activity.RESULT_OK, resultIntent);
-            finish();
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("reg", Constants.PIN_TYPE_USE_KEY);
+        resultIntent.putExtra("pin", password);
+        setResult(Activity.RESULT_OK, resultIntent);
+        finish();
+    }
+
+    private void changeSigningPin() {
+        if (isChange) {
+            if(isResister) {
+                TextView message = findViewById(R.id.status_text);
+                message.setText(Constants.PIN_RE_ENTER_TEXT);
+
+                for (int i = 0; i <= 5; i++) {
+                    pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
+                }
+                tempPassword = password;
+                password = "";
+                isResister = false;
+            } else {
+                if (tempPassword.equals(password)) {
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("reg", Constants.PIN_TYPE_REG_KEY);
+                    resultIntent.putExtra("oldPin", oldPin);
+                    resultIntent.putExtra("newPin", tempPassword);
+                    setResult(Activity.RESULT_OK, resultIntent);
+                    finish();
+                } else {
+                    TextView message = findViewById(R.id.status_text);
+                    message.setText(Constants.PIN_NOT_MATCH_TEXT);
+                    enableButton(false);
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            message.setText(Constants.PIN_CHANGE_TEXT);
+                            isResister = true;
+                            initPin();
+                        }
+                    }, Config.PIN_FAIL_DELAY);
+                }
+            }
         } else {
+            oldPin = password;
+            TextView message = findViewById(R.id.status_text);
+            message.setText(Constants.PIN_CHANGE_TEXT);
+
             for (int i = 0; i <= 5; i++) {
                 pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
             }
+            tempPassword = password;
             password = "";
-            finish();
+            isChange = true;
+            isResister = true;
+
         }
     }
 
+    private void changeUnlockPin() {
+        if (isChange) {
+            if(isResister) {
+                TextView message = findViewById(R.id.status_text);
+                message.setText(Constants.PIN_RE_ENTER_TEXT);
+
+                for (int i = 0; i <= 5; i++) {
+                    pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
+                }
+                tempPassword = password;
+                password = "";
+                isResister = false;
+            } else {
+                if (tempPassword.equals(password)) {
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("reg", Constants.PIN_TYPE_REG_KEY);
+                    resultIntent.putExtra("oldPassCode", oldPin);
+                    resultIntent.putExtra("newPassCode", tempPassword);
+                    setResult(Activity.RESULT_OK, resultIntent);
+                    finish();
+                } else {
+                    TextView message = findViewById(R.id.status_text);
+                    message.setText(Constants.PIN_NOT_MATCH_TEXT);
+                    enableButton(false);
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            message.setText(Constants.PIN_CHANGE_TEXT);
+                            isResister = true;
+                            initPin();
+                        }
+                    }, Config.PIN_FAIL_DELAY);
+                }
+            }
+        } else {
+            oldPin = password;
+            TextView message = findViewById(R.id.status_text);
+            message.setText(Constants.PIN_CHANGE_TEXT);
+
+            for (int i = 0; i <= 5; i++) {
+                pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
+            }
+            tempPassword = password;
+            password = "";
+            isChange = true;
+            isResister = true;
+
+        }
+    }
     private void registerLock(String passCode, boolean isLock) {
         new Thread(new Runnable() {
             @Override

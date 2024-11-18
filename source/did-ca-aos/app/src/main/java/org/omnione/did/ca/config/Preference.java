@@ -55,16 +55,6 @@ public class Preference {
         SharedPreferences prefs = getPreference(context);
         return prefs.getString(Constants.PREFERENCE_VERIFIER_URL, Config.VERIFIER_URL);
     }
-    public static void savePin(Context context, String prefKey, String pin) {
-        SharedPreferences prefs = getPreference(context);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(prefKey, pin);
-        editor.apply();
-    }
-    public static String loadPin(Context context, String prefKey) {
-        SharedPreferences prefs = getPreference(context);
-        return prefs.getString(prefKey, "0000");
-    }
 
     public static void saveCaAppId(Context context, String caAppId) {
         SharedPreferences prefs = getPreference(context);

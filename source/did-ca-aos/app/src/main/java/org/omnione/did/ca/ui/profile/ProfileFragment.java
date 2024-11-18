@@ -140,6 +140,11 @@ public class ProfileFragment extends Fragment {
             try {
                 String vcSchemaStr = CaUtil.getVcSchema(activity, verifyProfile.getProfile().filter.getCredentialSchemas().get(0).getId()).get();
                 VCSchema vcSchema = MessageUtil.deserialize(vcSchemaStr, VCSchema.class);
+                if(vcSchemaStr.isEmpty()) {
+                    ContextCompat.getMainExecutor(activity).execute(() -> {
+                        CaUtil.showErrorDialog(activity, "[CA error] VC schema is null");
+                    });
+                }
                 textView.setText(vcSchema.getTitle());
             } catch (ExecutionException | InterruptedException e) {
                 Throwable cause = e.getCause();

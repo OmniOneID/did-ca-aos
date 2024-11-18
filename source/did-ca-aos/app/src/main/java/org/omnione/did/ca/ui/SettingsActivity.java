@@ -18,6 +18,7 @@ package org.omnione.did.ca.ui;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -74,7 +75,13 @@ public class SettingsActivity extends AppCompatActivity {
                     ClipData clipData = ClipData.newPlainText("copyText",copyText);
                     clipboardManager.setPrimaryClip(clipData);
                     Toast.makeText(getApplicationContext(),"The DID has been copied to the clipboard.", Toast.LENGTH_SHORT).show();
-
+                } else if (i == 3) {
+                    startActivity(new Intent(SettingsActivity.this, SettingsExpandableActivity.class));
+                    finish();
+                } else if (i == 4) {
+                    Toast.makeText(SettingsActivity.this,"did document update", Toast.LENGTH_SHORT).show();
+                } else if (i == 5) {
+                    Toast.makeText(SettingsActivity.this,"did document restore", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -83,7 +90,13 @@ public class SettingsActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         adapter.addItem("TAS URL", Preference.loadTasUrl(this));
         adapter.addItem("Verifier URL", Preference.loadVerifierUrl(this));
-        adapter.addItem("DID",Preference.getDID(this));
+        if(Preference.getDID(this).isEmpty())
+            adapter.addItem("DID","not registered");
+        else
+            adapter.addItem("DID",Preference.getDID(this));
+        adapter.addItem("User Authentication settings","Provides management of authentication methods.");
+        adapter.addItem("DID Document Update","");
+        adapter.addItem("DID Document Restore","");
     }
     @Override
     protected void onResume() {
