@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,7 @@ public class AddVcFragment extends Fragment {
                     Bundle bundle = new Bundle();
                     bundle.putString("result", issueProfile);
                     bundle.putString("type", "user_init");
+                    bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
                     navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
                 } catch (Exception e){
                     CaLog.e("item click error " + e.getMessage());

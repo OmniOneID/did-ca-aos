@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ public class VcListItemView extends LinearLayout {
     TextView textView;
     TextView textView2;
     TextView textView3;
+    TextView textView4;
     ImageView imageView;
 
     public VcListItemView(Context context) {
@@ -57,6 +58,8 @@ public class VcListItemView extends LinearLayout {
         textView = (TextView) findViewById(R.id.textView);
         textView2 = (TextView) findViewById(R.id.textView2);
         textView3 = (TextView) findViewById(R.id.textView3);
+        textView3 = (TextView) findViewById(R.id.textView3);
+        textView4 = (TextView) findViewById(R.id.textView4);
         imageView = (ImageView) findViewById(R.id.imageView);
 
     }
@@ -89,6 +92,13 @@ public class VcListItemView extends LinearLayout {
 
         String strDateTime = format.format(date);
         textView3.setText("issuanceDate : " + strDateTime);
+    }
+
+    public void setIsZkp(boolean isZkp) {
+        if (isZkp)
+            textView4.setText("ZKP included");
+        else
+            textView4.setVisibility(GONE);
     }
 
     public void setImage(String img){

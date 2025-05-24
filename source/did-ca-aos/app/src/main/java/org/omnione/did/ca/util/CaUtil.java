@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,19 +26,28 @@ import android.util.Log;
 import androidx.core.content.ContextCompat;
 
 import org.omnione.did.ca.config.Config;
-import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.push.UpdatePushTokenVo;
 import org.omnione.did.ca.ui.common.ErrorDialog;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
-import org.omnione.did.sdk.datamodel.security.ReqEcdh;
+import org.omnione.did.sdk.datamodel.util.GsonWrapper;
+import org.omnione.did.sdk.datamodel.util.MessageUtil;
+import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
+import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
+import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
+import org.omnione.did.sdk.datamodel.zkp.CredentialDefinitionVo;
+import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
+import org.omnione.did.sdk.datamodel.zkp.CredentialSchemaVo;
+import org.omnione.did.sdk.datamodel.zkp.PredicateInfo;
 import org.omnione.did.sdk.utility.CryptoUtils;
 import org.omnione.did.sdk.utility.Encodings.Base16;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
+import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.io.ByteArrayOutputStream;
@@ -46,10 +55,17 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CaUtil {
     public static Bitmap drawableFromImgStr(Context context) {
@@ -205,5 +221,155 @@ public class CaUtil {
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
                 });
+    }
+
+    public static CredentialSchema getCredentialSchema(Context context, final String schemaId) {
+        ExecutorService es = Executors.newCachedThreadPool();
+        Future<CredentialSchema> future = es.submit(new Callable<CredentialSchema>() {
+            @Override
+            public CredentialSchema call() {
+                try {
+
+                    String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
+                    CaLog.d("getSchema >>>>>>>>>> " + schema);
+
+                    CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);
+
+                    CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
+                    CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
+                    return credentialSchema;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        });
+
+        try {
+            return future.get();
+
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    public static CredentialDefinition getCredentialDefinition(Context context, final String credDefId) {
+        ExecutorService es = Executors.newCachedThreadPool();
+        Future<CredentialDefinition> future = es.submit(new Callable<CredentialDefinition>() {
+            @Override
+            public CredentialDefinition call() {
+                try {
+                    String credDef = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-def?id="+credDefId, "GET","");
+                    CaLog.d("getCredDef >>>>>>>>>> " + credDef);
+                    CredentialDefinitionVo credentialDefinitionVo = MessageUtil.deserialize(credDef, CredentialDefinitionVo.class);
+                    CredentialDefinition credentialDefinition = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialDefinitionVo.getCredDef())), CredentialDefinition.class);
+                    CaLog.d("credentialDefinition: "+GsonWrapper.getGson().toJson(credentialDefinition));
+                    return credentialDefinition;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        });
+
+        try {
+            return future.get();
+
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String findAttributeNameByCredDefId(Map<String, AttributeInfo> requestedAttributes) {
+        for (Map.Entry<String, AttributeInfo> entry : requestedAttributes.entrySet()) {
+            AttributeInfo attributeInfo = entry.getValue();
+            List<Map<String, String>> restrictions = attributeInfo.getRestrictions();
+            for (Map<String, String> restriction : restrictions) {
+                return restriction.get("credDefId");
+            }
+        }
+        return null;
+    }
+
+    public static String findPredicateNameByCredDefId(Map<String, PredicateInfo> requestedPredicates) {
+        for (Map.Entry<String, PredicateInfo> entry : requestedPredicates.entrySet()) {
+            PredicateInfo predicateInfo = entry.getValue();
+            List<Map<String, String>> restrictions = predicateInfo.getRestrictions();
+            for (Map<String, String> restriction : restrictions) {
+                return restriction.get("credDefId");
+            }
+        }
+        return null;
+    }
+
+    public static String extractSchemaName(String input) {
+        String regex = ":2:([^:]+):\\d+\\.\\d+:";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+    public static String getAttributeCaptionValue(Context context, final String schemaId, String attrName) {
+        ExecutorService es = Executors.newCachedThreadPool();
+        Future<String> future = es.submit(new Callable<String>() {
+            @Override
+            public String call() {
+                try {
+                    String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
+                    CaLog.d("getSchema >>>>>>>>>> " + schema);
+
+                    CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);
+                    CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
+                    CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
+
+
+                    String[] parts = attrName.split("\\.");
+                    if (parts.length != 2) {
+                        return null;
+                    }
+
+                    String namespaceId = parts[0];
+                    String label = parts[1];
+
+                    for (AttributeType attrType : credentialSchema.getAttrTypes()) {
+                        if (attrType.getNamespace().getId().equals(namespaceId)) {
+                            for (AttributeDef item : attrType.getItems()) {
+                                if (item.getLabel().equals(label)) {
+                                    return item.getCaption();
+                                }
+                            }
+                        }
+                    }
+
+                    return null;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        });
+
+        try {
+            return future.get();
+
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

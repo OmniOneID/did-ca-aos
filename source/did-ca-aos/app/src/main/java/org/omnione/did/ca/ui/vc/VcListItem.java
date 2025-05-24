@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package org.omnione.did.ca.ui.vc;
 
+import android.text.BoringLayout;
+
 public class VcListItem {
     String title;
     String validUntil;
     String issuanceDate;
+
+    boolean isZkp;
     String img;
 
-    public VcListItem(String title, String validUntil, String issuanceDate, String img) {
+    public VcListItem(String title, String validUntil, String issuanceDate, boolean isZkp, String img) {
         this.title = title;
         this.validUntil = validUntil;
         this.issuanceDate = issuanceDate;
+        this.isZkp = isZkp;
         this.img = img;
     }
 
@@ -35,6 +40,14 @@ public class VcListItem {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public boolean isZkp() {
+        return isZkp;
+    }
+
+    public void setIsZkp(boolean isZkp) {
+        this.isZkp = isZkp;
     }
 
     public String getValidUntil() {
@@ -66,6 +79,7 @@ public class VcListItem {
         return "SingerItem{" +
                 "title='" + title + '\'' +
                 ", validUntil='" + validUntil + '\'' +
+                ", isZkp='" + isZkp + '\'' +
                 '}';
     }
 }

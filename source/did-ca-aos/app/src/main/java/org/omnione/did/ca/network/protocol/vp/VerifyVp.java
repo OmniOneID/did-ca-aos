@@ -18,7 +18,6 @@ package org.omnione.did.ca.network.protocol.vp;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -32,11 +31,12 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
+import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
 import org.omnione.did.sdk.datamodel.vc.issue.ReturnEncVP;
 import org.omnione.did.sdk.datamodel.profile.VerifyProfile;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
-import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.datamodel.protocol.P310RequestVo;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.token.WalletTokenSeed;
@@ -69,8 +69,14 @@ public class VerifyVp {
         return instance;
     }
 
-    public CompletableFuture<String> verifyVpPreProcess(String offerId, final String txId) {
-        String api1 = "/verifier/api/v1/request-profile";
+    public CompletableFuture<String> verifyVpPreProcess(String offerId, final String txId, String type) {
+        String api1;
+
+        if (type.equals(VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer.toString())) {
+            api1 = "/verifier/api/v1/request-proof-request-profile";
+        } else {
+            api1 = "/verifier/api/v1/request-profile";
+        }
 
         String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
 
@@ -78,7 +84,7 @@ public class VerifyVp {
 
         return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.VERIFIER_URL + api1, "POST", M310_RequestProfile(offerId, txId)))
                 .thenCompose(_M310_RequestProfile -> {
-                    this.txId = MessageUtil.deserialize(_M310_RequestProfile, P210ResponseVo.class).getTxId();
+                    this.txId = MessageUtil.deserialize(_M310_RequestProfile, P310ZkpResponseVo.class).getTxId();
                     verifyProfile = _M310_RequestProfile;
                     return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
                 })

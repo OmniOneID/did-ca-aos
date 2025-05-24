@@ -17,7 +17,6 @@
 package org.omnione.did.ca.network.protocol.vc;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -308,6 +307,7 @@ public class RevokeVc {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
                     walletApi.deleteCredentials(hWalletToken,vcId);
+
                 } catch (Exception e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
                         CaUtil.showErrorDialog(context, e.getMessage());

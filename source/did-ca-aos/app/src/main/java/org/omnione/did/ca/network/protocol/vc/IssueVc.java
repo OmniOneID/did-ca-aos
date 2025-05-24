@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,9 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.zkpmanager.ZKPManager;
 import org.omnione.did.sdk.datamodel.did.DIDDocument;
+import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P210RequestVo;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
@@ -108,7 +110,9 @@ public class IssueVc {
                 .thenCompose(_M210_ProposeIssueVc -> {
                     txId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getTxId();
                     refId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getRefId();
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M210_RequestEcdh(_M210_ProposeIssueVc)));
+                    return CompletableFuture.supplyAsync(() -> {
+                        return httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M210_RequestEcdh(_M210_ProposeIssueVc));
+                    });
                 })
                 .thenCompose(_M210_RequestEcdh -> {
                     ecdhResult = _M210_RequestEcdh;
@@ -147,6 +151,7 @@ public class IssueVc {
     }
     public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) throws WalletException {
         String _M210_RequestIssueVc = M210_RequestIssueVc(txId, serverToken, refId, profile, signedDIDAuth);
+
         if(_M210_RequestIssueVc.isEmpty())
             throw new WalletException(WalletErrorCode.ERR_CODE_WALLET_ISSUE_CREDENTIAL_FAIL);
         String api6 = "/tas/api/v1/confirm-issue-vc"; //VC 발급 완료

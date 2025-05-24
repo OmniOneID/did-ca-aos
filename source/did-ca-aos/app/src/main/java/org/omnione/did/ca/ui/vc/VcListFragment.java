@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 
 import org.omnione.did.ca.R;
-import org.omnione.did.ca.ui.ScanQrActivity;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
@@ -51,6 +51,7 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.IssueVc;
 import org.omnione.did.ca.network.protocol.vp.VerifyVp;
+import org.omnione.did.ca.ui.ScanQrActivity;
 import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.ui.common.PayloadData;
 import org.omnione.did.ca.ui.common.ProgressCircle;
@@ -64,11 +65,11 @@ import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
 import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
+import org.omnione.did.sdk.datamodel.zkp.Credential;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -141,6 +142,7 @@ public class VcListFragment extends Fragment {
                                     Bundle bundle = new Bundle();
                                     bundle.putString("result", issueProfile);
                                     bundle.putString("type",Constants.TYPE_ISSUE);
+                                    bundle.putString("offerType", offer.getType().getValue());
                                     navController.navigate(R.id.action_vcListFragment_to_profileFragment, bundle);
                                 } catch (Exception e) {
                                     CaUtil.showErrorDialog(activity, e.getMessage());
@@ -150,10 +152,13 @@ public class VcListFragment extends Fragment {
                                 VerifyOfferPayload offer = MessageUtil.deserialize(payload, VerifyOfferPayload.class);
                                 VerifyVp verifyVp = VerifyVp.getInstance(activity);
                                 try {
-                                    String verifYProfile = verifyVp.verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId()).get();
+                                    String verifyProfile = verifyVp.verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId(), offer.getType().getValue()).get();
+                                    CaLog.d("verifyProfile: "+verifyProfile);
+
                                     Bundle bundle = new Bundle();
-                                    bundle.putString("result", verifYProfile);
+                                    bundle.putString("result", verifyProfile);
                                     bundle.putString("type",Constants.TYPE_VERIFY);
+                                    bundle.putString("offerType", offer.getType().getValue());
                                     navController.navigate(R.id.action_vcListFragment_to_profileFragment, bundle);
 
                                 } catch (Exception e){
@@ -195,6 +200,7 @@ public class VcListFragment extends Fragment {
                         });
                         return;
                     }
+
                     for(VerifiableCredential vc : vcList){
                         vcSchema = getVcSchema(vc.getCredentialSchema().getId()).get();
                         if(vcSchema.isEmpty()){
@@ -204,8 +210,13 @@ public class VcListFragment extends Fragment {
                         }
                         vcDetails.add(setVcInfo(vcSchema));
                     }
+
+                    List<String> ids = new ArrayList<>();
                     for(VcDetail vcDetail : vcDetails){
-                        adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), vcDetail.getImage()));
+                        ids.add(vcDetail.getVcId());
+                        List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
+                        adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), credentials != null, vcDetail.getImage()));
+                        ids.clear();
                     }
                     activity.runOnUiThread(new Runnable() {
                         @Override
@@ -290,6 +301,7 @@ public class VcListFragment extends Fragment {
             view.setIssuanceDate(item.getIssuanceDate());
             view.setImage(item.getImg());
 
+            view.setIsZkp(item.isZkp());
 
             return view;
         }
@@ -329,10 +341,12 @@ public class VcListFragment extends Fragment {
                     vcDetail.setTitle(schema.getTitle());
                     vcDetail.setValidUntil(vc.getValidUntil());
                     vcDetail.setIssuanceDate(vc.getIssuanceDate());
-                    if(schema.getTitle().contains("National"))
-                        vcDetail.setImage(CaUtil.drawableToBase64(activity,R.drawable.default_vc));
+
                     if(schema.getTitle().contains("Driver"))
                         vcDetail.setImage(CaUtil.drawableToBase64(activity,R.drawable.nation_id_vc));
+                    else
+                        vcDetail.setImage(CaUtil.drawableToBase64(activity,R.drawable.default_vc));
+
                     for (int i = 0; i < vc.getCredentialSubject().getClaims().size(); i++) {
                         Claim claim = vc.getCredentialSubject().getClaims().get(i);
                         if (claim.getCaption().equals("성")) {
@@ -342,7 +356,7 @@ public class VcListFragment extends Fragment {
                             vcDetail.setName(firstName + claim.getValue());
                         } else if (claim.getCaption().equals("생년월일")) {
                             vcDetail.setBirth(claim.getValue());
-                        } else if (claim.getCaption().equals("증명서진")) {
+                        } else if (claim.getCaption().equals("증명사진")) {
                             //vcDetail.setImage(claim.getValue());
                         }
                     }

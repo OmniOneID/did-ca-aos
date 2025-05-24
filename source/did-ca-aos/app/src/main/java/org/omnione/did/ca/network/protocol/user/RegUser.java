@@ -18,7 +18,6 @@ package org.omnione.did.ca.network.protocol.user;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
