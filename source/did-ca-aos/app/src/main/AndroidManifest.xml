@@ -59,9 +59,6 @@
 
 
         <activity android:name="org.omnione.did.ca.zkp.ReferentListActivity"/>
-        <activity
-            android:name=".zkp.ZKPMainActivity">
-        </activity>
 
         <service
             android:name=".push.PushMessagingService"
