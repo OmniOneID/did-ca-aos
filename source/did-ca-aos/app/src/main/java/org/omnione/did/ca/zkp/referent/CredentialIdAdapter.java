@@ -32,7 +32,6 @@ public class CredentialIdAdapter extends BaseAdapter {
     private ArrayList<ReferentItem> referentItems = new ArrayList<ReferentItem>() ;
 
     private int selectedPosition = -1;
-    // ListViewAdapter의 생성자
     public CredentialIdAdapter() {
 
     }

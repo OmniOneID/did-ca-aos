@@ -31,6 +31,7 @@ import android.widget.GridView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -48,6 +49,7 @@ import org.omnione.did.sdk.datamodel.vc.issue.VCPlanList;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 public class AddVcFragment extends Fragment {
     NavController navController;
@@ -67,9 +69,11 @@ public class AddVcFragment extends Fragment {
         navController = Navigation.findNavController(view);
         try {
             vcPlanStr = getVcPlan().get();
-        } catch (Exception e){
+        } catch (ExecutionException | InterruptedException e) {
             CaLog.e("getVcPlan error " + e.getMessage());
-            CaUtil.showErrorDialog(activity, e.getMessage());
+            ContextCompat.getMainExecutor(activity).execute(()  -> {
+                CaUtil.showErrorDialog(activity, e.getMessage());
+            });
         }
         vcPlanList = MessageUtil.deserialize(vcPlanStr, VCPlanList.class);
         GridView gridView = (GridView) view.findViewById(R.id.gridView);
@@ -91,18 +95,20 @@ public class AddVcFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                IssueVc issueVc = IssueVc.getInstance(activity);
+                String issueProfile = null;
                 try {
-                    IssueVc issueVc = IssueVc.getInstance(activity);
-                    String issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
-                    Bundle bundle = new Bundle();
-                    bundle.putString("result", issueProfile);
-                    bundle.putString("type", "user_init");
-                    bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
-                    navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
-                } catch (Exception e){
-                    CaLog.e("item click error " + e.getMessage());
-                    CaUtil.showErrorDialog(activity, e.getMessage());
+                    issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
+                } catch (ExecutionException | InterruptedException e) {
+                    ContextCompat.getMainExecutor(activity).execute(()  -> {
+                        CaUtil.showErrorDialog(activity, e.getMessage());
+                    });
                 }
+                Bundle bundle = new Bundle();
+                bundle.putString("result", issueProfile);
+                bundle.putString("type", "user_init");
+                bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
+                navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
             }
         });
         Button cancelBtn = (Button) view.findViewById(R.id.cancelBtn);

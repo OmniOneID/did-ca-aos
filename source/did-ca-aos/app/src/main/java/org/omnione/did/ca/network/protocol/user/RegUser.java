@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 
+import org.json.JSONException;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
@@ -32,6 +33,7 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.did.DIDDocument;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P132ResponseVo;
@@ -52,7 +54,6 @@ import org.omnione.did.sdk.utility.DataModels.EcType;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.utility.DataModels.MultibaseType;
-import org.omnione.did.sdk.wallet.WalletApi;
 
 import org.json.JSONObject;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
@@ -263,7 +264,7 @@ public class RegUser {
             WalletApi walletApi = WalletApi.getInstance(context);
             String did = walletApi.getDIDDocument(1).getId();
             signedWalletInfo = walletApi.getSignedWalletInfo();
-        } catch (Exception e){
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -282,7 +283,7 @@ public class RegUser {
         JSONObject json = new JSONObject();
         try {
             json.put("appId", appId);
-        } catch (Exception e){
+        } catch (JSONException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -298,7 +299,7 @@ public class RegUser {
                 public void run() {
                     try {
                         walletApi.generateKeyPair(hWalletToken, pin);
-                    } catch (Exception e) {
+                    } catch (WalletException | UtilityException | WalletCoreException e) {
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
                         });
@@ -330,7 +331,7 @@ public class RegUser {
                         registerUser(walletApi.createSignedDIDDoc(ownerDIDDoc));
                         Preference.setInit(context, true);
                         navController.navigate(R.id.action_stepFragment_to_vcListFragment);
-                    } catch (Exception e){
+                    } catch (WalletException | UtilityException | WalletCoreException e) {
                         CaLog.e("bio key signing fail" + e.getMessage());
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
@@ -355,7 +356,7 @@ public class RegUser {
                 }
             });
             walletApi.authenticateBioKey(fragment, context);
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio authentication fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
@@ -372,7 +373,7 @@ public class RegUser {
                 bundle.putInt("step", Constants.STEP3);
                 navController.navigate(R.id.action_stepFragment_self, bundle);
             });
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             CaLog.e("PIN key creation fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
@@ -395,7 +396,7 @@ public class RegUser {
                                     bundle.putInt("step", Constants.STEP3);
                                     navController.navigate(R.id.action_stepFragment_self, bundle);
                                 });
-                            } catch (Exception e) {
+                            } catch (WalletException | UtilityException | WalletCoreException e) {
                                 CaLog.e("bio key creation fail " + e.getMessage());
                                 ContextCompat.getMainExecutor(context).execute(()  -> {
                                     CaUtil.showErrorDialog(context, e.getMessage());
@@ -422,7 +423,7 @@ public class RegUser {
                 }
             });
             walletApi.registerBioKey(context);
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio key creation fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
@@ -433,20 +434,14 @@ public class RegUser {
     private void registerUser(SignedDidDoc signedDIDDoc){
         try {
             regUserProcess(signedDIDDoc).get();
-        } catch (Exception e) {
-            CaLog.e("registerUser error : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
-        }
-        try {
             WalletApi walletApi = WalletApi.getInstance(context);
             Preference.setDID(context, walletApi.getDIDDocument( Constants.DID_TYPE_HOLDER).getId());
-        } catch (Exception e){
-            CaLog.e("did save error : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
+        } catch (WalletException | WalletCoreException | UtilityException | ExecutionException |
+                 InterruptedException e) {
+             CaLog.e("registerUser error : " + e.getMessage());
+             ContextCompat.getMainExecutor(context).execute(()  -> {
+                 CaUtil.showErrorDialog(context, e.getMessage());
+             });
         }
         // update push token (optional)
         CaUtil.updatePushToken(context);

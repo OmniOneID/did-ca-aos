@@ -31,9 +31,11 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
 import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
+import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.vc.issue.ReturnEncVP;
 import org.omnione.did.sdk.datamodel.profile.VerifyProfile;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
@@ -42,7 +44,6 @@ import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.token.WalletTokenSeed;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 public class VerifyVp {
     private static VerifyVp instance;
@@ -91,7 +93,8 @@ public class VerifyVp {
                 .thenApply(_M000_GetWalletTokenData -> {
                     try {
                         hWalletToken = TokenUtil.createHashWalletToken(_M000_GetWalletTokenData, context);
-                    } catch (Exception e) {
+                    } catch (WalletException | WalletCoreException | UtilityException |
+                             ExecutionException | InterruptedException e) {
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
                         });
@@ -143,14 +146,17 @@ public class VerifyVp {
                     }
                 }
                 List<String> claimCode = vpProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims;
+                CaLog.d("submit to VC ID : " + GsonWrapper.getGson().toJson(claimCode));
                 String nonce = vpProfile.getProfile().process.verifierNonce;
                 ReturnEncVP returnEncVP = walletApi.createEncVp(hWalletToken, vcId, claimCode, vpProfile.getProfile().process.reqE2e, pin, nonce, vpProfile.getProfile().process.authType);
+                CaLog.d("returnEncVP: "+GsonWrapper.getGson().toJson(returnEncVP));
                 P310RequestVo requestVo = new P310RequestVo(CaUtil.createMessageId(context));
                 requestVo.setTxId(txId);
                 requestVo.setEncVp(returnEncVP.getEncVp());
                 requestVo.setAccE2e(returnEncVP.getAccE2e());
                 String request = requestVo.toJson();
                 resultHolder[0] = request;
+                CaLog.d("holder[0]: "+GsonWrapper.getGson().toJson(resultHolder[0]));
             } catch (WalletException | UtilityException | WalletCoreException e){
                 CaLog.e(" vp error : " + e.getMessage());
                 ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -177,7 +183,7 @@ public class VerifyVp {
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
-        } catch (Exception e){
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -203,7 +209,7 @@ public class VerifyVp {
                 public void onSuccess(String result) {
                     try {
                         verifyVpProcess("").get();
-                    } catch (Exception e){
+                    } catch (ExecutionException | InterruptedException e) {
                         CaLog.e("bio authentication fail" + e.getMessage());
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
@@ -231,7 +237,7 @@ public class VerifyVp {
                 }
             });
             walletApi.authenticateBioKey(fragment, context);
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio authentication fail");
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());

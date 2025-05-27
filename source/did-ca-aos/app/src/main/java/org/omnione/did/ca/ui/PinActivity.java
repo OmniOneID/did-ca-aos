@@ -33,9 +33,10 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
+
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 public class PinActivity extends AppCompatActivity {

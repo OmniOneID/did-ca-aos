@@ -28,15 +28,14 @@ import java.util.List;
 import java.util.Map;
 
 public interface VerifyConstants {
-    // 통신, 데이터 저장
     interface Model {
-        String verifyProof(P310ZkpRequestVo proof, ProofRequest proofRequest);
+        boolean verifyProof(P310ZkpRequestVo proof, ProofRequest proofRequest);
 
         CredentialDefinition getCredentialDefinition(String credDefId);
 
         CredentialSchema getCredentialSchema(String schemaId);
     }
-    // UI
+
     interface View {
         void showError(String errorCode, String errorMessage);
 
@@ -52,7 +51,6 @@ public interface VerifyConstants {
 
         Map<String, String> getSelfAttribute();
     }
-
 
     interface Presenter {
         AvailableReferent getAvailableReferent();

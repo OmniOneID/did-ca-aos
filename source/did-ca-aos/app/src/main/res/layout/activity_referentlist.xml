@@ -17,7 +17,6 @@
         android:textSize="17sp"
         android:textStyle="bold" />
 
-    <!-- 리스트뷰: 화면의 대부분을 차지하도록 weight 사용 -->
     <ListView
         android:id="@+id/listView_value"
         android:layout_width="match_parent"

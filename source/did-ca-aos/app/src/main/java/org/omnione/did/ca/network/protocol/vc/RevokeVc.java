@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Config;
@@ -32,6 +33,7 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.protocol.P220RequestVo;
 import org.omnione.did.sdk.datamodel.protocol.P220ResponseVo;
 import org.omnione.did.sdk.datamodel.security.ReqEcdh;
@@ -51,7 +53,6 @@ import org.omnione.did.sdk.utility.DataModels.EcType;
 import org.omnione.did.sdk.utility.DataModels.MultibaseType;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
@@ -252,7 +253,7 @@ public class RevokeVc {
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
-        } catch (Exception e){
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -268,7 +269,7 @@ public class RevokeVc {
             WalletApi walletApi = WalletApi.getInstance(context);
             String did = walletApi.getDIDDocument(1).getId();
             signedWalletInfo = walletApi.getSignedWalletInfo();
-        } catch (Exception e){
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -287,7 +288,8 @@ public class RevokeVc {
         JSONObject json = new JSONObject();
         try {
             json.put("appId", appId);
-        } catch (Exception e) {
+        } catch (JSONException e) {
+            CaLog.e("deleteVc fail" + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -307,8 +309,8 @@ public class RevokeVc {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
                     walletApi.deleteCredentials(hWalletToken,vcId);
-
-                } catch (Exception e) {
+                } catch (WalletException | WalletCoreException | UtilityException e) {
+                    CaLog.e("deleteVc fail" + e.getMessage());
                     ContextCompat.getMainExecutor(context).execute(()  -> {
                         CaUtil.showErrorDialog(context, e.getMessage());
                     });
@@ -335,7 +337,7 @@ public class RevokeVc {
                 public void onSuccess(String result) {
                     try {
                         revokeVcProcess("").get();
-                    } catch (Exception e){
+                    } catch (ExecutionException | InterruptedException e) {
                         CaLog.e("bio authentication fail" + e.getMessage());
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
@@ -361,9 +363,11 @@ public class RevokeVc {
                 }
             });
             walletApi.authenticateBioKey(fragment, context);
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio authentication fail : " + e.getMessage());
-            CaUtil.showErrorDialog(context, e.getMessage());
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
     }
 

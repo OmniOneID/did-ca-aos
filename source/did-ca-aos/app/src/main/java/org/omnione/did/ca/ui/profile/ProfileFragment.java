@@ -237,7 +237,6 @@ public class ProfileFragment extends Fragment {
                     Bundle bundle = new Bundle();
                     bundle.putInt("type", Constants.WEBVIEW_VC_INFO);
                     bundle.putString("vcSchemaId", requireArguments().getString("vcSchemaId"));
-
                     navController.navigate(R.id.action_profileFragment_to_webviewFragment, bundle);
                 }
                 else if(type.equals(Constants.TYPE_ISSUE)) {
@@ -397,7 +396,6 @@ public class ProfileFragment extends Fragment {
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
         }
-
     }
 
     private void submitVp(String pin){

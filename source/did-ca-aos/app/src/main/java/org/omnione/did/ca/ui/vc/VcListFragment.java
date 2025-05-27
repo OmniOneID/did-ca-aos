@@ -41,7 +41,6 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
-import androidx.navigation.fragment.NavHostFragment;
 
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
@@ -56,6 +55,7 @@ import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.ui.common.PayloadData;
 import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -68,7 +68,6 @@ import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
 import org.omnione.did.sdk.datamodel.zkp.Credential;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,7 +128,7 @@ public class VcListFragment extends Fragment {
                             String payload = "";
                             try {
                                 payload = new String(MultibaseUtils.decode(payloadData.getPayload()));
-                            } catch (Exception e){
+                            } catch (UtilityException e) {
                                 CaLog.e("payload decode error : " + e.getMessage());
                                 CaUtil.showErrorDialog(activity, e.getMessage());
                             }
@@ -137,16 +136,21 @@ public class VcListFragment extends Fragment {
                                 CaLog.d("Issue VC Profile");
                                 IssueOfferPayload offer = MessageUtil.deserialize(payload, IssueOfferPayload.class);
                                 IssueVc issueVc = IssueVc.getInstance(activity);
+
+                                String issueProfile = null;
                                 try {
-                                    String issueProfile = issueVc.issueVcPreProcess(offer.getVcPlanId(), offer.getIssuer(), offer.getOfferId()).get();
-                                    Bundle bundle = new Bundle();
-                                    bundle.putString("result", issueProfile);
-                                    bundle.putString("type",Constants.TYPE_ISSUE);
-                                    bundle.putString("offerType", offer.getType().getValue());
-                                    navController.navigate(R.id.action_vcListFragment_to_profileFragment, bundle);
-                                } catch (Exception e) {
-                                    CaUtil.showErrorDialog(activity, e.getMessage());
+                                    issueProfile = issueVc.issueVcPreProcess(offer.getVcPlanId(), offer.getIssuer(), offer.getOfferId()).get();
+                                } catch (ExecutionException | InterruptedException e) {
+                                    ContextCompat.getMainExecutor(activity).execute(()  -> {
+                                        CaUtil.showErrorDialog(activity, e.getMessage());
+                                    });
                                 }
+                                Bundle bundle = new Bundle();
+                                bundle.putString("result", issueProfile);
+                                bundle.putString("type",Constants.TYPE_ISSUE);
+                                bundle.putString("offerType", offer.getType().getValue());
+                                navController.navigate(R.id.action_vcListFragment_to_profileFragment, bundle);
+
                             } else if(payloadData.getPayloadType().equals("SUBMIT_VP")){
                                 CaLog.d("Submit VP Profile");
                                 VerifyOfferPayload offer = MessageUtil.deserialize(payload, VerifyOfferPayload.class);
@@ -161,9 +165,11 @@ public class VcListFragment extends Fragment {
                                     bundle.putString("offerType", offer.getType().getValue());
                                     navController.navigate(R.id.action_vcListFragment_to_profileFragment, bundle);
 
-                                } catch (Exception e){
+                                } catch (ExecutionException | InterruptedException e) {
                                     CaLog.e("Vp profile error : " + e.getMessage());
-                                    CaUtil.showErrorDialog(activity, e.getMessage());
+                                    ContextCompat.getMainExecutor(activity).execute(()  -> {
+                                        CaUtil.showErrorDialog(activity, e.getMessage());
+                                    });
                                 }
                             }
 
@@ -211,13 +217,21 @@ public class VcListFragment extends Fragment {
                         vcDetails.add(setVcInfo(vcSchema));
                     }
 
-                    List<String> ids = new ArrayList<>();
-                    for(VcDetail vcDetail : vcDetails){
-                        ids.add(vcDetail.getVcId());
-                        List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
-                        adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), credentials != null, vcDetail.getImage()));
-                        ids.clear();
-                    }
+
+                        List<String> ids = new ArrayList<>();
+                        for(VcDetail vcDetail : vcDetails){
+                            ids.add(vcDetail.getVcId());
+                            boolean hasZkp = false;
+                            if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcDetail.getVcId())) {
+                                List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
+                                if (credentials.size() > 0) {
+                                    hasZkp = true;
+                                }
+                            }
+                            adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), hasZkp, vcDetail.getImage()));
+                            ids.clear();
+                        }
+
                     activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -331,9 +345,16 @@ public class VcListFragment extends Fragment {
 
         VcDetail vcDetail = new VcDetail();
         try {
+//            List<Credential> zkpVcList = walletApi.getAllZkpCredentials(hWalletToken);
+//            CaLog.d("Zkp list size : " + zkpVcList.size());
+//            for (Credential credential : zkpVcList) {
+//                CaLog.d("Zkp list id : " + credential.getCredentialId());
+//            }
+
             List<VerifiableCredential> vcList = walletApi.getAllCredentials(hWalletToken);
             CaLog.d("VC list size : " + vcList.size());
             for (VerifiableCredential vc : vcList) {
+                CaLog.d("VC list id : " + vc.getId());
                 if(vc.getCredentialSchema().getId().equals(schema.getId())) {
                     CaLog.d("get VC in Wallet : " + vc.toJson());
                     vcDetail = new VcDetail();
@@ -362,7 +383,7 @@ public class VcListFragment extends Fragment {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             CaLog.e("get vc fail : " + e.getMessage());
             ContextCompat.getMainExecutor(activity).execute(()  -> {
                 CaUtil.showErrorDialog(activity, e.getMessage(), activity);

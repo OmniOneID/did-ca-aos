@@ -59,6 +59,7 @@ import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.util.CaUtil;
 
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
@@ -73,7 +74,6 @@ import org.omnione.did.sdk.datamodel.zkp.Credential;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
 
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 
@@ -122,9 +122,11 @@ public class DetailVcFragment extends Fragment {
                         textView.setText(displayVc(vc));
 
                         // add zkp info
-                        List<Credential> credentialList = walletApi.getZkpCredentials(hWalletToken, List.of(vcId));
-                        credential = credentialList.get(0);
-                        textView.append(displayZkpCredential(credential));
+                        if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcId)) {
+                            List<Credential> credentialList = walletApi.getZkpCredentials(hWalletToken, List.of(vcId));
+                            credential = credentialList.get(0);
+                            textView.append(displayZkpCredential(credential));
+                        }
 
                     } catch (WalletCoreException | WalletException | UtilityException e) {
                         CaLog.e("get detail vc error : " + e.getMessage());

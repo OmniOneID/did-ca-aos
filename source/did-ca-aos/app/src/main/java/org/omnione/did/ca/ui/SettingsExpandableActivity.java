@@ -36,10 +36,10 @@ import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.ArrayList;
@@ -146,7 +146,7 @@ public class SettingsExpandableActivity extends AppCompatActivity {
 //                                                });
                                                 CaLog.d("is bio key : " + walletApi.isSavedKey(Constants.KEY_ID_BIO));
                                                 CaLog.d("get DID Document : " + walletApi.getDIDDocument(2).toJson());
-                                            } catch (Exception e) {
+                                            } catch (WalletException | WalletCoreException | UtilityException e) {
                                                 CaLog.e("bio key creation fail " + e.getMessage());
                                                 ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
                                                     CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
@@ -176,7 +176,7 @@ public class SettingsExpandableActivity extends AppCompatActivity {
                                 }
                             });
                             walletApi.registerBioKey(SettingsExpandableActivity.this);
-                        } catch (Exception e) {
+                        } catch (WalletException | WalletCoreException e) {
                             CaLog.e("bio key creation fail : " + e.getMessage());
                             ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
                                 CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());

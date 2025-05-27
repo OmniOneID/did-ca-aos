@@ -21,7 +21,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -31,6 +30,7 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.push.UpdatePushTokenVo;
 import org.omnione.did.ca.ui.common.ErrorDialog;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
@@ -45,7 +45,6 @@ import org.omnione.did.sdk.datamodel.zkp.PredicateInfo;
 import org.omnione.did.sdk.utility.CryptoUtils;
 import org.omnione.did.sdk.utility.Encodings.Base16;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
@@ -64,8 +63,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class CaUtil {
     public static Bitmap drawableFromImgStr(Context context) {
@@ -229,18 +226,16 @@ public class CaUtil {
             @Override
             public CredentialSchema call() {
                 try {
-
                     String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
                     CaLog.d("getSchema >>>>>>>>>> " + schema);
-
                     CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);
-
                     CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
                     CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
                     return credentialSchema;
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
                 }
                 return null;
             }
@@ -249,10 +244,10 @@ public class CaUtil {
         try {
             return future.get();
 
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
         return null;
     }
@@ -270,8 +265,10 @@ public class CaUtil {
                     CredentialDefinition credentialDefinition = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialDefinitionVo.getCredDef())), CredentialDefinition.class);
                     CaLog.d("credentialDefinition: "+GsonWrapper.getGson().toJson(credentialDefinition));
                     return credentialDefinition;
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
                 }
                 return null;
             }
@@ -279,11 +276,10 @@ public class CaUtil {
 
         try {
             return future.get();
-
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
         return null;
     }
@@ -311,14 +307,15 @@ public class CaUtil {
     }
 
     public static String extractSchemaName(String input) {
-        String regex = ":2:([^:]+):\\d+\\.\\d+:";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
+        CaLog.d("extractSchemaName: "+input);
+        String[] parts = input.split(":");
 
-        if (matcher.find()) {
-            return matcher.group(1);
+        if (parts.length >= 3) {
+            return parts[parts.length - 3];
+
+        } else {
+            return "NONE";
         }
-        return null;
     }
 
     public static String getAttributeCaptionValue(Context context, final String schemaId, String attrName) {
@@ -355,8 +352,10 @@ public class CaUtil {
 
                     return null;
 
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
                 }
                 return null;
             }
@@ -365,10 +364,10 @@ public class CaUtil {
         try {
             return future.get();
 
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
         return null;
     }

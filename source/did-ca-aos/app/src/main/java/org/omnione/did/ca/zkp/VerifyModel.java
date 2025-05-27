@@ -17,9 +17,13 @@
 package org.omnione.did.ca.zkp;
 
 import android.content.Context;
+
+import androidx.core.content.ContextCompat;
+
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
+import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.datamodel.protocol.P310ZkpRequestVo;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
@@ -28,6 +32,7 @@ import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchemaVo;
 import org.omnione.did.sdk.datamodel.zkp.ProofRequest;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -51,24 +56,18 @@ public class VerifyModel implements VerifyConstants.Model {
     }
 
     @Override
-    public String verifyProof(final P310ZkpRequestVo proof, final ProofRequest proofRequest) {
+    public boolean verifyProof(final P310ZkpRequestVo proof, final ProofRequest proofRequest) {
 
-        try {
-            CaLog.d("proof: " + GsonWrapper.getGson().toJson(proof));
+        CaLog.d("proof: " + GsonWrapper.getGson().toJson(proof));
+        String response = httpClient.send(context, Config.VERIFIER_URL + Config.requestVerifyProof, "POST", proof.toJson());
 
-            String response = httpClient.send(context, Config.VERIFIER_URL + Config.requestVerifyProof, "POST", proof.toJson());
+//        JSONObject jsonObject = new JSONObject(response);
+//        int resultCode = jsonObject.getInt("resultCode");
+//        String resultMsg = jsonObject.getString("resultMsg");
+//        JSONObject response_jsonObj = jsonObject.getJSONObject("resultData");
+//        ZkpResponse zkpResponse = ZkpGsonWrapper.getGson().fromJson(jsonObject.toString(), ZkpResponse.class);
 
-//            JSONObject jsonObject = new JSONObject(response);
-//            int resultCode = jsonObject.getInt("resultCode");
-//            String resultMsg = jsonObject.getString("resultMsg");
-//            JSONObject response_jsonObj = jsonObject.getJSONObject("resultData");
-//            ZkpResponse zkpResponse = ZkpGsonWrapper.getGson().fromJson(jsonObject.toString(), ZkpResponse.class);
-            return response;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "fail";
+        return true;
     }
 
     @Override
@@ -84,8 +83,10 @@ public class VerifyModel implements VerifyConstants.Model {
                     CredentialDefinition credentialDefinition = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialDefinitionVo.getCredDef())), CredentialDefinition.class);
                     CaLog.d("credentialDefinition: "+GsonWrapper.getGson().toJson(credentialDefinition));
                     return credentialDefinition;
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
                 }
                 return null;
             }
@@ -94,10 +95,10 @@ public class VerifyModel implements VerifyConstants.Model {
         try {
             return future.get();
 
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
         return null;
     }
@@ -115,8 +116,10 @@ public class VerifyModel implements VerifyConstants.Model {
                     CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
                     CaLog.d("credentialSchema: "+GsonWrapper.getGson().toJson(credentialSchema));
                     return credentialSchema;
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
                 }
                 return null;
             }
@@ -126,7 +129,9 @@ public class VerifyModel implements VerifyConstants.Model {
             return future.get();
 
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
         }
         return null;
     }

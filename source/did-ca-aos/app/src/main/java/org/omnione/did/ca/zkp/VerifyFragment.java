@@ -37,6 +37,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -89,12 +90,10 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
     private P310ZkpResponseVo proofRequestProfileVo;
 
-    private Referent referent;
-    private String key;
     private RelativeLayout progress;
 
     private VerifyConstants.Presenter presenter;
-    private String p2p_proof_Request_api_id;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
@@ -106,6 +105,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
         proofRequestProfileVo = GsonWrapper.getGson().fromJson(requireArguments().getString("proofRequestProfileVo"), P310ZkpResponseVo.class);
+
         presenter = new VerifyPresenter(getActivity().getApplicationContext(), this);
         initUI(view);
         presenter.setProofRequestProfile(proofRequestProfileVo);
@@ -168,7 +168,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                     Map self_ref_map = availableReferent.getSelfAttrReferent();
                     List keys = new ArrayList(self_ref_map.keySet());
 
-                    // 중복 제거
+                    // duplicate remove
                     for (int j = 0; j < selectedUserReferent.size(); j++) {
                         if (selectedUserReferent.get(j).getReferentName().equals(selfAttrReferent.getName())) {
                             selectedUserReferent.remove(j);
@@ -183,7 +183,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                     selfAttr.put((String) keys.get(i), data);
                 }
 
-                // 중복 제거
+                // duplicate remove
                 for (int i = 0; i < selectedUserReferent.size(); i++) {
                     for (int j = 0; j < selectedAttrReferent.size(); j++) {
                         if (selectedUserReferent.get(i).getReferentName().equals(selectedAttrReferent.get(j).getReferentName())) {
@@ -192,7 +192,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                     }
                 }
 
-                // attr_referent checkbox 상태 셋팅
+                // attr_referent checkbox
                 for (int i = 0; i < selectedAttrReferent.size(); i++) {
                     CaLog.d( "isRevealed : " + selectedAttrReferent.get(i).isRevealed());
                     View childView = listView_attr.getChildAt(i);
@@ -215,7 +215,9 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
     @Override
     public void showError(String errorCode, String errorMessage) {
-        DialogUtil.showAlert(getActivity(), null, errorCode + ", " + errorMessage);
+        ContextCompat.getMainExecutor(getActivity()).execute(()  -> {
+            CaUtil.showErrorDialog(getActivity(), errorMessage);
+        });
     }
 
     @Override
@@ -265,7 +267,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-//                        NavHostFragment.findNavController(VerifyFragment.this).navigate(R.id.action_VerifyFragment_to_MainFragment);
+                        navController.navigate(R.id.action_VerifyFragment_to_vcListFragment);
                     }
                 });
             }
@@ -377,7 +379,6 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
                 AvailableReferent availableReferent = presenter.getAvailableReferent();
 
-                // callback data
                 selectedCredentialId = data.getStringExtra("credentialId");
                 selectedRaw = data.getStringExtra("raw");
                 pos = data.getIntExtra("pos", 0);
@@ -386,7 +387,6 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                 Map predicate_ref_map = availableReferent.getPredicateReferent();
                 List keys = new ArrayList(predicate_ref_map.keySet());
 
-                // view에 data 셋팅
                 View view = listView_predicates.getChildAt(pos);
                 TextView textViewTitle = view.findViewById(R.id.textView_predicate_ref_item_title);
 

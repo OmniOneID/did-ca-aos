@@ -18,10 +18,14 @@ package org.omnione.did.ca.zkp;
 
 import android.content.Context;
 
+import androidx.core.content.ContextCompat;
+
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
+import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
-import org.omnione.did.sdk.wallet.WalletApi;
+
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.protocol.P310ZkpRequestVo;
 import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
@@ -71,7 +75,6 @@ public class VerifyPresenter implements VerifyConstants.Presenter {
 
     @Override
     public void setProofRequestProfile(P310ZkpResponseVo proofRequestProfileVo) {
-        view.showLoading("...");
         this.proofRequestProfileVo = proofRequestProfileVo;
         searchCredential(proofRequestProfileVo);
     }
@@ -89,17 +92,14 @@ public class VerifyPresenter implements VerifyConstants.Presenter {
 
     private void createReferent(List<UserReferent> selectedUserReferent) {
 
-        view.showLoading("...");
-
         try {
             ReferentInfo referentInfo = WalletApi.getInstance(context).createZkpReferent(selectedUserReferent);
 
             CaLog.d("referentInfo: " + GsonWrapper.getGsonPrettyPrinting().toJson(referentInfo));
             createProofParam(referentInfo.getReferents());
+
         } catch (WalletCoreException | UtilityException e) {
-            view.showToast("createReferent: "+e.getMessage());
-        } finally {
-            view.hideLoading();
+            CaUtil.showErrorDialog(context, e.getMessage());
         }
     }
 
@@ -120,21 +120,18 @@ public class VerifyPresenter implements VerifyConstants.Presenter {
 
     private void createProof(List<ProofParam> proofParams, Map<String, String> selfAttr) {
 
-        view.showLoading("...");
         new Thread(() -> {
             try {
                 String hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC_AND_PRESENT_VP).get();
 
                 P310ZkpRequestVo proof = WalletApi.getInstance(context).createZkpProof(hWalletToken, proofRequestProfileVo, proofParams, selfAttr);
                 // 서버 검증 로직
-                String resultCode = model.verifyProof(proof, proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest);
-                view.showError(resultCode, "성공");
+                boolean result = model.verifyProof(proof, proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest);
+                view.showError("", "성공");
                 view.moveToMainView();
 
-            } catch (Exception e) {
-                view.showToast("createProof : " + e.getMessage());
-            } finally {
-                view.hideLoading();
+            } catch (WalletException | InterruptedException | UtilityException | ExecutionException | WalletCoreException e) {
+                view.showError("", e.getMessage());
             }
         }).start();
     }
@@ -142,28 +139,18 @@ public class VerifyPresenter implements VerifyConstants.Presenter {
 
     private void searchCredential(P310ZkpResponseVo proofRequestProfileVo) {
 
-        view.showLoading("...");
+        new Thread(() -> {
+            try {
+                CaLog.d("proofRequest: "+GsonWrapper.getGson().toJson(proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest));
+                String hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC).get();
+                AvailableReferent availableReferent = WalletApi.getInstance(context).searchZkpCredentials(hWalletToken, proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest);
+                CaLog.d("availableReferent >>>>>>>>>> " + GsonWrapper.getGsonPrettyPrinting().toJson(availableReferent));
+                setAvailableReferent(availableReferent);
+                view.drawAvailableReferent();
 
-            new Thread(() -> {
-                try {
-                    CaLog.d("proofRequest: "+GsonWrapper.getGson().toJson(proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest));
-                    String hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC).get();
-                    AvailableReferent availableReferent = WalletApi.getInstance(context).searchZkpCredentials(hWalletToken, proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest);
-                    CaLog.d("availableReferent >>>>>>>>>> " + GsonWrapper.getGsonPrettyPrinting().toJson(availableReferent));
-
-                    setAvailableReferent(availableReferent);
-                    view.drawAvailableReferent();
-                } catch (WalletCoreException | UtilityException e) {
-                    view.showToast("searchCredential : " + e.getMessage());
-                } catch (ExecutionException e) {
-                    throw new RuntimeException(e);
-                } catch (WalletException e) {
-                    throw new RuntimeException(e);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    view.hideLoading();
-                }
-            }).start();
+            } catch (WalletCoreException | UtilityException | WalletException | ExecutionException | InterruptedException e) {
+                view.showError("", e.getMessage());
+            }
+        }).start();
     }
 }
