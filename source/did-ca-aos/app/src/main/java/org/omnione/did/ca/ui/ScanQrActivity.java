@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +123,6 @@ public class ScanQrActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == requestCodeCameraPermission && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startQRCodeScanner();
-
         }
     }
 

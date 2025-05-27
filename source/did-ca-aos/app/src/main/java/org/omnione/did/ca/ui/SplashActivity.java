@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -43,9 +44,9 @@ import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.logger.CommunicationLogger;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.wallet.walletservice.logger.WalletLogger;
 
@@ -62,6 +63,7 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+
 
         //log enable
         WalletLogger walletLogger = WalletLogger.getInstance();

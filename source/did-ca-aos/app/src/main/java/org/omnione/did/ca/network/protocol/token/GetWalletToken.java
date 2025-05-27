@@ -23,11 +23,12 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.token.WalletTokenSeed;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
+
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.wallet.walletservice.network.HttpUrlConnection;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -92,6 +93,4 @@ public class GetWalletToken {
         WalletTokenSeed walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
         return  walletTokenSeed.toJson();
     }
-
-
 }

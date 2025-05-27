@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.settings.SettingListViewAdapter;
 import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
-import org.omnione.did.sdk.wallet.WalletApi;
 
 public class SettingsActivity extends AppCompatActivity {
     int cnt = 0;

@@ -56,6 +56,10 @@
             android:name="org.omnione.did.ca.ui.SettingsExpandableActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
+
+
+        <activity android:name="org.omnione.did.ca.zkp.ReferentListActivity"/>
+
         <service
             android:name=".push.PushMessagingService"
             android:exported="false">
@@ -63,6 +67,8 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+
     </application>
 
 </manifest>

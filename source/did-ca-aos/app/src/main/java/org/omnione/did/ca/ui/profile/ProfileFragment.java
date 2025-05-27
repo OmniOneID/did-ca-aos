@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package org.omnione.did.ca.ui.profile;
 
+import static org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,15 +54,24 @@ import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
 import org.omnione.did.sdk.datamodel.profile.IssueProfile;
 import org.omnione.did.sdk.datamodel.profile.VerifyProfile;
 import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
+import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
+import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
+import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
+import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
+import org.omnione.did.sdk.datamodel.zkp.PredicateInfo;
+import org.omnione.did.sdk.datamodel.zkp.ProofRequest;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -67,15 +79,18 @@ public class ProfileFragment extends Fragment {
     NavController navController;
     Activity activity;
     String type;
+    String offerType;
     String profileData;
     private IssueProfile issueProfile;
     private VerifyProfile verifyProfile;
+
+    private P310ZkpResponseVo proofRequestProfileVo;
     private String authNonce;
     ActivityResultLauncher<Intent> pinActivityIssueResultLauncher;
     ActivityResultLauncher<Intent> pinActivityVerifyResultLauncher;
     GetWalletToken getWalletToken;
 
-    TextView title, message, textView, textView2, description, requireClaim;
+    TextView title, message, textView, description, requireClaim;
     ImageView imageView;
     LinearLayout issueDsc, verifyDsc;
 
@@ -104,7 +119,6 @@ public class ProfileFragment extends Fragment {
         title = view.findViewById(R.id.title);
         message = view.findViewById(R.id.message);
         textView = view.findViewById(R.id.textView);
-        textView2 = view.findViewById(R.id.textView2);
         description = view.findViewById(R.id.description);
         requireClaim = view.findViewById(R.id.requiredClaims);
         imageView = view.findViewById(R.id.imageView);
@@ -114,6 +128,7 @@ public class ProfileFragment extends Fragment {
 
         type = requireArguments().getString("type");
         profileData = requireArguments().getString("result");
+        offerType = requireArguments().getString("offerType");
 
         if(type.equals("user_init") || type.equals(Constants.TYPE_ISSUE)) {
             String profileData = requireArguments().getString("result");
@@ -124,7 +139,7 @@ public class ProfileFragment extends Fragment {
             title.setText("Issuance certificate Information");
             message.setText("The certificate will be issued by " + issueProfile.getProfile().issuer.getName());
             textView.setText(issueProfile.getTitle());
-            textView2.setText("Issuance Application Date : " + CaUtil.convertDate(issueProfile.getProof().getCreated()));
+
             description.setText("The Identity certificate issued by " + issueProfile.getProfile().issuer.getName() + " is stored In the certificate.");
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
@@ -133,35 +148,85 @@ public class ProfileFragment extends Fragment {
 
         } else {
             Preference.setProfile(getContext(), requireArguments().getString("result"));
-            P310ResponseVo vpProfile = MessageUtil.deserialize(requireArguments().getString("result"), P310ResponseVo.class);
-            verifyProfile = vpProfile.getProfile();
-            title.setText("Certificate submission guide\n");
-            message.setText("The following certificate is submitted to the " + verifyProfile.getProfile().verifier.getName());
-            try {
-                String vcSchemaStr = CaUtil.getVcSchema(activity, verifyProfile.getProfile().filter.getCredentialSchemas().get(0).getId()).get();
-                VCSchema vcSchema = MessageUtil.deserialize(vcSchemaStr, VCSchema.class);
-                if(vcSchemaStr.isEmpty()) {
-                    ContextCompat.getMainExecutor(activity).execute(() -> {
-                        CaUtil.showErrorDialog(activity, "[CA error] VC schema is null");
-                    });
+            if (offerType.equals(VerifyProofOffer.getValue())) {
+                proofRequestProfileVo = MessageUtil.deserialize(requireArguments().getString("result"), P310ZkpResponseVo.class);
+                title.setText("ZKP submission guide\n");
+                textView.setText(proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest().getName());
+                verifyDsc.setVisibility(View.VISIBLE);
+
+                ProofRequest proofRequest = proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest();
+                String attrCredDefId = CaUtil.findAttributeNameByCredDefId(proofRequest.getRequestedAttributes());
+                CredentialDefinition credentialDefinitionForAttr = CaUtil.getCredentialDefinition(activity, attrCredDefId);
+                CredentialSchema schemaForAttr = CaUtil.getCredentialSchema(activity, credentialDefinitionForAttr.getSchemaId());
+
+                for (Map.Entry<String, AttributeInfo> entry : proofRequest.getRequestedAttributes().entrySet()) {
+                    AttributeInfo value = entry.getValue();
+                    String[] parts = value.getName().split("\\.");
+                    String namespace = parts[0];
+                    String key = parts[1];
+                    for (AttributeType type : schemaForAttr.getAttrTypes()) {
+                        String nmId = type.getNamespace().getId();
+                        if (nmId.equals(namespace)) {
+                            for (AttributeDef attrDef : type.getItems()) {
+                                if (attrDef.getLabel().equals(key)) {
+                                    requireClaim.append(attrDef.getCaption()+"\n");
+                                }
+                            }
+                        }
+                    }
                 }
-                textView.setText(vcSchema.getTitle());
-            } catch (ExecutionException | InterruptedException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
-                    CaLog.e("get vc schema error : " + e.getMessage());
-                    ContextCompat.getMainExecutor(activity).execute(()  -> {
-                        CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
-                    });
-                } else {
-                    CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
+
+                String predCredDefId = CaUtil.findPredicateNameByCredDefId(proofRequest.getRequestedPredicates());
+                CredentialDefinition credentialDefinitionForPred = CaUtil.getCredentialDefinition(activity, predCredDefId);
+                CredentialSchema schemaForPred = CaUtil.getCredentialSchema(activity, credentialDefinitionForPred.getSchemaId());
+
+                for (Map.Entry<String, PredicateInfo> entry : proofRequest.getRequestedPredicates().entrySet()) {
+                    PredicateInfo value = entry.getValue();
+                    String[] parts = value.getName().split("\\.");
+                    String namespace = parts[0];
+                    String key = parts[1];
+                    for (AttributeType type : schemaForPred.getAttrTypes()) {
+                        String nmId = type.getNamespace().getId();
+                        if (nmId.equals(namespace)) {
+                            for (AttributeDef attrDef : type.getItems()) {
+                                if (attrDef.getLabel().equals(key)) {
+                                    requireClaim.append(attrDef.getCaption()+"\n");
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            textView2.setText("Issuance Date : " + CaUtil.convertDate(verifyProfile.getProof().getCreated()));
-            issueDsc.setVisibility(View.GONE);
-            verifyDsc.setVisibility(View.VISIBLE);
-            for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
-                requireClaim.append("* " + reqClaim + "\n");
+
+            } else {
+                P310ResponseVo vpProfile = MessageUtil.deserialize(requireArguments().getString("result"), P310ResponseVo.class);
+                verifyProfile = vpProfile.getProfile();
+                title.setText("Certificate submission guide\n");
+                message.setText("The following certificate is submitted to the " + verifyProfile.getProfile().verifier.getName());
+                try {
+                    String vcSchemaStr = CaUtil.getVcSchema(activity, verifyProfile.getProfile().filter.getCredentialSchemas().get(0).getId()).get();
+                    VCSchema vcSchema = MessageUtil.deserialize(vcSchemaStr, VCSchema.class);
+                    if(vcSchemaStr.isEmpty()) {
+                        ContextCompat.getMainExecutor(activity).execute(() -> {
+                            CaUtil.showErrorDialog(activity, "[CA error] VC schema is null");
+                        });
+                    }
+                    textView.setText(vcSchema.getTitle());
+                } catch (ExecutionException | InterruptedException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
+                        CaLog.e("get vc schema error : " + e.getMessage());
+                        ContextCompat.getMainExecutor(activity).execute(()  -> {
+                            CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
+                        });
+                    } else {
+                        CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
+                    }
+                }
+                issueDsc.setVisibility(View.GONE);
+                verifyDsc.setVisibility(View.VISIBLE);
+                for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
+                    requireClaim.append("* " + reqClaim + "\n");
+                }
             }
         }
 
@@ -171,9 +236,12 @@ public class ProfileFragment extends Fragment {
                 if(type.equals("user_init")) {
                     Bundle bundle = new Bundle();
                     bundle.putInt("type", Constants.WEBVIEW_VC_INFO);
+                    bundle.putString("vcSchemaId", requireArguments().getString("vcSchemaId"));
                     navController.navigate(R.id.action_profileFragment_to_webviewFragment, bundle);
                 }
                 else if(type.equals(Constants.TYPE_ISSUE)) {
+
+                    imageView.setImageResource(R.drawable.issuer_logo);
                     try {
                         IssueVc issueVc = IssueVc.getInstance(activity);
                         if (issueVc.isBioKey()) {
@@ -190,40 +258,48 @@ public class ProfileFragment extends Fragment {
                     }
 
                 } else {
-                    VerifyVp verifyVp = VerifyVp.getInstance(activity);
-                    if(verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN){
-                        Intent intent = new Intent(getContext(), PinActivity.class);
-                        intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
-                        intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
-                        pinActivityVerifyResultLauncher.launch(intent);
-                    } else if(verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.BIO){
-                        verifyVp.authenticateBio(ProfileFragment.this, navController);
-                    } else if(verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_OR_BIO){
-                        try {
-                            if (verifyVp.isBioKey()) {
-                                Bundle bundle = new Bundle();
-                                bundle.putString("type", Constants.TYPE_VERIFY);
-                                navController.navigate(R.id.action_profileFragment_to_selectAuthTypetFragment, bundle);
-                            }
-                            else {
-                                Intent intent = new Intent(getContext(), PinActivity.class);
-                                intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
-                                intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
-                                pinActivityVerifyResultLauncher.launch(intent);
-                            }
-                        } catch (WalletCoreException | UtilityException | WalletException e){
-                            CaLog.e("Bio Key not Register : " + e.getMessage());
-                            CaUtil.showErrorDialog(activity, e.getMessage());
-                        }
-                    } else if(verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.ANY
-                    || verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_AND_BIO){
+                    imageView.setImageResource(R.drawable.user_icon);
+
+                    if (offerType.equals(VerifyProofOffer.getValue())) {
                         Bundle bundle = new Bundle();
-                        bundle.putString("type", Constants.TYPE_VERIFY);
-                        navController.navigate(R.id.action_profileFragment_to_selectAuthTypetFragment, bundle);
+                        bundle.putString("proofRequestProfileVo", proofRequestProfileVo.toJson());
+                        navController.navigate(R.id.action_profileFragment_to_VerifyFragment, bundle);
                     }
+                    else {
 
+                        VerifyVp verifyVp = VerifyVp.getInstance(activity);
+                        if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN) {
+                            Intent intent = new Intent(getContext(), PinActivity.class);
+                            intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                            intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
+                            pinActivityVerifyResultLauncher.launch(intent);
+                        } else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.BIO) {
+                            verifyVp.authenticateBio(ProfileFragment.this, navController);
+                        } else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_OR_BIO) {
+                            try {
+                                if (verifyVp.isBioKey()) {
+                                    Bundle bundle = new Bundle();
+                                    bundle.putString("type", Constants.TYPE_VERIFY);
+                                    navController.navigate(R.id.action_profileFragment_to_selectAuthTypetFragment, bundle);
+                                } else {
+                                    Intent intent = new Intent(getContext(), PinActivity.class);
+                                    intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                                    intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
+                                    pinActivityVerifyResultLauncher.launch(intent);
+                                }
+                            } catch (WalletCoreException | UtilityException | WalletException e) {
+                                CaLog.e("Bio Key not Register : " + e.getMessage());
+                                CaUtil.showErrorDialog(activity, e.getMessage());
+                            }
+                        } else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.ANY
+                                || verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_AND_BIO) {
+                            Bundle bundle = new Bundle();
+                            bundle.putString("type", Constants.TYPE_VERIFY);
+                            navController.navigate(R.id.action_profileFragment_to_selectAuthTypetFragment, bundle);
+                        }
+
+                    }
                 }
-
             }
         });
         Button cancelButton = (Button) view.findViewById(R.id.cancelBtn);
@@ -291,7 +367,7 @@ public class ProfileFragment extends Fragment {
             title.setText("Issuance certificate Information");
             message.setText("The certificate will be issued by " + issueProfile.getProfile().issuer.getName());
             textView.setText(issueProfile.getTitle());
-            textView2.setText("Issuance Application Date : " + CaUtil.convertDate(issueProfile.getProof().getCreated()));
+
             description.setText("The Identity certificate issued by " + issueProfile.getProfile().issuer.getName() + " is stored In the certificate.");
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
@@ -315,12 +391,11 @@ public class ProfileFragment extends Fragment {
             title.setText("Issuance certificate Information");
             message.setText("The certificate will be issued by " + issueProfile.getProfile().issuer.getName());
             textView.setText(issueProfile.getTitle());
-            textView2.setText("Issuance Application Date : " + CaUtil.convertDate(issueProfile.getProof().getCreated()));
+
             description.setText("The Identity certificate issued by " + issueProfile.getProfile().issuer.getName() + " is stored In the certificate.");
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
         }
-
     }
 
     private void submitVp(String pin){

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@
 package org.omnione.did.ca.util;
 
 import android.content.Context;
-import android.util.Log;
 
-
-import androidx.core.content.ContextCompat;
 
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.datamodel.security.AccEcdh;
 import org.omnione.did.sdk.datamodel.token.WalletTokenData;
@@ -39,12 +37,9 @@ import org.omnione.did.sdk.utility.DigestUtils;
 import org.omnione.did.sdk.utility.Encodings.Base16;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
-import org.omnione.did.sdk.wallet.WalletApi;
-import org.omnione.did.sdk.wallet.WalletCore;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 public class TokenUtil {

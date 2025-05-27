@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="#FFFFFF"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include
+        android:id="@+id/titlebar"
+        layout="@layout/title_zkp_verify" />
+
+    <LinearLayout
+        android:id="@+id/guide_layout"
+        android:layout_below="@id/titlebar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_alignParentEnd="true"
+        android:gravity="end|center_vertical">
+
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/eye_open" />
+
+        <TextView
+            android:id="@+id/textview_guide"
+            android:text="Tap the image to hide or show attributes"
+            android:textColor="#FF9800"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:layout_marginRight="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- items -->
+    <LinearLayout
+        android:layout_below="@id/guide_layout"
+        android:layout_marginHorizontal="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:textColor = "#FF9800"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="10dp"
+            android:text="Attributes"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <ListView
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:id="@+id/listView_attr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/border" />
+
+        <TextView
+            android:textColor ="#FF9800"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="15dp"
+            android:text="Predicates"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <ListView
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:id="@+id/listView_predicates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/border" />
+
+        <TextView
+            android:textColor = "#FF9800"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="15dp"
+            android:text="Self-Attributes"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <ListView
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:id="@+id/listView_self_attr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/border" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/cancelBtn"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:layout_width="185dp"
+            android:layout_height="55dp"
+            android:layout_gravity="center"
+            android:textColor="@color/primary_btn_line_text_color"
+            android:textSize="20dp"
+            android:text="Cancel"
+            android:background="@drawable/primary_btn_line_selector" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/okBtn"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginLeft="15dp"
+            android:layout_width="185dp"
+            android:layout_height="55dp"
+            android:layout_gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="20dp"
+            android:text="OK"
+            android:background="@drawable/primary_btn_default_selector" />
+    </LinearLayout>
+
+
+    <RelativeLayout
+        android:id="@+id/main_progress"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:elevation="20dp"
+        android:focusableInTouchMode="false"
+
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="invisible">
+        <ProgressBar
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:scaleX="0.2"
+            android:scaleY="0.2"
+            android:indeterminateDrawable="@drawable/progress"
+            android:elevation="10dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+
+            />
+    </RelativeLayout>
+
+</RelativeLayout>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -41,6 +47,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
+import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.ui.PinActivity;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
@@ -50,17 +57,28 @@ import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.RevokeVc;
 import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.util.CaUtil;
+
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
+import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
+
+import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
+import org.omnione.did.sdk.datamodel.zkp.Credential;
+import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
+
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -68,10 +86,14 @@ public class DetailVcFragment extends Fragment {
     NavController navController;
     Activity activity;
     VerifiableCredential vc;
+
+    Credential credential;
     String vcId;
     ImageView imageView;
     String hWalletToken = "";
     GetWalletToken getWalletToken;
+
+    HttpUrlConnection httpClient;
     ActivityResultLauncher<Intent> pinActivityRevokeResultLauncher;
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -98,6 +120,14 @@ public class DetailVcFragment extends Fragment {
                         List<VerifiableCredential> vcList = walletApi.getCredentials(hWalletToken, List.of(vcId));
                         vc = vcList.get(0);
                         textView.setText(displayVc(vc));
+
+                        // add zkp info
+                        if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcId)) {
+                            List<Credential> credentialList = walletApi.getZkpCredentials(hWalletToken, List.of(vcId));
+                            credential = credentialList.get(0);
+                            textView.append(displayZkpCredential(credential));
+                        }
+
                     } catch (WalletCoreException | WalletException | UtilityException e) {
                         CaLog.e("get detail vc error : " + e.getMessage());
                         ContextCompat.getMainExecutor(activity).execute(()  -> {
@@ -156,26 +186,80 @@ public class DetailVcFragment extends Fragment {
         activity = (Activity) context;
     }
 
-    private String displayVc(VerifiableCredential vc){
-        StringBuffer sb = new StringBuffer();
-        String display = "";
-        for(Claim claim : vc.getCredentialSubject().getClaims()) {
-            sb.append(" [ ");
+    private CharSequence displayVc(VerifiableCredential vc) {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+
+        String title = "Verifiable Credential\n\n";
+        int start = sb.length();
+        sb.append(title);
+        int end = sb.length();
+
+        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        for (Claim claim : vc.getCredentialSubject().getClaims()) {
             sb.append(claim.getCaption());
-            sb.append(" ] ");
             sb.append("\n");
 
-            if(claim.getValue().contains("data:image"))
-                imageView.setImageBitmap(BitmapFactory.decodeByteArray(Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT), 0, Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT).length));
-            else
+            if (claim.getValue().contains("data:image")) {
+                byte[] decoded = Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT);
+                imageView.setImageBitmap(BitmapFactory.decodeByteArray(decoded, 0, decoded.length));
+            } else {
                 sb.append(claim.getValue());
-            sb.append("\n");
-            sb.append("\n");
-        }
-        return sb.toString();
+            }
 
+            sb.append("\n\n");
+        }
+
+        return sb;
     }
+
+
+
+    private CharSequence displayZkpCredential(Credential credential) throws ExecutionException, InterruptedException {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+
+        sb.append("\n\n");
+
+        String title = "Zero-Knowledge Proof\n\n";
+        int start = sb.length(); // 주황색 시작 위치
+        sb.append(title);
+        int end = sb.length(); // 주황색 끝 위치
+
+        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2, /*"\n\n" 제외*/ Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        // credneitlaSchema 조회
+        CredentialSchema schema = CaUtil.getCredentialSchema(activity, credential.getSchemaId());
+        Log.d("djpark", "schema: "+GsonWrapper.getGson().toJson(schema));
+
+        for (Map.Entry<String, AttributeValue> entry : credential.getValues().entrySet()) {
+            String keyEntry = entry.getKey();
+            String[] parts = keyEntry.split("\\.");
+            String namespace = parts[0];
+            String key = parts[1];
+
+            for (AttributeType type : schema.getAttrTypes()) {
+                String nmId = type.getNamespace().getId();
+                if (nmId.equals(namespace)) {
+                    for (AttributeDef attrDef : type.getItems()) {
+                        if (attrDef.getLabel().equals(key)) {
+                            AttributeValue value = entry.getValue();
+                            sb.append(attrDef.getCaption());
+                            sb.append("\n");
+                            sb.append(value.getRaw());
+                            sb.append("\n\n");
+                        }
+                    }
+                }
+            }
+        }
+
+        return sb;
+    }
+
     private void showDialog() {
+
         CustomDialog customDialog = new CustomDialog(activity, Constants.DIALOG_CONFIRM_TYPE);
         customDialog.setMessage("Are you sure you want to delete it?");
         customDialog.setCancelable(false);
