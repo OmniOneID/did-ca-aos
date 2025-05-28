@@ -5,13 +5,16 @@
 
 
 ## S/W 사양
-| 구분 | 내용                |
-|------|----------------------------|
-| OS  | Android 14|
-| Language  | Java 17|
-| IDE  | Android Studio 4|
-| Build System  | Gradle 8.2 |
-| Compatibility | Android API level 34 or higher  |
+| 구분             | 내용                                                     |
+| ---------------- | ------------------------------------------------------ |
+| OS               | Android 14                                             |
+| Language         | Java 20                                                |
+| IDE              | Android Studio 4                                       |
+| Build System     | Gradle 8.2                                             |
+| Compatibility    | Android API level 34 or higher                         |
+| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26) |
+|                  | Recommended Requirements: Android 14 (API Level 34)    |
+
 
 ## DIDCA 프로젝트 클론 및 체크아웃
 ```git

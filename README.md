@@ -5,13 +5,15 @@ This document is a guide for using the OpenDID authentication client, providing 
 
 
 ## S/W Specifications
-| Category | Details |
-|------|----------------------------|
-| OS  | Android 14|
-| Language  | Java 17|
-| IDE  | Android Studio 4|
-| Build System  | Gradle 8.2 |
-| Compatibility | Android API level 34 or higher  |
+| Category         | Details                                                |
+| ---------------- | ------------------------------------------------------ |
+| OS               | Android 14                                             |
+| Language         | Java 21                                                |
+| IDE              | Android Studio 4                                       |
+| Build System     | Gradle 8.2                                             |
+| Compatibility    | Android API level 34 or higher                         |
+| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26) |
+|                  | Recommended Requirements: Android 14 (API Level 34)    |
 
 ## DIDCA Project Clone and Checkout
 ```git
