@@ -40,11 +40,7 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
 
 ## SDK Application Method
 The Android SDK is referred to as `did-client-sdk-aos` below.
-- *did-core-sdk-aos-1.0.0.jar*
-- *did-utility-sdk-aos-1.0.0.jar*
-- *did-datamodel-sdk-aos-1.0.0.jar*
 - *did-wallet-sdk-aos-1.0.0.jar*
-- *did-communication-sdk-aos-1.0.0.jar*
 
 Please refer to the respective links for their own licenses for third-party libraries used by each SDK.
 <br>
