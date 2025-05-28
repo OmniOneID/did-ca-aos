@@ -75,8 +75,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     private AttrRefAdapter attrRefAdapter;
     private PredicateRefAdapter predicateRefAdapter;
     private SelfAttrRefAdapter selfattrRefAdapter;
-    private Button okBtn;
-    private Button cancelBtn;
+    private Button okBtn, cancelBtn;
     private String selectedCredentialId, selectedRaw;
     private int pos;
     private int ATTR_REF_REQUEST_CODE = 1;
@@ -154,7 +153,6 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
         okBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showLoading("...");
                 AvailableReferent availableReferent = presenter.getAvailableReferent();
 
                 InputMethodManager inputMethodManager = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -389,8 +387,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
                 View view = listView_predicates.getChildAt(pos);
                 TextView textViewTitle = view.findViewById(R.id.textView_predicate_ref_item_title);
-
-
+                
                 textViewTitle.setText(predicateReferent.getName());
 
                 TextView textViewSubTitle = view.findViewById(R.id.textView_predicate_ref_item_subtitle);

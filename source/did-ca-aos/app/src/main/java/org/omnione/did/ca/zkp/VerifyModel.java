@@ -58,8 +58,9 @@ public class VerifyModel implements VerifyConstants.Model {
     @Override
     public boolean verifyProof(final P310ZkpRequestVo proof, final ProofRequest proofRequest) {
 
+        String api = "/verifier/api/v1/request-verify-proof";
         CaLog.d("proof: " + GsonWrapper.getGson().toJson(proof));
-        String response = httpClient.send(context, Config.VERIFIER_URL + Config.requestVerifyProof, "POST", proof.toJson());
+        String response = httpClient.send(context, Config.VERIFIER_URL + api, "POST", proof.toJson());
 
 //        JSONObject jsonObject = new JSONObject(response);
 //        int resultCode = jsonObject.getInt("resultCode");

@@ -90,7 +90,7 @@ public class ProfileFragment extends Fragment {
     ActivityResultLauncher<Intent> pinActivityVerifyResultLauncher;
     GetWalletToken getWalletToken;
 
-    TextView title, message, textView, description, requireClaim;
+    TextView title, message, textView, textView2, description, requireClaim;
     ImageView imageView;
     LinearLayout issueDsc, verifyDsc;
 
@@ -119,6 +119,8 @@ public class ProfileFragment extends Fragment {
         title = view.findViewById(R.id.title);
         message = view.findViewById(R.id.message);
         textView = view.findViewById(R.id.textView);
+        textView2 = view.findViewById(R.id.textView2);
+
         description = view.findViewById(R.id.description);
         requireClaim = view.findViewById(R.id.requiredClaims);
         imageView = view.findViewById(R.id.imageView);
@@ -139,7 +141,7 @@ public class ProfileFragment extends Fragment {
             title.setText("Issuance certificate Information");
             message.setText("The certificate will be issued by " + issueProfile.getProfile().issuer.getName());
             textView.setText(issueProfile.getTitle());
-
+            textView2.setText("Issuance Date : " + CaUtil.convertDate(issueProfile.getProof().getCreated()));
             description.setText("The Identity certificate issued by " + issueProfile.getProfile().issuer.getName() + " is stored In the certificate.");
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
@@ -151,7 +153,9 @@ public class ProfileFragment extends Fragment {
             if (offerType.equals(VerifyProofOffer.getValue())) {
                 proofRequestProfileVo = MessageUtil.deserialize(requireArguments().getString("result"), P310ZkpResponseVo.class);
                 title.setText("ZKP submission guide\n");
+                imageView.setImageResource(R.drawable.user_icon);
                 textView.setText(proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest().getName());
+                textView2.setVisibility(View.GONE);
                 verifyDsc.setVisibility(View.VISIBLE);
 
                 ProofRequest proofRequest = proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest();
@@ -201,6 +205,7 @@ public class ProfileFragment extends Fragment {
                 P310ResponseVo vpProfile = MessageUtil.deserialize(requireArguments().getString("result"), P310ResponseVo.class);
                 verifyProfile = vpProfile.getProfile();
                 title.setText("Certificate submission guide\n");
+                imageView.setImageResource(R.drawable.user_icon);
                 message.setText("The following certificate is submitted to the " + verifyProfile.getProfile().verifier.getName());
                 try {
                     String vcSchemaStr = CaUtil.getVcSchema(activity, verifyProfile.getProfile().filter.getCredentialSchemas().get(0).getId()).get();
@@ -222,6 +227,7 @@ public class ProfileFragment extends Fragment {
                         CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
                     }
                 }
+                textView2.setVisibility(View.GONE);
                 issueDsc.setVisibility(View.GONE);
                 verifyDsc.setVisibility(View.VISIBLE);
                 for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
@@ -367,7 +373,7 @@ public class ProfileFragment extends Fragment {
             title.setText("Issuance certificate Information");
             message.setText("The certificate will be issued by " + issueProfile.getProfile().issuer.getName());
             textView.setText(issueProfile.getTitle());
-
+            textView2.setText("Issuance Application Date : " + CaUtil.convertDate(issueProfile.getProof().getCreated()));
             description.setText("The Identity certificate issued by " + issueProfile.getProfile().issuer.getName() + " is stored In the certificate.");
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);

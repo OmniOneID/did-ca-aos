@@ -28,7 +28,7 @@ public class CaLog {
 
     private static String buildLogMsg(String message) {
         StackTraceElement ste = Thread.currentThread().getStackTrace()[4];
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         if(ste.getFileName() != null) {
             sb.append(" [ ");
             sb.append(ste.getFileName().replace(".java", ""));

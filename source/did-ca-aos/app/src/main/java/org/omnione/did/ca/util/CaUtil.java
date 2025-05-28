@@ -75,8 +75,7 @@ public class CaUtil {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
         byte[] byteArray = byteStream.toByteArray();
-        String baseString = "data:image/png;base64," + Base64.encodeToString(byteArray,Base64.DEFAULT);
-        return baseString;
+        return "data:image/png;base64," + Base64.encodeToString(byteArray,Base64.DEFAULT);
     }
 
     public static String getPackageName(Context context) {
@@ -92,8 +91,7 @@ public class CaUtil {
             throw new RuntimeException(e);
         }
 
-        String strDateTime = format.format(date);
-        return  strDateTime;
+        return format.format(date);
     }
 
     public static String createMessageId(Context context) {
@@ -113,8 +111,7 @@ public class CaUtil {
     public static String createCaAppId() throws UtilityException{
         Date today = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMM");
-        String messageId = "AID" + dateFormat.format(today) + "a" + Base16.toHex(CryptoUtils.generateNonce(5));
-        return messageId;
+        return "AID" + dateFormat.format(today) + "a" + Base16.toHex(CryptoUtils.generateNonce(5));
     }
     public static boolean isLock(Context context) {
         final boolean[] resultHolder = new boolean[1];

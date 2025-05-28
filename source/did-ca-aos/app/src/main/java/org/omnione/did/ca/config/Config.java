@@ -18,31 +18,12 @@ package org.omnione.did.ca.config;
 
 public class Config {
     //////////// SERVER URL ////////////////
-//    public final static String CAS_URL = "http://192.168.3.130:8094"; //dev server
-//    public final static String TAS_URL = "http://192.168.3.130:8090"; //dev server
-//    public final static String VERIFIER_URL = "http://192.168.3.130:8092"; //dev server
-//    public final static String DEMO_URL = "http://192.168.3.130:8099"; //dev
-//    public final static String WALLET_URL = "http://192.168.3.130:8095"; //dev
-//    public final static String API_GATEWAY_URL = "http://192.168.3.130:8093"; //dev
-
-    // 진환
-    public final static String CAS_URL = "http://10.48.17.129:8094"; //dev server
-    public final static String TAS_URL = "http://10.48.17.129:8090"; //dev server
-    public final static String ISSUE_URL = "http://10.48.17.129:8091"; //dev server
-    public final static String VERIFIER_URL = "http://10.48.17.129:8092"; //dev server
-    public final static String DEMO_URL = "http://10.48.17.129:8099"; //dev
-    public final static String WALLET_URL = "http://10.48.17.129:8095"; //dev
-    public final static String API_GATEWAY_URL = "http://10.48.17.129:8093"; //dev
-
-    // 길우
-//    public final static String CAS_URL = "http://10.48.17.128:8094"; //dev server
-//    public final static String TAS_URL = "http://10.48.17.128:8090"; //dev server
-//    public final static String VERIFIER_URL = "http://10.48.17.129:8092"; //dev server
-//    public final static String DEMO_URL = "http://10.48.17.128:8099"; //dev
-//    public final static String WALLET_URL = "http://10.48.17.128:8095"; //dev
-//    public final static String API_GATEWAY_URL = "http://10.48.17.128:8093"; //dev
-
-    public static String blockChainHost = "http://10.48.17.128:8091";
+    public final static String CAS_URL = "http://192.168.3.130:18094"; //dev server
+    public final static String TAS_URL = "http://192.168.3.130:18090"; //dev server
+    public final static String VERIFIER_URL = "http://192.168.3.130:18092"; //dev server
+    public final static String DEMO_URL = "http://192.168.3.130:18099"; //dev
+    public final static String WALLET_URL = "http://192.168.3.130:18095"; //dev
+    public final static String API_GATEWAY_URL = "http://192.168.3.130:18093"; //dev
 
     //////////// pin config ////////////////
     public final static int PIN_MAX_VALUE = 6;
@@ -52,23 +33,5 @@ public class Config {
     public final static int SPLASH_DELAY = 2000;
 
 
-
-
-
-
-
-    // ZKP
-    public static String issuerHost = "http://10.48.202.157:40001";
-    public static String spHost = "http://10.48.202.157:40001";
-
-    // Protocol
-    public static String credentialOffer = "/omniapi/zkp/requestCredentialOffer";
-//    public static String getTableRows = "/v1/chain/get_table_rows";
-    public static String getTableRows = "/issuer/api/v1/v1/chain/get_table_rows";
-    public static String credentialRequest = "/omniapi/zkp/getCredential";
-    public static String proofRequest = "/omniapi/zkp/createProofRequest";
-    public static String verifyProof = "/omniapi/zkp/verifyProof";
-
-    public static String requestVerifyProof = "/verifier/api/v1/request-verify-proof";
 
 }
