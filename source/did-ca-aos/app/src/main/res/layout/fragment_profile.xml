@@ -85,9 +85,8 @@
         <LinearLayout
             android:id="@+id/issueDsc"
             android:layout_width="match_parent"
-            android:layout_marginTop="10dp"
             android:layout_height="0dp"
-            android:layout_weight="3"
+            android:layout_weight="2"
             android:orientation="vertical"
             android:visibility="visible">
             <TextView
@@ -104,18 +103,18 @@
         <LinearLayout
             android:id="@+id/verifyDsc"
             android:layout_width="match_parent"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="0dp"
             android:layout_height="0dp"
-            android:layout_weight="3"
+            android:layout_weight="4"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:visibility="visible">
             <TextView
                 android:id="@+id/requiredClaims"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_margin="10dp"
-                android:text="require Claim\n"
+                android:layout_margin="0dp"
+                android:text="Required Claim\n"
                 android:textColor="#000000"
                 android:textSize="18dp"/>
         </LinearLayout>

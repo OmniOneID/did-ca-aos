@@ -157,7 +157,8 @@ public class ProfileFragment extends Fragment {
                 textView.setText(proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest().getName());
                 textView2.setVisibility(View.GONE);
                 verifyDsc.setVisibility(View.VISIBLE);
-
+                message.setText("The following certificate is submitted to the " + proofRequestProfileVo.getProofRequestProfile().getProfile().getVerifier().getName());
+                description.setVisibility(View.GONE);
                 ProofRequest proofRequest = proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest();
                 String attrCredDefId = CaUtil.findAttributeNameByCredDefId(proofRequest.getRequestedAttributes());
                 CredentialDefinition credentialDefinitionForAttr = CaUtil.getCredentialDefinition(activity, attrCredDefId);
@@ -173,7 +174,7 @@ public class ProfileFragment extends Fragment {
                         if (nmId.equals(namespace)) {
                             for (AttributeDef attrDef : type.getItems()) {
                                 if (attrDef.getLabel().equals(key)) {
-                                    requireClaim.append(attrDef.getCaption()+"\n");
+                                    requireClaim.append("*"+attrDef.getCaption()+"\n");
                                 }
                             }
                         }
@@ -194,7 +195,7 @@ public class ProfileFragment extends Fragment {
                         if (nmId.equals(namespace)) {
                             for (AttributeDef attrDef : type.getItems()) {
                                 if (attrDef.getLabel().equals(key)) {
-                                    requireClaim.append(attrDef.getCaption()+"\n");
+                                    requireClaim.append("*"+attrDef.getCaption()+"\n");
                                 }
                             }
                         }
@@ -230,6 +231,7 @@ public class ProfileFragment extends Fragment {
                 textView2.setVisibility(View.GONE);
                 issueDsc.setVisibility(View.GONE);
                 verifyDsc.setVisibility(View.VISIBLE);
+                description.setVisibility(View.GONE);
                 for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
                     requireClaim.append("* " + reqClaim + "\n");
                 }

@@ -39,6 +39,8 @@ public interface VerifyConstants {
     interface View {
         void showError(String errorCode, String errorMessage);
 
+        void showToast(String message);
+
         void showLoading(String message);
 
         void hideLoading();

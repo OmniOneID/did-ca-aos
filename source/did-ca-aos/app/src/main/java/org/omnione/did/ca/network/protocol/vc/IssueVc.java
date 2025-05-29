@@ -364,9 +364,9 @@ public class IssueVc {
     }
 
     private void issueVc(DIDAuth signedDIDAuth, NavController navController){
-        P210ResponseVo vcPofile = MessageUtil.deserialize(profile, P210ResponseVo.class);
+        P210ResponseVo vcProfile = MessageUtil.deserialize(profile, P210ResponseVo.class);
         try {
-            issueVcProcess(vcPofile.getProfile(), signedDIDAuth).get();
+            issueVcProcess(vcProfile.getProfile(), signedDIDAuth).get();
         } catch (ExecutionException | WalletException | InterruptedException e) {
             CaLog.e("issueVC error : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {

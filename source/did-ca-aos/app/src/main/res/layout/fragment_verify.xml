@@ -52,6 +52,7 @@
             android:layout_marginLeft="10dp"
             android:layout_marginTop="10dp"
             android:text="Attributes"
+            android:id="@+id/textView_attributes"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -72,6 +73,7 @@
             android:layout_marginLeft="10dp"
             android:layout_marginTop="15dp"
             android:text="Predicates"
+            android:id="@+id/textView_predicates"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -91,6 +93,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_marginTop="15dp"
+            android:id="@+id/textView_self_attributes"
             android:text="Self-Attributes"
             android:textSize="17sp"
             android:textStyle="bold" />
@@ -167,7 +170,6 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-
             />
     </RelativeLayout>
 

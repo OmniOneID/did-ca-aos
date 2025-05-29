@@ -67,9 +67,8 @@ import java.util.List;
 import java.util.Map;
 
 public class VerifyFragment extends Fragment implements VerifyConstants.View {
-
     private static final String ZKP_TAG = VerifyFragment.class.getName();
-
+    private TextView textView_attributes, textView_predicates, textView_self_attributes;
     private ListView listView_attr, listView_predicates, listView_self_attr;
     private ArrayList<String> attr_ref_ArrayList, predicate_ref_ArrayList, self_attr_ref_ArrayList;
     private AttrRefAdapter attrRefAdapter;
@@ -82,15 +81,10 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     private int PREDICATE_REF_REQUEST_CODE = 2;
     private List<UserReferent> selectedUserReferent = new LinkedList<UserReferent>();
     private List<UserReferent> selectedAttrReferent = new LinkedList<UserReferent>();
-
-    NavController navController;
-
+    private NavController navController;
     private Map<String, String> selfAttr = new HashMap<String, String>();
-
     private P310ZkpResponseVo proofRequestProfileVo;
-
     private RelativeLayout progress;
-
     private VerifyConstants.Presenter presenter;
 
     @Override
@@ -111,6 +105,10 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     }
 
     private void initUI(View view) {
+
+        textView_attributes = view.findViewById(R.id.textView_attributes);
+        textView_predicates = view.findViewById(R.id.textView_predicates);
+        textView_self_attributes = view.findViewById(R.id.textView_self_attributes);
 
         listView_attr = view.findViewById(R.id.listView_attr);
         listView_predicates = view.findViewById(R.id.listView_predicates);
@@ -281,9 +279,17 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
         Map self_ref_map = availableReferent.getSelfAttrReferent();
 
         attr_ref_ArrayList = new ArrayList<>(attr_ref_map.values());
+        if (attr_ref_ArrayList.isEmpty()) {
+            textView_attributes.setVisibility(View.INVISIBLE);
+        }
         predicate_ref_ArrayList = new ArrayList<>(predicate_ref_map.values());
+        if (predicate_ref_ArrayList.isEmpty()) {
+            textView_predicates.setVisibility(View.INVISIBLE);
+        }
         self_attr_ref_ArrayList = new ArrayList<>(self_ref_map.values());
-
+        if (self_attr_ref_ArrayList.isEmpty()) {
+            textView_self_attributes.setVisibility(View.INVISIBLE);
+        }
 
         ProofRequest proofRequest = proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest();
 
@@ -387,7 +393,7 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
                 View view = listView_predicates.getChildAt(pos);
                 TextView textViewTitle = view.findViewById(R.id.textView_predicate_ref_item_title);
-                
+
                 textViewTitle.setText(predicateReferent.getName());
 
                 TextView textViewSubTitle = view.findViewById(R.id.textView_predicate_ref_item_subtitle);
