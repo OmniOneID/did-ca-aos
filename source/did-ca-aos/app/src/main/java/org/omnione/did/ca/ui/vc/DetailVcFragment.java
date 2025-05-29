@@ -77,6 +77,7 @@ import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
@@ -229,17 +230,40 @@ public class DetailVcFragment extends Fragment {
         sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2, /*"\n\n" 제외*/ Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-        // credneitlaSchema 조회
+        // credentialSchema 조회
         CredentialSchema schema = CaUtil.getCredentialSchema(activity, credential.getSchemaId());
         Log.d("djpark", "schema: "+GsonWrapper.getGson().toJson(schema));
 
+        for (AttributeType type: schema.getAttrTypes()) {
+            String nameSpace = type.getNamespace().getId();
+            for (Map.Entry<String, AttributeValue> entry : credential.getValues().entrySet()) {
+                String keyEntry = entry.getKey();
+                if (keyEntry.startsWith(nameSpace) && keyEntry.length() > nameSpace.length()) {
+                    String label = keyEntry.substring(nameSpace.length() + 1); // +1은 '.' 문자 제거용
+                    String nmId = type.getNamespace().getId();
+                    if (nmId.equals(nameSpace)) {
+                        for (AttributeDef attrDef : type.getItems()) {
+                            if (attrDef.getLabel().equals(label)) {
+                                AttributeValue value = entry.getValue();
+                                sb.append(attrDef.getCaption());
+                                sb.append("\n");
+                                sb.append(value.getRaw());
+                                sb.append("\n\n");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         for (Map.Entry<String, AttributeValue> entry : credential.getValues().entrySet()) {
             String keyEntry = entry.getKey();
-            String[] parts = keyEntry.split("\\.");
+            String[] parts = keyEntry.split("\\."); // zkp.18013.5.name
+            int partsNum = parts.length;
             String namespace = parts[0];
-            String key = parts[1];
+            String key = parts[partsNum-1];
 
-            for (AttributeType type : schema.getAttrTypes()) {
+            for (AttributeType type: schema.getAttrTypes()) {
                 String nmId = type.getNamespace().getId();
                 if (nmId.equals(namespace)) {
                     for (AttributeDef attrDef : type.getItems()) {
