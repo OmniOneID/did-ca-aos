@@ -37,6 +37,7 @@ import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
 import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinitionVo;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
@@ -329,25 +330,23 @@ public class CaUtil {
                     CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
 
 
-                    String[] parts = attrName.split("\\.");
-                    if (parts.length != 2) {
-                        return null;
-                    }
+                    for (AttributeType type: credentialSchema.getAttrTypes()) {
+                        String nameSpace = type.getNamespace().getId();
+                        for (String attrName : credentialSchema.getAttrNames()) {
 
-                    String namespaceId = parts[0];
-                    String label = parts[1];
-
-                    for (AttributeType attrType : credentialSchema.getAttrTypes()) {
-                        if (attrType.getNamespace().getId().equals(namespaceId)) {
-                            for (AttributeDef item : attrType.getItems()) {
-                                if (item.getLabel().equals(label)) {
-                                    return item.getCaption();
+                            if (attrName.startsWith(nameSpace) && attrName.length() > nameSpace.length()) {
+                                String label = attrName.substring(nameSpace.length() + 1); // +1은 '.' 문자 제거용
+                                String nmId = type.getNamespace().getId();
+                                if (nmId.equals(nameSpace)) {
+                                    for (AttributeDef attrDef : type.getItems()) {
+                                        if (attrDef.getLabel().equals(label)) {
+                                            return attrDef.getCaption();
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-
-                    return null;
 
                 } catch (UtilityException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {

@@ -64,6 +64,7 @@ import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
 import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
 import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
 import org.omnione.did.sdk.datamodel.zkp.PredicateInfo;
@@ -164,38 +165,45 @@ public class ProfileFragment extends Fragment {
                 CredentialDefinition credentialDefinitionForAttr = CaUtil.getCredentialDefinition(activity, attrCredDefId);
                 CredentialSchema schemaForAttr = CaUtil.getCredentialSchema(activity, credentialDefinitionForAttr.getSchemaId());
 
-                for (Map.Entry<String, AttributeInfo> entry : proofRequest.getRequestedAttributes().entrySet()) {
-                    AttributeInfo value = entry.getValue();
-                    String[] parts = value.getName().split("\\.");
-                    String namespace = parts[0];
-                    String key = parts[1];
-                    for (AttributeType type : schemaForAttr.getAttrTypes()) {
-                        String nmId = type.getNamespace().getId();
-                        if (nmId.equals(namespace)) {
-                            for (AttributeDef attrDef : type.getItems()) {
-                                if (attrDef.getLabel().equals(key)) {
-                                    requireClaim.append("*"+attrDef.getCaption()+"\n");
+                for (AttributeType type: schemaForAttr.getAttrTypes()) {
+                    String namespace = type.getNamespace().getId();
+                    for (Map.Entry<String, AttributeInfo> entry : proofRequest.getRequestedAttributes().entrySet()) {
+                        String keyEntry = entry.getValue().getName();
+                        CaLog.d("keyEntry: "+keyEntry);
+                        CaLog.d("namespace: "+namespace);
+                        if (keyEntry.startsWith(namespace) && keyEntry.length() > namespace.length()) {
+                            String label = keyEntry.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
+                            String nmId = type.getNamespace().getId();
+                            if (nmId.equals(namespace)) {
+                                for (AttributeDef attrDef : type.getItems()) {
+                                    if (attrDef.getLabel().equals(label)) {
+                                        requireClaim.append("*" + attrDef.getCaption() + "\n");
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
+
                 String predCredDefId = CaUtil.findPredicateNameByCredDefId(proofRequest.getRequestedPredicates());
                 CredentialDefinition credentialDefinitionForPred = CaUtil.getCredentialDefinition(activity, predCredDefId);
                 CredentialSchema schemaForPred = CaUtil.getCredentialSchema(activity, credentialDefinitionForPred.getSchemaId());
 
-                for (Map.Entry<String, PredicateInfo> entry : proofRequest.getRequestedPredicates().entrySet()) {
-                    PredicateInfo value = entry.getValue();
-                    String[] parts = value.getName().split("\\.");
-                    String namespace = parts[0];
-                    String key = parts[1];
-                    for (AttributeType type : schemaForPred.getAttrTypes()) {
-                        String nmId = type.getNamespace().getId();
-                        if (nmId.equals(namespace)) {
-                            for (AttributeDef attrDef : type.getItems()) {
-                                if (attrDef.getLabel().equals(key)) {
-                                    requireClaim.append("*"+attrDef.getCaption()+"\n");
+                for (AttributeType type: schemaForPred.getAttrTypes()) {
+                    String namespace = type.getNamespace().getId();
+                    for (Map.Entry<String, PredicateInfo> entry : proofRequest.getRequestedPredicates().entrySet()) {
+                        String keyEntry = entry.getValue().getName();
+                        CaLog.d("keyEntry: "+keyEntry);
+                        CaLog.d("namespace: "+namespace);
+                        if (keyEntry.startsWith(namespace) && keyEntry.length() > namespace.length()) {
+                            String label = keyEntry.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
+                            String nmId = type.getNamespace().getId();
+                            if (nmId.equals(namespace)) {
+                                for (AttributeDef attrDef : type.getItems()) {
+                                    if (attrDef.getLabel().equals(label)) {
+                                        requireClaim.append("*"+attrDef.getCaption()+"\n");
+                                    }
                                 }
                             }
                         }
