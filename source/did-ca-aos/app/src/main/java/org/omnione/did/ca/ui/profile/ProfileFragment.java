@@ -50,6 +50,7 @@ import org.omnione.did.ca.network.protocol.vc.IssueVc;
 import org.omnione.did.ca.network.protocol.vp.VerifyVp;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.ui.PinActivity;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -72,7 +73,9 @@ import org.omnione.did.sdk.datamodel.zkp.ProofRequest;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -95,6 +98,9 @@ public class ProfileFragment extends Fragment {
     ImageView imageView;
     LinearLayout issueDsc, verifyDsc;
 
+    private ProgressCircle progressCircle;
+
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,6 +120,7 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        progressCircle = new ProgressCircle(activity);
         getWalletToken = GetWalletToken.getInstance(activity);
 
         navController = Navigation.findNavController(view);
@@ -158,6 +165,7 @@ public class ProfileFragment extends Fragment {
                 textView.setText(proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest().getName());
                 textView2.setVisibility(View.GONE);
                 verifyDsc.setVisibility(View.VISIBLE);
+                issueDsc.setVisibility(View.GONE);
                 message.setText("The following certificate is submitted to the " + proofRequestProfileVo.getProofRequestProfile().getProfile().getVerifier().getName());
                 description.setVisibility(View.GONE);
                 ProofRequest proofRequest = proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest();
@@ -225,6 +233,20 @@ public class ProfileFragment extends Fragment {
                         });
                     }
                     textView.setText(vcSchema.getTitle());
+                    textView2.setVisibility(View.GONE);
+                    issueDsc.setVisibility(View.GONE);
+                    verifyDsc.setVisibility(View.VISIBLE);
+                    description.setVisibility(View.GONE);
+
+                    for (VCSchema.Claim claim:  vcSchema.getCredentialSubject().getClaims()) {
+                        String namespace = claim.namespace.id;
+
+                        for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
+                            if (reqClaim.startsWith(namespace + ".")) {
+                                requireClaim.append(reqClaim.substring(namespace.length() + 1)+"\n");
+                            }
+                        }
+                    }
                 } catch (ExecutionException | InterruptedException e) {
                     Throwable cause = e.getCause();
                     if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
@@ -236,27 +258,25 @@ public class ProfileFragment extends Fragment {
                         CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
                     }
                 }
-                textView2.setVisibility(View.GONE);
-                issueDsc.setVisibility(View.GONE);
-                verifyDsc.setVisibility(View.VISIBLE);
-                description.setVisibility(View.GONE);
-                for(String reqClaim : verifyProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims){
-                    requireClaim.append("* " + reqClaim + "\n");
-                }
+
             }
         }
 
         okButton.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
+
                 if(type.equals("user_init")) {
+                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                     Bundle bundle = new Bundle();
                     bundle.putInt("type", Constants.WEBVIEW_VC_INFO);
                     bundle.putString("vcSchemaId", requireArguments().getString("vcSchemaId"));
                     navController.navigate(R.id.action_profileFragment_to_webviewFragment, bundle);
                 }
                 else if(type.equals(Constants.TYPE_ISSUE)) {
-
+                    progressCircle.dismiss();
                     imageView.setImageResource(R.drawable.issuer_logo);
                     try {
                         IssueVc issueVc = IssueVc.getInstance(activity);
@@ -271,9 +291,12 @@ public class ProfileFragment extends Fragment {
                     } catch (WalletCoreException | UtilityException | WalletException e) {
                         CaLog.e("pin key authentication fail : " + e.getMessage());
                         CaUtil.showErrorDialog(activity, e.getMessage());
+                        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                     }
+                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
 
                 } else {
+                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                     imageView.setImageResource(R.drawable.user_icon);
 
                     if (offerType.equals(VerifyProofOffer.getValue())) {
@@ -282,16 +305,17 @@ public class ProfileFragment extends Fragment {
                         navController.navigate(R.id.action_profileFragment_to_VerifyFragment, bundle);
                     }
                     else {
-
                         VerifyVp verifyVp = VerifyVp.getInstance(activity);
                         if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN) {
                             Intent intent = new Intent(getContext(), PinActivity.class);
                             intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
                             intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
                             pinActivityVerifyResultLauncher.launch(intent);
-                        } else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.BIO) {
+                        }
+                        else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.BIO) {
                             verifyVp.authenticateBio(ProfileFragment.this, navController);
-                        } else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_OR_BIO) {
+                        }
+                        else if (verifyProfile.getProfile().process.authType == VerifyAuthType.VERIFY_AUTH_TYPE.PIN_OR_BIO) {
                             try {
                                 if (verifyVp.isBioKey()) {
                                     Bundle bundle = new Bundle();
@@ -317,6 +341,7 @@ public class ProfileFragment extends Fragment {
                     }
                 }
             }
+
         });
         Button cancelButton = (Button) view.findViewById(R.id.cancelBtn);
         cancelButton.setOnClickListener(new Button.OnClickListener() {
@@ -332,6 +357,7 @@ public class ProfileFragment extends Fragment {
                 new ActivityResultCallback<ActivityResult>() {
                     @Override
                     public void onActivityResult(ActivityResult result) {
+                        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                         if (result.getResultCode() == Activity.RESULT_OK) {
                             try {
                                 CaLog.e("onViewCreated pinActivityIssueResultLauncher");
@@ -354,6 +380,7 @@ public class ProfileFragment extends Fragment {
                 new ActivityResultCallback<ActivityResult>() {
                     @Override
                     public void onActivityResult(ActivityResult result) {
+                        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                         if (result.getResultCode() == Activity.RESULT_OK) {
                             String pin = result.getData().getStringExtra("pin");
                             if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_USE_KEY) {
@@ -375,6 +402,7 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
         if(type.equals("webview")) {
             type = "user_init";
             P210ResponseVo vcProfile = MessageUtil.deserialize(Preference.getProfile(getContext()), P210ResponseVo.class);

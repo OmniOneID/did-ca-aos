@@ -105,16 +105,17 @@
             android:layout_width="match_parent"
             android:layout_marginTop="0dp"
             android:layout_height="0dp"
+            android:layout_margin="20dp"
             android:layout_weight="4"
             android:orientation="vertical"
             android:visibility="visible">
             <TextView
                 android:id="@+id/requiredClaims"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_gravity="left"
                 android:layout_margin="0dp"
-                android:text="Required Claim\n"
+                android:text="Required information\n\n"
                 android:textColor="#000000"
                 android:textSize="18dp"/>
         </LinearLayout>

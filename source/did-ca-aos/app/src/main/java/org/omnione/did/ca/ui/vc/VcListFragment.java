@@ -216,21 +216,28 @@ public class VcListFragment extends Fragment {
                         }
                         vcDetails.add(setVcInfo(vcSchema));
                     }
-
-
-                        List<String> ids = new ArrayList<>();
-                        for(VcDetail vcDetail : vcDetails){
-                            ids.add(vcDetail.getVcId());
-                            boolean hasZkp = false;
-                            if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcDetail.getVcId())) {
-                                List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
-                                if (credentials.size() > 0) {
-                                    hasZkp = true;
-                                }
-                            }
-                            adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), hasZkp, vcDetail.getImage()));
-                            ids.clear();
+                    if (WalletApi.getInstance(activity).isAnyZkpCredentialsSaved()) {
+                        List<Credential> zkpVcList = walletApi.getAllZkpCredentials(hWalletToken);
+                        CaLog.d("Zkp list size : " + zkpVcList.size());
+                        for (Credential credential : zkpVcList) {
+                            CaLog.d("Zkp list id : " + credential.getCredentialId());
                         }
+                    }
+
+
+                    List<String> ids = new ArrayList<>();
+                    for(VcDetail vcDetail : vcDetails){
+                        ids.add(vcDetail.getVcId());
+                        boolean hasZkp = false;
+                        if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcDetail.getVcId())) {
+                            List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
+                            if (credentials.size() > 0) {
+                                hasZkp = true;
+                            }
+                        }
+                        adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), hasZkp, vcDetail.getImage()));
+                        ids.clear();
+                    }
 
                     activity.runOnUiThread(new Runnable() {
                         @Override

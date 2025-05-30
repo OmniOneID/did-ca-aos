@@ -17,6 +17,7 @@
 package org.omnione.did.ca.zkp;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -24,6 +25,7 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.datamodel.protocol.P310ZkpRequestVo;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
@@ -35,6 +37,7 @@ import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,15 +63,9 @@ public class VerifyModel implements VerifyConstants.Model {
 
         String api = "/verifier/api/v1/request-verify-proof";
         CaLog.d("proof: " + GsonWrapper.getGson().toJson(proof));
-        String response = httpClient.send(context, Config.VERIFIER_URL + api, "POST", proof.toJson());
 
-//        JSONObject jsonObject = new JSONObject(response);
-//        int resultCode = jsonObject.getInt("resultCode");
-//        String resultMsg = jsonObject.getString("resultMsg");
-//        JSONObject response_jsonObj = jsonObject.getJSONObject("resultData");
-//        ZkpResponse zkpResponse = ZkpGsonWrapper.getGson().fromJson(jsonObject.toString(), ZkpResponse.class);
-
-        return true;
+        String result = httpClient.send(context, Config.VERIFIER_URL + api, "POST", proof.toJson());
+        return result != null;
     }
 
     @Override

@@ -41,6 +41,7 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.network.protocol.vc.IssueVc;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.vc.issue.VCPlan;
@@ -58,6 +59,9 @@ public class AddVcFragment extends Fragment {
     String vcPlanStr = "";
     VCPlanList vcPlanList;
     ActivityResultLauncher<Intent> qrActivityResultLauncher;
+
+    private ProgressCircle progressCircle;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_add_vc, container, false);
@@ -66,7 +70,11 @@ public class AddVcFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
         navController = Navigation.findNavController(view);
+
+        progressCircle = new ProgressCircle(activity);
+
         try {
             vcPlanStr = getVcPlan().get();
         } catch (ExecutionException | InterruptedException e) {
@@ -95,19 +103,27 @@ public class AddVcFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                progressCircle.show();
+
                 IssueVc issueVc = IssueVc.getInstance(activity);
-                String issueProfile = null;
+                String issueProfile;
                 try {
                     issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
                 } catch (ExecutionException | InterruptedException e) {
                     ContextCompat.getMainExecutor(activity).execute(()  -> {
                         CaUtil.showErrorDialog(activity, e.getMessage());
                     });
+                    progressCircle.dismiss();
+                    return;
                 }
                 Bundle bundle = new Bundle();
                 bundle.putString("result", issueProfile);
                 bundle.putString("type", "user_init");
                 bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
+
+                progressCircle.dismiss();
+
                 navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
             }
         });

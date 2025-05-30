@@ -38,7 +38,8 @@ public class VcListItemView extends LinearLayout {
     TextView textView;
     TextView textView2;
     TextView textView3;
-    TextView textView4;
+    TextView textVc;
+    TextView textZkp;
     ImageView imageView;
 
     public VcListItemView(Context context) {
@@ -59,7 +60,8 @@ public class VcListItemView extends LinearLayout {
         textView2 = (TextView) findViewById(R.id.textView2);
         textView3 = (TextView) findViewById(R.id.textView3);
         textView3 = (TextView) findViewById(R.id.textView3);
-        textView4 = (TextView) findViewById(R.id.textView4);
+        textVc = (TextView) findViewById(R.id.textVc);
+        textZkp = (TextView) findViewById(R.id.textZkp);
         imageView = (ImageView) findViewById(R.id.imageView);
 
     }
@@ -95,10 +97,11 @@ public class VcListItemView extends LinearLayout {
     }
 
     public void setIsZkp(boolean isZkp) {
-        if (isZkp)
-            textView4.setText("ZKP included");
-        else
-            textView4.setVisibility(GONE);
+        if (isZkp) {
+            textZkp.setVisibility(VISIBLE);
+        } else {
+            textZkp.setVisibility(INVISIBLE);
+        }
     }
 
     public void setImage(String img){

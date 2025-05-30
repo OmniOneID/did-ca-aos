@@ -61,16 +61,30 @@
                 android:layout_gravity="center|left"
                 android:textSize="16dp"
                 android:textColor="#000000"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/textVc"
+                    android:layout_width="40dp"
+                    android:gravity="center"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/label_border"
+                    android:textColor="@android:color/holo_orange_dark"
+                    android:text="VC" />
 
-            <TextView
-                android:id="@+id/textView4"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:text="15 Feb 2024"
-                android:layout_gravity="center|left"
-                android:textSize="16dp"
-                android:textColor="#000000"/>
+                <TextView
+                    android:id="@+id/textZkp"
+                    android:layout_width="40dp"
+                    android:gravity="center"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="10dp"
+                    android:background="@drawable/label_border"
+                    android:textColor="@android:color/holo_orange_dark"
+                    android:text="ZKP" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

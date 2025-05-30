@@ -43,7 +43,9 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.zkp.referent.AttrRefAdapter;
 import org.omnione.did.ca.zkp.referent.PredicateRefAdapter;
@@ -84,8 +86,10 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     private NavController navController;
     private Map<String, String> selfAttr = new HashMap<String, String>();
     private P310ZkpResponseVo proofRequestProfileVo;
-    private RelativeLayout progress;
     private VerifyConstants.Presenter presenter;
+
+    private ProgressCircle progressCircle;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -96,10 +100,11 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 
         super.onViewCreated(view, savedInstanceState);
+        progressCircle = new ProgressCircle(getActivity());
         navController = Navigation.findNavController(view);
         proofRequestProfileVo = GsonWrapper.getGson().fromJson(requireArguments().getString("proofRequestProfileVo"), P310ZkpResponseVo.class);
 
-        presenter = new VerifyPresenter(getActivity().getApplicationContext(), this);
+        presenter = new VerifyPresenter(getActivity(), this);
         initUI(view);
         presenter.setProofRequestProfile(proofRequestProfileVo);
     }
@@ -113,8 +118,6 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
         listView_attr = view.findViewById(R.id.listView_attr);
         listView_predicates = view.findViewById(R.id.listView_predicates);
         listView_self_attr = view.findViewById(R.id.listView_self_attr);
-
-        progress = view.findViewById(R.id.main_progress);
 
         cancelBtn = (Button) view.findViewById(R.id.cancelBtn);
         cancelBtn.setOnClickListener(new Button.OnClickListener() {
@@ -151,6 +154,8 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
         okBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                showLoading();
+
                 AvailableReferent availableReferent = presenter.getAvailableReferent();
 
                 InputMethodManager inputMethodManager = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -228,13 +233,13 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
     }
 
     @Override
-    public void showLoading(final String message) {
+    public void showLoading() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 getActivity().runOnUiThread(new Runnable() {
                     public void run() {
-                        progress.setVisibility(View.VISIBLE);
+                        progressCircle.show();
                     }
                 });
             }
@@ -243,16 +248,11 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
 
     @Override
     public void hideLoading() {
-        new Thread(new Runnable() {
-            @Override
+        new Thread(() -> getActivity().runOnUiThread(new Runnable() {
             public void run() {
-                getActivity().runOnUiThread(new Runnable() {
-                    public void run() {
-                        progress.setVisibility(View.INVISIBLE);
-                    }
-                });
+                progressCircle.dismiss();
             }
-        }).start();
+        })).start();
     }
 
     @Override
@@ -263,7 +263,9 @@ public class VerifyFragment extends Fragment implements VerifyConstants.View {
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        navController.navigate(R.id.action_VerifyFragment_to_vcListFragment);
+                        Bundle bundle = new Bundle();
+                        bundle.putString("type", Constants.TYPE_VERIFY);
+                        navController.navigate(R.id.action_VerifyFragment_to_resultFragment2, bundle);
                     }
                 });
             }

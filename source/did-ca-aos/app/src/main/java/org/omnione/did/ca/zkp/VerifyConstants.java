@@ -41,7 +41,7 @@ public interface VerifyConstants {
 
         void showToast(String message);
 
-        void showLoading(String message);
+        void showLoading();
 
         void hideLoading();
 

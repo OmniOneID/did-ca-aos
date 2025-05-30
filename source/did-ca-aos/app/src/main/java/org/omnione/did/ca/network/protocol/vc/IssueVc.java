@@ -94,8 +94,6 @@ public class IssueVc {
         String api2 = "/tas/api/v1/request-ecdh";
         String api3 = "/tas/api/v1/request-create-token";
         String api4 = "/tas/api/v1/request-issue-profile";
-        String api5 = "/tas/api/v1/request-issue-vc";
-        String api6 = "/tas/api/v1/confirm-issue-vc";
 
         String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
         String api_cas2 = "/cas/api/v1/request-attested-appinfo";

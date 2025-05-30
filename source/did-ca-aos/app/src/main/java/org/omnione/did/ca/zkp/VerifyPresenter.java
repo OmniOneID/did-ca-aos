@@ -127,9 +127,10 @@ public class VerifyPresenter implements VerifyConstants.Presenter {
                 P310ZkpRequestVo proof = WalletApi.getInstance(context).createZkpProof(hWalletToken, proofRequestProfileVo, proofParams, selfAttr);
                 // 서버 검증 로직
                 boolean result = model.verifyProof(proof, proofRequestProfileVo.getProofRequestProfile().getProfile().proofRequest);
-                view.showError("", "성공");
-                view.moveToMainView();
-
+                view.hideLoading();
+                if (result) {
+                    view.moveToMainView();
+                }
             } catch (WalletException | InterruptedException | UtilityException | ExecutionException | WalletCoreException e) {
                 view.showError("", e.getMessage());
             }
