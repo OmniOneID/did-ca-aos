@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,6 +48,7 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.IssueVc;
+import org.omnione.did.ca.network.protocol.vp.VerifyProof;
 import org.omnione.did.ca.network.protocol.vp.VerifyVp;
 import org.omnione.did.ca.ui.ScanQrActivity;
 import org.omnione.did.ca.ui.common.CustomDialog;
@@ -154,10 +154,18 @@ public class VcListFragment extends Fragment {
                             } else if(payloadData.getPayloadType().equals("SUBMIT_VP")){
                                 CaLog.d("Submit VP Profile");
                                 VerifyOfferPayload offer = MessageUtil.deserialize(payload, VerifyOfferPayload.class);
-                                VerifyVp verifyVp = VerifyVp.getInstance(activity);
                                 try {
-                                    String verifyProfile = verifyVp.verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId(), offer.getType().getValue()).get();
-                                    CaLog.d("verifyProfile: "+verifyProfile);
+                                    String verifyProfile;
+
+                                    if (offer.getType().getValue().toString().equals(VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer.toString())) {
+                                        verifyProfile = VerifyProof.getInstance(activity).verifyProofPreProcess(offer.getOfferId(),payloadData.getTxId()).get();
+                                        CaLog.d("verifyProofPreProcess verifyProfile: "+verifyProfile);
+
+
+                                    } else {
+                                        verifyProfile = VerifyVp.getInstance(activity).verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId()).get();
+                                        CaLog.d("verifyVpPreProcess verifyProfile: "+verifyProfile);
+                                    }
 
                                     Bundle bundle = new Bundle();
                                     bundle.putString("result", verifyProfile);

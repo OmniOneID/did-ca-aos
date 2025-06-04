@@ -22,7 +22,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,7 +54,7 @@ import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
-import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
+import org.omnione.did.sdk.datamodel.protocol.P311ResponseVo;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
@@ -65,7 +64,6 @@ import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
 import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
 import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeType;
-import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
 import org.omnione.did.sdk.datamodel.zkp.PredicateInfo;
@@ -73,9 +71,7 @@ import org.omnione.did.sdk.datamodel.zkp.ProofRequest;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -88,7 +84,7 @@ public class ProfileFragment extends Fragment {
     private IssueProfile issueProfile;
     private VerifyProfile verifyProfile;
 
-    private P310ZkpResponseVo proofRequestProfileVo;
+    private P311ResponseVo proofRequestProfileVo;
     private String authNonce;
     ActivityResultLauncher<Intent> pinActivityIssueResultLauncher;
     ActivityResultLauncher<Intent> pinActivityVerifyResultLauncher;
@@ -159,7 +155,7 @@ public class ProfileFragment extends Fragment {
         } else {
             Preference.setProfile(getContext(), requireArguments().getString("result"));
             if (offerType.equals(VerifyProofOffer.getValue())) {
-                proofRequestProfileVo = MessageUtil.deserialize(requireArguments().getString("result"), P310ZkpResponseVo.class);
+                proofRequestProfileVo = MessageUtil.deserialize(requireArguments().getString("result"), P311ResponseVo.class);
                 title.setText("ZKP submission guide\n");
                 imageView.setImageResource(R.drawable.user_icon);
                 textView.setText(proofRequestProfileVo.getProofRequestProfile().getProfile().getProofRequest().getName());
@@ -266,10 +262,9 @@ public class ProfileFragment extends Fragment {
             @Override
             public void onClick(View v) {
 
-                new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
+//                new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
 
                 if(type.equals("user_init")) {
-                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                     Bundle bundle = new Bundle();
                     bundle.putInt("type", Constants.WEBVIEW_VC_INFO);
                     bundle.putString("vcSchemaId", requireArguments().getString("vcSchemaId"));
@@ -301,7 +296,7 @@ public class ProfileFragment extends Fragment {
 
                     if (offerType.equals(VerifyProofOffer.getValue())) {
                         Bundle bundle = new Bundle();
-                        bundle.putString("proofRequestProfileVo", proofRequestProfileVo.toJson());
+                        bundle.putString("proofRequestProfile", proofRequestProfileVo.getProofRequestProfile().toJson());
                         navController.navigate(R.id.action_profileFragment_to_VerifyFragment, bundle);
                     }
                     else {
@@ -446,6 +441,10 @@ public class ProfileFragment extends Fragment {
         VerifyVp verifyVp = VerifyVp.getInstance(activity);
         try {
             verifyVp.verifyVpProcess(pin).get();
+
+            Bundle bundle = new Bundle();
+            bundle.putString("type",Constants.TYPE_VERIFY);
+            navController.navigate(R.id.action_profileFragment_to_resultFragment, bundle);
         } catch (ExecutionException | InterruptedException e) {
             Throwable cause = e.getCause();
             if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
@@ -457,8 +456,6 @@ public class ProfileFragment extends Fragment {
                 CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
             }
         }
-        Bundle bundle = new Bundle();
-        bundle.putString("type",Constants.TYPE_VERIFY);
-        navController.navigate(R.id.action_profileFragment_to_resultFragment, bundle);
+
     }
 }

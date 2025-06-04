@@ -54,6 +54,7 @@
             android:text="Attributes"
             android:id="@+id/textView_attributes"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView
@@ -75,6 +76,7 @@
             android:text="Predicates"
             android:id="@+id/textView_predicates"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView
@@ -96,6 +98,7 @@
             android:id="@+id/textView_self_attributes"
             android:text="Self-Attributes"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView

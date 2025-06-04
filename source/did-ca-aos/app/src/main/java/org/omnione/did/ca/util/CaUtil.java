@@ -329,15 +329,16 @@ public class CaUtil {
                     CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
                     CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
 
-
                     for (AttributeType type: credentialSchema.getAttrTypes()) {
-                        String nameSpace = type.getNamespace().getId();
-                        for (String attrName : credentialSchema.getAttrNames()) {
+                        String namespace = type.getNamespace().getId();
 
-                            if (attrName.startsWith(nameSpace) && attrName.length() > nameSpace.length()) {
-                                String label = attrName.substring(nameSpace.length() + 1); // +1은 '.' 문자 제거용
+                            CaLog.d("attrName: "+attrName);
+                            if (attrName.startsWith(namespace) && attrName.length() > namespace.length()) {
+                                String label = attrName.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
                                 String nmId = type.getNamespace().getId();
-                                if (nmId.equals(nameSpace)) {
+                                CaLog.d("label: "+label);
+                                CaLog.d("nmId: "+nmId);
+                                if (nmId.equals(namespace)) {
                                     for (AttributeDef attrDef : type.getItems()) {
                                         if (attrDef.getLabel().equals(label)) {
                                             return attrDef.getCaption();
@@ -345,7 +346,7 @@ public class CaUtil {
                                     }
                                 }
                             }
-                        }
+
                     }
 
                 } catch (UtilityException e) {
