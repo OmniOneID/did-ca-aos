@@ -144,24 +144,21 @@ public class RevokeVc {
                 CaUtil.showErrorDialog(context, "[Error] revoke VC failed");
             });
         }
+        deleteVc(credentialId);
+
         String api6 = "/tas/api/v1/confirm-revoke-vc";
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
         return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api6, "POST", M220_ConfirmRevokeVc()))
-                .thenCompose(_M220_ConfirmRevokeVc -> {
-                    deleteVc(credentialId);
-                    return CompletableFuture.completedFuture(_M220_ConfirmRevokeVc);
-                })
+                .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
                 });
-
     }
     private String M220_ProposeRevokeVc(String vcId){
         P220RequestVo requestVo = new P220RequestVo(CaUtil.createMessageId(context));
         requestVo.setVcId(vcId);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String M220_RequestEcdh(String result){
@@ -184,23 +181,20 @@ public class RevokeVc {
             });
         }
         requestVo.setReqEcdh(reqEcdh);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String M220_RequestCreateToken(ServerTokenSeed serverTokenSeed){
         P220RequestVo requestVo = new P220RequestVo(CaUtil.createMessageId(context), txId);
         requestVo.setSeed(serverTokenSeed);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String M220_RequestIssueProfile(String result){
         P220RequestVo requestVo = new P220RequestVo(CaUtil.createMessageId(context), txId);
         this.serverToken = result;
         requestVo.setServerToken(serverToken);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String M220_RequestRevokeVc(String vcId, String issuerNonce, String pin){
@@ -244,8 +238,7 @@ public class RevokeVc {
     private String M220_ConfirmRevokeVc(){
         P220RequestVo requestVo = new P220RequestVo(CaUtil.createMessageId(context), txId);
         requestVo.setServerToken(serverToken);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String createWalletTokenSeed(WalletTokenPurpose.WALLET_TOKEN_PURPOSE purpose) {
@@ -281,8 +274,7 @@ public class RevokeVc {
     }
 
     private String M000_GetWalletTokenData() {
-        String request = createWalletTokenSeed(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC);
-        return request;
+        return createWalletTokenSeed(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC);
     }
     private String M000_GetAttestedAppInfo(String appId){
         JSONObject json = new JSONObject();
