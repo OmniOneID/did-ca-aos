@@ -51,6 +51,8 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AddVcFragment extends Fragment {
     NavController navController;
@@ -100,34 +102,39 @@ public class AddVcFragment extends Fragment {
             adapter.addItem(new AddVcListItem(vcPlan.getName(), vcPlan.getDescription(), vcForm));
         }
         gridView.setAdapter(adapter);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                showLoading();
 
-                progressCircle.show();
+                executor.execute(() -> {
+                    IssueVc issueVc = IssueVc.getInstance(activity);
+                    String issueProfile;
+                    try {
+                        issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
+                    } catch (ExecutionException | InterruptedException e) {
+                        ContextCompat.getMainExecutor(activity).execute(() -> {
+                            CaUtil.showErrorDialog(activity, e.getMessage());
+                        });
+                        progressCircle.dismiss();
+                        return;
+                    }
 
-                IssueVc issueVc = IssueVc.getInstance(activity);
-                String issueProfile;
-                try {
-                    issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
-                } catch (ExecutionException | InterruptedException e) {
-                    ContextCompat.getMainExecutor(activity).execute(()  -> {
-                        CaUtil.showErrorDialog(activity, e.getMessage());
-                    });
-                    progressCircle.dismiss();
-                    return;
-                }
-                Bundle bundle = new Bundle();
-                bundle.putString("result", issueProfile);
-                bundle.putString("type", "user_init");
-                bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
+                    hideLoading();
 
-                progressCircle.dismiss();
-
-                navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
+                    new Thread(() -> getActivity().runOnUiThread(() -> {
+                        Bundle bundle = new Bundle();
+                        bundle.putString("result", issueProfile);
+                        bundle.putString("type", "user_init");
+                        bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
+                        navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
+                    })).start();
+                });
             }
         });
-        Button cancelBtn = (Button) view.findViewById(R.id.cancelBtn);
+        Button cancelBtn = view.findViewById(R.id.cancelBtn);
         cancelBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -136,6 +143,18 @@ public class AddVcFragment extends Fragment {
             }
         });
 
+    }
+
+    public void showLoading() {
+        new Thread(() -> getActivity().runOnUiThread(() -> {
+            progressCircle.show();
+        })).start();
+    }
+
+    public void hideLoading() {
+        new Thread(() -> getActivity().runOnUiThread(() -> {
+            progressCircle.dismiss();
+        })).start();
     }
 
     static class VcListAdapter extends BaseAdapter {

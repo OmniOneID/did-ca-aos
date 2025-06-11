@@ -22,6 +22,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -137,6 +138,7 @@ public class ProfileFragment extends Fragment {
         offerType = requireArguments().getString("offerType");
 
         if(type.equals("user_init") || type.equals(Constants.TYPE_ISSUE)) {
+
             String profileData = requireArguments().getString("result");
             Preference.setProfile(getContext(), profileData);
             P210ResponseVo vcPofile = MessageUtil.deserialize(requireArguments().getString("result"), P210ResponseVo.class);
@@ -154,6 +156,7 @@ public class ProfileFragment extends Fragment {
 
         } else {
             Preference.setProfile(getContext(), requireArguments().getString("result"));
+
             if (offerType.equals(VerifyProofOffer.getValue())) {
                 proofRequestProfileVo = MessageUtil.deserialize(requireArguments().getString("result"), P311ResponseVo.class);
                 title.setText("ZKP submission guide\n");
@@ -254,16 +257,13 @@ public class ProfileFragment extends Fragment {
                         CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
                     }
                 }
-
             }
         }
 
         okButton.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-
 //                new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
-
                 if(type.equals("user_init")) {
                     Bundle bundle = new Bundle();
                     bundle.putInt("type", Constants.WEBVIEW_VC_INFO);
@@ -348,44 +348,50 @@ public class ProfileFragment extends Fragment {
 
         // activity callback
         pinActivityIssueResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            try {
-                                CaLog.e("onViewCreated pinActivityIssueResultLauncher");
-                                String pin = result.getData().getStringExtra("pin");
-                                IssueVc issueVc = IssueVc.getInstance(activity);
-                                issueVc.getSignedDIDAuthByPin(authNonce, pin, navController);
-                            } catch (WalletCoreException | WalletException | UtilityException e){
-                                CaLog.e("signing error : " + e.getMessage());
-                                CaUtil.showErrorDialog(activity, e.getMessage());
-                            }
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaUtil.showErrorDialog(activity,"[Information] canceled by user");
+            new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        try {
+                            CaLog.e("onViewCreated pinActivityIssueResultLauncher");
+                            String pin = result.getData().getStringExtra("pin");
+                            IssueVc issueVc = IssueVc.getInstance(activity);
+                            issueVc.getSignedDIDAuthByPin(authNonce, pin, navController);
+                        } catch (WalletCoreException | WalletException | UtilityException e){
+                            CaLog.e("signing error : " + e.getMessage());
+                            CaUtil.showErrorDialog(activity, e.getMessage());
+                            Log.d("djpark","이곳...");
+                            new Thread(() -> getActivity().runOnUiThread(() -> {
+                                navController.navigate(R.id.action_profileFragment_to_addVcFragment);
+                            })).start();
+
+                        } catch (ExecutionException e) {
+                            throw new RuntimeException(e);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
                         }
+                    } else if(result.getResultCode() == Activity.RESULT_CANCELED){
+                        CaUtil.showErrorDialog(activity,"[Information] canceled by user");
                     }
                 }
         );
 
         pinActivityVerifyResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            String pin = result.getData().getStringExtra("pin");
-                            if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_USE_KEY) {
-                                submitVp(pin);
-                            }
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaUtil.showErrorDialog(activity,"[Information] canceled by user");
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        String pin = result.getData().getStringExtra("pin");
+                        if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_USE_KEY) {
+                            submitVp(pin);
                         }
+                    } else if(result.getResultCode() == Activity.RESULT_CANCELED){
+                        CaUtil.showErrorDialog(activity,"[Information] canceled by user");
                     }
                 }
+            }
         );
 
     }
@@ -456,6 +462,5 @@ public class ProfileFragment extends Fragment {
                 CaUtil.showErrorDialog(activity, cause.getCause().getMessage(), activity);
             }
         }
-
     }
 }

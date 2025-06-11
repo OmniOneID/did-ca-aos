@@ -26,6 +26,9 @@
         <action
             android:id="@+id/action_profileFragment_to_VerifyFragment"
             app:destination="@id/VerifyFragment" />
+        <action
+            android:id="@+id/action_profileFragment_to_addVcFragment"
+            app:destination="@id/addVcFragment" />
     </fragment>
     <fragment
         android:id="@+id/vpFragment"

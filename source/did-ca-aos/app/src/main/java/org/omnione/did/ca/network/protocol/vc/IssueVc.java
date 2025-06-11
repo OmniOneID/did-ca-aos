@@ -311,7 +311,7 @@ public class IssueVc {
         WalletApi walletApi = WalletApi.getInstance(context);
         return walletApi.isSavedKey(Constants.KEY_ID_BIO);
     }
-    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException {
+    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException, ExecutionException, InterruptedException {
         WalletApi walletApi = WalletApi.getInstance(context);
         DIDAuth signedDIDAuth = walletApi.getSignedDIDAuth(authNonce, pin);
         issueVc(signedDIDAuth, navController);
@@ -333,6 +333,12 @@ public class IssueVc {
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
                         });
+
+                        Bundle bundle = new Bundle();
+                        bundle.putString("type",Constants.TYPE_ISSUE);
+                        navController.navigate(R.id.action_profileFragment_to_addVcFragment, bundle);
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
                 @Override
@@ -361,16 +367,9 @@ public class IssueVc {
         }
     }
 
-    private void issueVc(DIDAuth signedDIDAuth, NavController navController){
+    private void issueVc(DIDAuth signedDIDAuth, NavController navController) throws WalletException, ExecutionException, InterruptedException {
         P210ResponseVo vcProfile = MessageUtil.deserialize(profile, P210ResponseVo.class);
-        try {
-            issueVcProcess(vcProfile.getProfile(), signedDIDAuth).get();
-        } catch (ExecutionException | WalletException | InterruptedException e) {
-            CaLog.e("issueVC error : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
-        }
+        issueVcProcess(vcProfile.getProfile(), signedDIDAuth).get();
         Bundle bundle = new Bundle();
         bundle.putString("type",Constants.TYPE_ISSUE);
         navController.navigate(R.id.action_profileFragment_to_resultFragment, bundle);
