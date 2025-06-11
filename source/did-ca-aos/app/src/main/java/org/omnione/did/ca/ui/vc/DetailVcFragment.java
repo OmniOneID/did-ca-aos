@@ -106,10 +106,11 @@ public class DetailVcFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
         getWalletToken = GetWalletToken.getInstance(activity);
-        TextView name = (TextView) view.findViewById(R.id.textView);
+        TextView name = view.findViewById(R.id.textView);
         name.setText(Preference.getUsernameForDemo(activity));
-        TextView textView = (TextView) view.findViewById(R.id.textView2);
-        imageView = (ImageView) view.findViewById(R.id.claimImg);
+        TextView textView = view.findViewById(R.id.textView2);
+        imageView = view.findViewById(R.id.claimImg);
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -120,13 +121,21 @@ public class DetailVcFragment extends Fragment {
                         WalletApi walletApi = WalletApi.getInstance(activity);
                         List<VerifiableCredential> vcList = walletApi.getCredentials(hWalletToken, List.of(vcId));
                         vc = vcList.get(0);
-                        textView.setText(displayVc(vc));
+                        requireActivity().runOnUiThread(() -> {
+                            textView.setText(displayVc(vc));
+                        });
 
                         // add zkp info
                         if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcId)) {
                             List<Credential> credentialList = walletApi.getZkpCredentials(hWalletToken, List.of(vcId));
                             credential = credentialList.get(0);
-                            textView.append(displayZkpCredential(credential));
+                            requireActivity().runOnUiThread(() -> {
+                                try {
+                                    textView.append(displayZkpCredential(credential));
+                                } catch (ExecutionException | InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
                         }
 
                     } catch (WalletCoreException | WalletException | UtilityException e) {
