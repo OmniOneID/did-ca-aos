@@ -8,7 +8,7 @@
 | 구분             | 내용                                                     |
 | ---------------- | ------------------------------------------------------ |
 | OS               | Android 14                                             |
-| Language         | Java 20                                                |
+| Language         | Java 21                                                |
 | IDE              | Android Studio 4                                       |
 | Build System     | Gradle 8.2                                             |
 | Compatibility    | Android API level 34 or higher                         |
