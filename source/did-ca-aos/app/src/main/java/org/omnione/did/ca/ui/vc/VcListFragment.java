@@ -84,6 +84,9 @@ public class VcListFragment extends Fragment {
     ActivityResultLauncher<Intent> qrActivityResultLauncher;
     String hWalletToken;
     GridView gridView;
+
+    ProgressCircle progressCircle;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_vc_list, container, false);
@@ -93,13 +96,14 @@ public class VcListFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
-        TextView nameView = (TextView) view.findViewById(R.id.name);
+        TextView nameView = view.findViewById(R.id.name);
         nameView.setText(Preference.getUsernameForDemo(activity));
 
-        ProgressCircle progressCircle = new ProgressCircle(activity);
-        progressCircle.show();
+        progressCircle = new ProgressCircle(activity);
 
-        Button addVcBtn = (Button) view.findViewById(R.id.addVcBtn);
+
+
+        Button addVcBtn = view.findViewById(R.id.addVcBtn);
         addVcBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -107,7 +111,7 @@ public class VcListFragment extends Fragment {
             }
         });
 
-        Button qrBtn = (Button) view.findViewById(R.id.qrBtn);
+        Button qrBtn = view.findViewById(R.id.qrBtn);
         qrBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -195,6 +199,8 @@ public class VcListFragment extends Fragment {
         List<VcDetail> vcDetails = new ArrayList<>();
         GetWalletToken getWalletToken = GetWalletToken.getInstance(activity);
 
+        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -251,7 +257,7 @@ public class VcListFragment extends Fragment {
                         @Override
                         public void run() {
                             gridView.setAdapter(adapter);
-                            //progressCircle.dismiss();
+                            new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                         }
                     });
                 } catch (WalletException | WalletCoreException | UtilityException e){

@@ -56,6 +56,7 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.RevokeVc;
 import org.omnione.did.ca.ui.common.CustomDialog;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 
 import org.omnione.did.sdk.communication.exception.CommunicationException;
@@ -96,6 +97,8 @@ public class DetailVcFragment extends Fragment {
 
     HttpUrlConnection httpClient;
     ActivityResultLauncher<Intent> pinActivityRevokeResultLauncher;
+
+    ProgressCircle progressCircle;
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_detail_vc, container, false);
@@ -111,6 +114,10 @@ public class DetailVcFragment extends Fragment {
         TextView textView = view.findViewById(R.id.textView2);
         imageView = view.findViewById(R.id.claimImg);
 
+        progressCircle = new ProgressCircle(activity);
+
+        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -121,8 +128,11 @@ public class DetailVcFragment extends Fragment {
                         WalletApi walletApi = WalletApi.getInstance(activity);
                         List<VerifiableCredential> vcList = walletApi.getCredentials(hWalletToken, List.of(vcId));
                         vc = vcList.get(0);
+
                         requireActivity().runOnUiThread(() -> {
+                            progressCircle.show();
                             textView.setText(displayVc(vc));
+                            progressCircle.dismiss();
                         });
 
                         // add zkp info
@@ -131,7 +141,9 @@ public class DetailVcFragment extends Fragment {
                             credential = credentialList.get(0);
                             requireActivity().runOnUiThread(() -> {
                                 try {
+                                    progressCircle.show();
                                     textView.append(displayZkpCredential(credential));
+                                    progressCircle.dismiss();
                                 } catch (ExecutionException | InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -151,6 +163,8 @@ public class DetailVcFragment extends Fragment {
                                 CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
                             });
                         }
+                    } finally {
+                        progressCircle.dismiss();
                     }
 
                 }

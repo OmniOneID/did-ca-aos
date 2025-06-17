@@ -131,14 +131,13 @@ public class ProfileFragment extends Fragment {
         imageView = view.findViewById(R.id.imageView);
         issueDsc = view.findViewById(R.id.issueDsc);
         verifyDsc = view.findViewById(R.id.verifyDsc);
-        Button okButton = (Button) view.findViewById(R.id.okBtn);
+        Button okButton = view.findViewById(R.id.okBtn);
 
         type = requireArguments().getString("type");
         profileData = requireArguments().getString("result");
         offerType = requireArguments().getString("offerType");
 
         if(type.equals("user_init") || type.equals(Constants.TYPE_ISSUE)) {
-
             String profileData = requireArguments().getString("result");
             Preference.setProfile(getContext(), profileData);
             P210ResponseVo vcPofile = MessageUtil.deserialize(requireArguments().getString("result"), P210ResponseVo.class);
@@ -152,7 +151,6 @@ public class ProfileFragment extends Fragment {
             issueDsc.setVisibility(View.VISIBLE);
             verifyDsc.setVisibility(View.GONE);
         } else if(requireArguments().getString("type").equals("webview")) {
-
 
         } else {
             Preference.setProfile(getContext(), requireArguments().getString("result"));
@@ -192,7 +190,6 @@ public class ProfileFragment extends Fragment {
                     }
                 }
 
-
                 String predCredDefId = CaUtil.findPredicateNameByCredDefId(proofRequest.getRequestedPredicates());
                 CredentialDefinition credentialDefinitionForPred = CaUtil.getCredentialDefinition(activity, predCredDefId);
                 CredentialSchema schemaForPred = CaUtil.getCredentialSchema(activity, credentialDefinitionForPred.getSchemaId());
@@ -216,7 +213,6 @@ public class ProfileFragment extends Fragment {
                         }
                     }
                 }
-
             } else {
                 P310ResponseVo vpProfile = MessageUtil.deserialize(requireArguments().getString("result"), P310ResponseVo.class);
                 verifyProfile = vpProfile.getProfile();
@@ -231,7 +227,7 @@ public class ProfileFragment extends Fragment {
                             CaUtil.showErrorDialog(activity, "[CA error] VC schema is null");
                         });
                     }
-                    textView.setText(vcSchema.getTitle());
+                    textView.setText(verifyProfile.getTitle());
                     textView2.setVisibility(View.GONE);
                     issueDsc.setVisibility(View.GONE);
                     verifyDsc.setVisibility(View.VISIBLE);
@@ -360,7 +356,6 @@ public class ProfileFragment extends Fragment {
                         } catch (WalletCoreException | WalletException | UtilityException e){
                             CaLog.e("signing error : " + e.getMessage());
                             CaUtil.showErrorDialog(activity, e.getMessage());
-                            Log.d("djpark","이곳...");
                             new Thread(() -> getActivity().runOnUiThread(() -> {
                                 navController.navigate(R.id.action_profileFragment_to_addVcFragment);
                             })).start();
