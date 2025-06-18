@@ -72,7 +72,10 @@ public class ReferentListActivity extends AppCompatActivity {
         textView_referentName.setText(caption);
 
         for (int i = 0; i < attrSubReferentList.size(); i++) {
-            credentialIdArrayList.add(CaUtil.extractSchemaName(attrSubReferentList.get(i).getCredentialDefId()) + "\n" + attrSubReferentList.get(i).getRaw());
+            String vcStatus = CaUtil.getVcMeta(this, attrSubReferentList.get(i).getCredentialId());
+            if (vcStatus.equals("ACTIVE")) {
+                credentialIdArrayList.add(CaUtil.extractSchemaName(attrSubReferentList.get(i).getCredentialDefId()) + "\n" + attrSubReferentList.get(i).getRaw());
+            }
         }
 
         credentialIdAdapter = new CredentialIdAdapter();

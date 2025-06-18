@@ -112,6 +112,8 @@ public class VerifyFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         try {
             proofRequestProfile = GsonWrapper.getGson().fromJson(requireArguments().getString("proofRequestProfile"), ProofRequestProfile.class);
+            availableReferent = GsonWrapper.getGson().fromJson(requireArguments().getString("availableReferent"), AvailableReferent.class);
+
             initUI(view);
             drawAvailableReferent();
         } catch (WalletCoreException | WalletException | UtilityException e) {
@@ -274,14 +276,14 @@ public class VerifyFragment extends Fragment {
     public void drawAvailableReferent() throws WalletCoreException, WalletException, UtilityException, ExecutionException, InterruptedException {
 
         new Thread(()->{
-            try {
-                availableReferent = WalletApi.getInstance(getContext()).searchZkpCredentials(VerifyProof.getInstance(getContext()).hWalletToken, proofRequestProfile.getProfile().proofRequest);
-            } catch (WalletCoreException | UtilityException | WalletException e) {
-                ContextCompat.getMainExecutor(getActivity()).execute(()  -> {
-                    CaUtil.showErrorDialog(getActivity(), e.getMessage());
-                });
-                return;
-            }
+//            try {
+//                availableReferent = WalletApi.getInstance(getContext()).searchZkpCredentials(VerifyProof.getInstance(getContext()).hWalletToken, proofRequestProfile.getProfile().proofRequest);
+//            } catch (WalletCoreException | UtilityException | WalletException e) {
+//                ContextCompat.getMainExecutor(getActivity()).execute(()  -> {
+//                    CaUtil.showErrorDialog(getActivity(), e.getMessage());
+//                });
+//                return;
+//            }
 
             CaLog.d("availableReferent >>>>>>>>>> " + GsonWrapper.getGsonPrettyPrinting().toJson(availableReferent));
 

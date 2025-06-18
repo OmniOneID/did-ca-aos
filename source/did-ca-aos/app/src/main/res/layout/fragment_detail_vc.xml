@@ -48,6 +48,7 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginEnd="20dp"
                 android:background="@drawable/trash" />
+
         </FrameLayout>
 
         <LinearLayout
@@ -55,7 +56,17 @@
             android:layout_height="0dp"
             android:layout_weight="9"
             android:orientation="vertical">
-
+            <TextView
+                android:id="@+id/textVcStatus"
+                android:layout_marginTop="5dp"
+                android:layout_marginEnd="5dp"
+                android:layout_width="80dp"
+                android:layout_height="30dp"
+                android:layout_gravity="end"
+                android:gravity="center"
+                android:background="@drawable/label_border_orange"
+                android:textColor="@android:color/holo_orange_dark"
+                android:text="" />
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"

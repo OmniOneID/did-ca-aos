@@ -95,6 +95,8 @@ public class DetailVcFragment extends Fragment {
     String hWalletToken = "";
     GetWalletToken getWalletToken;
 
+    TextView textVcStatus;
+
     HttpUrlConnection httpClient;
     ActivityResultLauncher<Intent> pinActivityRevokeResultLauncher;
 
@@ -113,6 +115,7 @@ public class DetailVcFragment extends Fragment {
         name.setText(Preference.getUsernameForDemo(activity));
         TextView textView = view.findViewById(R.id.textView2);
         imageView = view.findViewById(R.id.claimImg);
+        textVcStatus = view.findViewById(R.id.textVcStatus);
 
         progressCircle = new ProgressCircle(activity);
 
@@ -123,6 +126,8 @@ public class DetailVcFragment extends Fragment {
             public void run() {
                 if (requireArguments().getString("vcId") != null) {
                     vcId = requireArguments().getString("vcId");
+                    textVcStatus.setText(CaUtil.getVcMeta(activity, vcId));
+
                     try {
                         hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.DETAIL_VC).get();
                         WalletApi walletApi = WalletApi.getInstance(activity);
@@ -291,7 +296,25 @@ public class DetailVcFragment extends Fragment {
             @Override
             public void yesBtnClicked(String btnName) {
                 try {
-                    revokePreVc(vcId);
+
+                    String vcStatus = CaUtil.getVcMeta(activity, vcId);
+                    if (vcStatus.equals("ACTIVE") || vcStatus.equals("INACTIVE")) {
+                        revokePreVc(vcId);
+                    } else {
+                        hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC).get();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    WalletApi.getInstance(activity).deleteCredentials(hWalletToken, vcId);
+                                } catch (WalletException | WalletCoreException | UtilityException e) {
+                                    ContextCompat.getMainExecutor(activity).execute(()  -> {
+                                        CaUtil.showErrorDialog(activity, e.getMessage());
+                                    });
+                                }
+                            }
+                        }).start();
+                    }
                 } catch (ExecutionException | InterruptedException e) {
                     Throwable cause = e.getCause();
                     if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {

@@ -34,6 +34,9 @@ import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
+import org.omnione.did.sdk.datamodel.vc.issue.VcMeta;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatusVo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
 import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeType;
@@ -216,6 +219,40 @@ public class CaUtil {
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
                 });
+    }
+
+    public static String getVcMeta(Context context, final String vcId) {
+        ExecutorService es = Executors.newCachedThreadPool();
+        Future<String> future = es.submit(new Callable<String>() {
+            @Override
+            public String call() {
+                try {
+                    String vcStatusJson = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL+"/api-gateway/api/v1/vc-meta?vcId="+vcId, "GET","");
+                    CaLog.d("vcStatusJson >>>>>>>>>> " + vcStatusJson);
+
+                    VcStatusVo vcStatusVo = MessageUtil.deserialize(vcStatusJson, VcStatusVo.class);
+                    VcMeta vcMeta = MessageUtil.deserialize(new String(MultibaseUtils.decode(vcStatusVo.getVcMeta())), VcMeta.class);
+
+                    CaLog.d("vcStatus >>>>>>>>>> " + vcMeta.getStatus());
+                    return vcMeta.getStatus();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
+                }
+                return null;
+            }
+        });
+
+        try {
+            return future.get();
+
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
+        }
+        return null;
     }
 
     public static CredentialSchema getCredentialSchema(Context context, final String schemaId) {

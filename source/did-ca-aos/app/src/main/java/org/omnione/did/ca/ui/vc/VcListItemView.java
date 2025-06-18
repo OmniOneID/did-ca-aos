@@ -26,6 +26,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -39,6 +41,8 @@ public class VcListItemView extends LinearLayout {
     TextView textView2;
     TextView textView3;
     TextView textVc;
+
+    TextView textVcStatus;
     TextView textZkp;
     ImageView imageView;
 
@@ -61,6 +65,7 @@ public class VcListItemView extends LinearLayout {
         textView3 = (TextView) findViewById(R.id.textView3);
         textView3 = (TextView) findViewById(R.id.textView3);
         textVc = (TextView) findViewById(R.id.textVc);
+        textVcStatus = (TextView) findViewById(R.id.textVcStatus);
         textZkp = (TextView) findViewById(R.id.textZkp);
         imageView = (ImageView) findViewById(R.id.imageView);
 
@@ -101,6 +106,17 @@ public class VcListItemView extends LinearLayout {
             textZkp.setVisibility(VISIBLE);
         } else {
             textZkp.setVisibility(INVISIBLE);
+        }
+    }
+
+    public void setVcStatus(String vcStatus) {
+
+        if (vcStatus.equals("ACTIVE")) {
+            textVcStatus.setText("ACTIVE");
+        } else if (vcStatus.equals("INACTIVE")) {
+            textVcStatus.setText("INACTIVE");
+        } else {
+            textVcStatus.setText("REVOKED");
         }
     }
 
