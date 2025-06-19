@@ -143,6 +143,7 @@ public class RevokeVc {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, "[Error] revoke VC failed");
             });
+            return null;
         }
         deleteVc(credentialId);
 
