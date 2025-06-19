@@ -62,11 +62,11 @@ public class SettingsExpandableActivity extends AppCompatActivity {
         HashMap<String, String> groupA = new HashMap<>();
         groupA.put("group", "PIN Settings");
 
-        HashMap<String, String> groupB = new HashMap<>();
-        groupB.put("group", "Fingerprint Settings");
-
+//        HashMap<String, String> groupB = new HashMap<>();
+//        groupB.put("group", "Fingerprint Settings");
+//
         groupData.add(groupA);
-        groupData.add(groupB);
+//        groupData.add(groupB);
 
         ArrayList<HashMap<String, String>> childListA = new ArrayList<>();
 
@@ -83,11 +83,11 @@ public class SettingsExpandableActivity extends AppCompatActivity {
         ArrayList<HashMap<String, String>> childListB = new ArrayList<>();
 
         HashMap<String, String> childBA = new HashMap<>();
-        childBA.put("data", "Setting up a fingnerprint for Signing");
+        childBA.put("data", "Setting up a fingerprint for Signing");
         childListB.add(childBA);
 
         HashMap<String, String> childBB = new HashMap<>();
-        childBB.put("data", "Setting up a fingnerprint for Unlock");
+        childBB.put("data", "Setting up a fingerprint for Unlock");
         childListB.add(childBB);
 
         childData.add(childListB);
