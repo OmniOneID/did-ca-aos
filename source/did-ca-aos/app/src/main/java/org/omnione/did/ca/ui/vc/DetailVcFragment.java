@@ -372,8 +372,10 @@ public class DetailVcFragment extends Fragment {
     private void revokeVc(String pin){
         RevokeVc revokeVc = RevokeVc.getInstance(activity);
         try {
-            revokeVc.revokeVcProcess(pin).get();
-            navController.navigate(R.id.action_detailVcFragment_to_vcListFragment);
+            if (revokeVc.revokeVcProcess(pin) != null) {
+                revokeVc.revokeVcProcess(pin).get();
+                navController.navigate(R.id.action_detailVcFragment_to_vcListFragment);
+            }
         } catch (ExecutionException | InterruptedException e) {
             Throwable cause = e.getCause();
             if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
