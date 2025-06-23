@@ -372,18 +372,17 @@ public class DetailVcFragment extends Fragment {
     private void revokeVc(String pin){
         RevokeVc revokeVc = RevokeVc.getInstance(activity);
         try {
-            if (revokeVc.revokeVcProcess(pin) != null) {
-                revokeVc.revokeVcProcess(pin).get();
-                navController.navigate(R.id.action_detailVcFragment_to_vcListFragment);
-            }
+            revokeVc.revokeVcProcess(pin).get();
+            navController.navigate(R.id.action_detailVcFragment_to_vcListFragment);
         } catch (ExecutionException | InterruptedException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
-                CaLog.e("revoke error : " + e.getMessage());
-                ContextCompat.getMainExecutor(activity).execute(()  -> {
-                    CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
-                });
+            Throwable cause = e.getCause();  // RuntimeException 포함
+            if (cause instanceof CompletionException) {
+                cause = cause.getCause();
             }
+            CaLog.e("revoke error : " + cause.getMessage());
+            ContextCompat.getMainExecutor(activity).execute(()  -> {
+                CaUtil.showErrorDialog(activity, e.getMessage());
+            });
         }
     }
 }

@@ -138,23 +138,19 @@ public class RevokeVc {
 
     }
     public CompletableFuture<String> revokeVcProcess(String pin) {
-        String _M220_RequestRevokeVc = M220_RequestRevokeVc(credentialId, issuerNonce, pin);
-        if(_M220_RequestRevokeVc == null){
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, "[Error] revoke VC failed");
-            });
-            return null;
-        }
-        deleteVc(credentialId);
+        return CompletableFuture.supplyAsync(() -> {
+            String _M220_RequestRevokeVc = M220_RequestRevokeVc(credentialId, issuerNonce, pin);
+            if (_M220_RequestRevokeVc == null) {
+                throw new RuntimeException("[Error] revoke VC failed");
+            }
 
-        String api6 = "/tas/api/v1/confirm-revoke-vc";
+            deleteVc(credentialId);
 
-        HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api6, "POST", M220_ConfirmRevokeVc()))
-                .thenCompose(CompletableFuture::completedFuture)
-                .exceptionally(ex -> {
-                    throw new CompletionException(ex);
-                });
+            String api6 = "/tas/api/v1/confirm-revoke-vc";
+            HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
+
+            return httpUrlConnection.send(context, Config.TAS_URL + api6, "POST", M220_ConfirmRevokeVc());
+        });
     }
     private String M220_ProposeRevokeVc(String vcId){
         P220RequestVo requestVo = new P220RequestVo(CaUtil.createMessageId(context));
