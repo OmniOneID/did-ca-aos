@@ -24,22 +24,23 @@
                 android:textStyle="bold"
                 android:textColor="#ed8202"
                 android:textSize="24dp"/>
+
             <TextView
                 android:id="@+id/message"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_gravity="center"
                 android:text="The certificate will be issued by issuer."
                 android:textColor="#000000"
-                android:textSize="18dp"/>
+                android:textSize="18dp" />
         </LinearLayout>
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/vc"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:background="@drawable/bg_oval"
-            android:layout_margin="40dp"
-            android:layout_weight="8">
+            android:layout_margin="20dp"
+            android:layout_weight="7">
 
             <ImageView
                 android:id="@+id/imageView"
@@ -56,7 +57,7 @@
                 app:layout_constraintEnd_toEndOf="parent" />
 
             <TextView
-                android:id="@+id/textView"
+                android:id="@+id/textProfileTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="mDL"
@@ -65,18 +66,18 @@
                 android:textSize="20dp"
                 app:layout_constraintTop_toBottomOf="@+id/imageView"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toTopOf="@+id/textView2"
+                app:layout_constraintBottom_toTopOf="@+id/textIssueDate"
                 android:layout_marginStart="20dp"
                 android:layout_marginBottom="8dp" />
 
             <TextView
-                android:id="@+id/textView2"
+                android:id="@+id/textIssueDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Issuance Application Date"
                 android:textColor="#000000"
                 android:textSize="20dp"
-                app:layout_constraintTop_toBottomOf="@+id/textView"
+                app:layout_constraintTop_toBottomOf="@+id/textProfileTitle"
                 app:layout_constraintStart_toStartOf="parent"
                 android:layout_marginStart="20dp" />
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -84,9 +85,8 @@
         <LinearLayout
             android:id="@+id/issueDsc"
             android:layout_width="match_parent"
-            android:layout_marginTop="10dp"
             android:layout_height="0dp"
-            android:layout_weight="3"
+            android:layout_weight="2"
             android:orientation="vertical"
             android:visibility="visible">
             <TextView
@@ -103,18 +103,19 @@
         <LinearLayout
             android:id="@+id/verifyDsc"
             android:layout_width="match_parent"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="0dp"
             android:layout_height="0dp"
-            android:layout_weight="3"
+            android:layout_margin="20dp"
+            android:layout_weight="4"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:visibility="visible">
             <TextView
                 android:id="@+id/requiredClaims"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="10dp"
-                android:text="require Claim\n"
+                android:layout_gravity="left"
+                android:layout_margin="0dp"
+                android:text="Required information\n\n"
                 android:textColor="#000000"
                 android:textSize="18dp"/>
         </LinearLayout>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.omnione.did.ca.ui;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -32,11 +33,11 @@ import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.settings.SettingListViewAdapter;
 import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
-import org.omnione.did.sdk.wallet.WalletApi;
 
 public class SettingsActivity extends AppCompatActivity {
-    int cnt = 0;
+//    int cnt = 0;
     ListView listView;
     SettingListViewAdapter adapter;
     @Override
@@ -53,18 +54,18 @@ public class SettingsActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if(i == 0){
                     //wallet delete : hidden
-                    cnt++;
-                    if(cnt == 2) {
-                        try {
-                            WalletApi walletApi = WalletApi.getInstance(SettingsActivity.this);
-                            walletApi.deleteWallet();
-                            Preference.deleteAllPref(SettingsActivity.this);
-                            Toast.makeText(SettingsActivity.this, "wallet delete",Toast.LENGTH_SHORT).show();
-                            cnt = 0;
-                        } catch (WalletCoreException e) {
-                            CaUtil.showErrorDialog(SettingsActivity.this, "[error] Wallet instance creation fail");
-                        }
-                    }
+//                    cnt++;
+//                    if(cnt == 2) {
+//                        try {
+//                            WalletApi walletApi = WalletApi.getInstance(SettingsActivity.this);
+//                            walletApi.deleteWallet();
+//                            Preference.deleteAllPref(SettingsActivity.this);
+//                            Toast.makeText(SettingsActivity.this, "wallet delete",Toast.LENGTH_SHORT).show();
+//                            cnt = 0;
+//                        } catch (WalletCoreException e) {
+//                            CaUtil.showErrorDialog(SettingsActivity.this, "[error] Wallet instance creation fail");
+//                        }
+//                    }
                 }
                 else if (i == 1 ){
                     //showDialog(Preference.loadVerifierUrl(SettingsActivity.this), Constants.PREFERENCE_VERIFIER_URL);
@@ -74,7 +75,13 @@ public class SettingsActivity extends AppCompatActivity {
                     ClipData clipData = ClipData.newPlainText("copyText",copyText);
                     clipboardManager.setPrimaryClip(clipData);
                     Toast.makeText(getApplicationContext(),"The DID has been copied to the clipboard.", Toast.LENGTH_SHORT).show();
-
+                } else if (i == 3) {
+                    startActivity(new Intent(SettingsActivity.this, SettingsExpandableActivity.class));
+                    finish();
+                } else if (i == 4) {
+                    Toast.makeText(SettingsActivity.this,"did document update", Toast.LENGTH_SHORT).show();
+                } else if (i == 5) {
+                    Toast.makeText(SettingsActivity.this,"did document restore", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -83,7 +90,14 @@ public class SettingsActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         adapter.addItem("TAS URL", Preference.loadTasUrl(this));
         adapter.addItem("Verifier URL", Preference.loadVerifierUrl(this));
-        adapter.addItem("DID",Preference.getDID(this));
+        if(Preference.getDID(this).isEmpty())
+            adapter.addItem("DID","not registered");
+        else
+            adapter.addItem("DID",Preference.getDID(this));
+
+        adapter.addItem("User Authentication settings","Provides management of authentication methods.");
+//        adapter.addItem("DID Document Update","");
+//        adapter.addItem("DID Document Restore","");
     }
     @Override
     protected void onResume() {

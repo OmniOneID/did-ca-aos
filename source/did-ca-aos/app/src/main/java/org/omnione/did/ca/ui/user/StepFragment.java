@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,11 +49,11 @@ import org.omnione.did.ca.network.protocol.user.RegUser;
 import org.omnione.did.ca.ui.common.CustomDialog;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.concurrent.CompletionException;

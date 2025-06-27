@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -43,9 +44,9 @@ import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.logger.CommunicationLogger;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.wallet.walletservice.logger.WalletLogger;
 
@@ -87,46 +88,46 @@ public class SplashActivity extends AppCompatActivity {
 
         pinActivityResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
+                new ActivityResultCallback<>() {
                     @Override
                     public void onActivityResult(ActivityResult result) {
                         if (result.getResultCode() == Activity.RESULT_OK) {
                             startActivity(new Intent(SplashActivity.this, MainActivity.class));
                             finish();
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
+                        } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
                             CaLog.e("pin authentication fail");
-                            CaUtil.showErrorDialog(SplashActivity.this,"[Authenticate failed] PIN Authenticate Failed",SplashActivity.this);
+                            CaUtil.showErrorDialog(SplashActivity.this, "[Authenticate failed] PIN Authenticate Failed", SplashActivity.this);
                         }
                     }
                 }
         );
         pinActivityPushResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                            intent.putExtra("pushdata", result.getData().getStringExtra("data"));
-                            startActivity(intent);
-                            finish();
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaLog.e("pin authentication fail");
-                            CaUtil.showErrorDialog(SplashActivity.this,"[Authenticate failed] PIN Authenticate Failed", SplashActivity.this);
-                        }
-                    }
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                    intent.putExtra("pushdata", result.getData().getStringExtra("data"));
+                    startActivity(intent);
+                    finish();
+                } else if(result.getResultCode() == Activity.RESULT_CANCELED){
+                    CaLog.e("pin authentication fail");
+                    CaUtil.showErrorDialog(SplashActivity.this,"[Authenticate failed] PIN Authenticate Failed", SplashActivity.this);
                 }
+            }
         );
     }
 
     private void init(){
+
         try {
             walletApi = WalletApi.getInstance(this);
-            if(!walletApi.isExistWallet()) {
+            if(!walletApi.isExistWallet())
                walletApi.createWallet(Config.WALLET_URL, Config.TAS_URL);
-            }
-            if(Preference.getCaAppId(this).length() == 0)
+
+            if(Preference.getCaAppId(this).isEmpty()) {
                 Preference.saveCaAppId(this, CaUtil.createCaAppId());
+            }
+
             getFcmToken();
             if (CaUtil.isLock(this)) {
                 Intent intent = new Intent(SplashActivity.this, PinActivity.class);
@@ -137,23 +138,35 @@ public class SplashActivity extends AppCompatActivity {
                 startActivity(new Intent(SplashActivity.this, MainActivity.class));
                 finish();
             }
+
+            progressCircle.dismiss();
+
         } catch (WalletException | UtilityException | WalletCoreException e) {
             CaLog.e("Error creating wallet : " + e.getMessage());
+            try {
+                walletApi.deleteWallet();
+            } catch (WalletCoreException ex) {
+                throw new RuntimeException(ex);
+            }
+            Preference.saveCaAppId(this, "");
             ContextCompat.getMainExecutor(SplashActivity.this).execute(()  -> {
                 CaUtil.showErrorDialog(SplashActivity.this, e.getMessage(),SplashActivity.this);
             });
-
         } catch (ExecutionException | InterruptedException e) {
+            CaLog.e("Error creating wallet : " + e.getMessage());
+            try {
+                walletApi.deleteWallet();
+            } catch (WalletCoreException ex) {
+                throw new RuntimeException(ex);
+            }
+            Preference.saveCaAppId(this, "");
             Throwable cause = e.getCause();
             if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
-                CaLog.e("Error creating wallet : " + e.getMessage());
                 ContextCompat.getMainExecutor(SplashActivity.this).execute(()  -> {
                     CaUtil.showErrorDialog(SplashActivity.this, cause.getCause().getMessage(), SplashActivity.this);
                 });
             }
         }
-        progressCircle.dismiss();
-
     }
     private void pushInit(String pushData){
         CaLog.d("pushData : " + pushData);

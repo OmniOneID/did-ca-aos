@@ -7,63 +7,73 @@
     android:minWidth="300dp"
     android:background="@drawable/custom_dialog_background"
     android:orientation="vertical">
-    <LinearLayout
+
+    <!-- 타이틀 영역 (FrameLayout으로 아이콘+텍스트 중앙 정렬 처리) -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal">
-        <ImageView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/fail_icon"/>
+        android:layout_marginTop="10dp">
+
         <TextView
             android:id="@+id/titleTv"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="6"
             android:gravity="center"
             android:minHeight="50dp"
-            android:textSize="18dp"
+            android:textSize="18sp"
             android:text="Dialog Title" />
-    </LinearLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/fail_icon" />
+    </FrameLayout>
+
+    <!-- 구분선 -->
     <View
         android:layout_marginTop="10dp"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#cccccc"/>
+        android:background="#cccccc" />
+
+    <!-- 메시지 및 입력 영역 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="3"
         android:layout_marginTop="10dp"
         android:orientation="horizontal">
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:layout_weight="8">
-            <LinearLayout
+
+            <!-- 메시지 영역을 ScrollView로 감싸기 -->
+            <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="2"
-                android:orientation="horizontal">
+                android:layout_weight="2">
 
                 <TextView
                     android:id="@+id/messageTv"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="8"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:gravity="center"
                     android:minHeight="50dp"
-                    android:textSize="18dp"
-                    android:text="Dialog Message" />
-            </LinearLayout>
+                    android:textSize="18sp"
+                    android:text="Dialog Message. This is a long message that should scroll if it exceeds the available height. Add as much content as needed to test the scroll behavior." />
+            </ScrollView>
+
             <EditText
                 android:id="@+id/inputEt"
                 android:layout_width="match_parent"
@@ -73,13 +83,16 @@
                 android:minHeight="50dp"
                 android:textSize="16sp"
                 android:visibility="gone"
-                android:hint="http://"/>
+                android:hint="http://" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
     </LinearLayout>
+
+    <!-- 버튼 영역 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -96,10 +109,9 @@
             android:layout_height="45dp"
             android:layout_gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="16dp"
+            android:textSize="16sp"
             android:text="OK"
             android:background="@drawable/primary_btn_default_selector" />
-
     </LinearLayout>
 
 </LinearLayout>

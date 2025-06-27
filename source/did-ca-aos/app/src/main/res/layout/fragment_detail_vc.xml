@@ -11,14 +11,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+
         <FrameLayout
             android:id="@+id/vc"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_weight="4"
             android:orientation="vertical"
             android:background="#F5F5F7"
             android:layout_margin="0dp"
-            android:layout_weight="4"
             android:visibility="visible">
 
             <TextView
@@ -47,20 +48,39 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginEnd="20dp"
                 android:background="@drawable/trash" />
+
         </FrameLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="9"
             android:orientation="vertical">
             <TextView
-                android:id="@id/textView2"
+                android:id="@+id/textVcStatus"
+                android:layout_marginTop="5dp"
+                android:layout_marginEnd="5dp"
+                android:layout_width="80dp"
+                android:layout_height="30dp"
+                android:layout_gravity="end"
+                android:gravity="center"
+                android:background="@drawable/label_border_orange"
+                android:textColor="@android:color/holo_orange_dark"
+                android:text="" />
+            <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="5"
-                android:layout_margin="10dp"
-                android:layout_gravity="left"
-                android:text="loding..."/>
+                android:layout_margin="10dp">
+
+                <TextView
+                    android:id="@+id/textView2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="loading..."
+                    android:scrollbars="vertical" />
+            </ScrollView>
+
             <ImageView
                 android:id="@+id/claimImg"
                 android:layout_gravity="start"
@@ -68,13 +88,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="2"
-                android:visibility="gone"/>
+                android:visibility="gone" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="0.5" />
+
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button"
             android:layout_marginBottom="24dp"

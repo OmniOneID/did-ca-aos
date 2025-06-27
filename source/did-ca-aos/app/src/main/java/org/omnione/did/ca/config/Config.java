@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package org.omnione.did.ca.config;
 
 public class Config {
     //////////// SERVER URL ////////////////
-    public final static String CAS_URL = "http://192.168.3.130:8094"; //dev server
-    public final static String TAS_URL = "http://192.168.3.130:8090"; //dev server
-    public final static String VERIFIER_URL = "http://192.168.3.130:8092"; //dev server
-    public final static String DEMO_URL = "http://192.168.3.130:8099"; //dev
-    public final static String WALLET_URL = "http://192.168.3.130:8095"; //dev
-    public final static String API_GATEWAY_URL = "http://192.168.3.130:8093"; //dev
+    public final static String CAS_URL = "http://192.168.3.130:18094"; //dev server
+    public final static String TAS_URL = "http://192.168.3.130:18090"; //dev server
+    public final static String VERIFIER_URL = "http://192.168.3.130:18092"; //dev server
+        public final static String DEMO_URL = "http://192.168.3.130:18099"; //dev
+    public final static String WALLET_URL = "http://192.168.3.130:18095"; //dev
+    public final static String API_GATEWAY_URL = "http://192.168.3.130:18093"; //dev
 
     //////////// pin config ////////////////
     public final static int PIN_MAX_VALUE = 6;
@@ -31,5 +31,4 @@ public class Config {
 
     //////////// Splash config  ////////////////
     public final static int SPLASH_DELAY = 2000;
-
 }
