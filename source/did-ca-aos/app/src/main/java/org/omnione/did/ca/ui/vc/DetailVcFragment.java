@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -41,6 +47,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
+import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.ui.PinActivity;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
@@ -49,18 +56,31 @@ import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.RevokeVc;
 import org.omnione.did.ca.ui.common.CustomDialog;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
+
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
+import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
+
+import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
+import org.omnione.did.sdk.datamodel.zkp.Credential;
+import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
+
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -68,11 +88,19 @@ public class DetailVcFragment extends Fragment {
     NavController navController;
     Activity activity;
     VerifiableCredential vc;
+
+    Credential credential;
     String vcId;
     ImageView imageView;
     String hWalletToken = "";
     GetWalletToken getWalletToken;
+
+    TextView textVcStatus;
+
+    HttpUrlConnection httpClient;
     ActivityResultLauncher<Intent> pinActivityRevokeResultLauncher;
+
+    ProgressCircle progressCircle;
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_detail_vc, container, false);
@@ -83,21 +111,50 @@ public class DetailVcFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
         getWalletToken = GetWalletToken.getInstance(activity);
-        TextView name = (TextView) view.findViewById(R.id.textView);
+        TextView name = view.findViewById(R.id.textView);
         name.setText(Preference.getUsernameForDemo(activity));
-        TextView textView = (TextView) view.findViewById(R.id.textView2);
-        imageView = (ImageView) view.findViewById(R.id.claimImg);
+        TextView textView = view.findViewById(R.id.textView2);
+        imageView = view.findViewById(R.id.claimImg);
+        textVcStatus = view.findViewById(R.id.textVcStatus);
+
+        progressCircle = new ProgressCircle(activity);
+
+        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 if (requireArguments().getString("vcId") != null) {
                     vcId = requireArguments().getString("vcId");
+                    textVcStatus.setText(CaUtil.getVcMeta(activity, vcId));
+
                     try {
                         hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.DETAIL_VC).get();
                         WalletApi walletApi = WalletApi.getInstance(activity);
                         List<VerifiableCredential> vcList = walletApi.getCredentials(hWalletToken, List.of(vcId));
                         vc = vcList.get(0);
-                        textView.setText(displayVc(vc));
+
+                        requireActivity().runOnUiThread(() -> {
+                            progressCircle.show();
+                            textView.setText(displayVc(vc));
+                            progressCircle.dismiss();
+                        });
+
+                        // add zkp info
+                        if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcId)) {
+                            List<Credential> credentialList = walletApi.getZkpCredentials(hWalletToken, List.of(vcId));
+                            credential = credentialList.get(0);
+                            requireActivity().runOnUiThread(() -> {
+                                try {
+                                    progressCircle.show();
+                                    textView.append(displayZkpCredential(credential));
+                                    progressCircle.dismiss();
+                                } catch (ExecutionException | InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                        }
+
                     } catch (WalletCoreException | WalletException | UtilityException e) {
                         CaLog.e("get detail vc error : " + e.getMessage());
                         ContextCompat.getMainExecutor(activity).execute(()  -> {
@@ -111,6 +168,8 @@ public class DetailVcFragment extends Fragment {
                                 CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
                             });
                         }
+                    } finally {
+                        progressCircle.dismiss();
                     }
 
                 }
@@ -156,26 +215,80 @@ public class DetailVcFragment extends Fragment {
         activity = (Activity) context;
     }
 
-    private String displayVc(VerifiableCredential vc){
-        StringBuffer sb = new StringBuffer();
-        String display = "";
-        for(Claim claim : vc.getCredentialSubject().getClaims()) {
-            sb.append(" [ ");
+    private CharSequence displayVc(VerifiableCredential vc) {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+
+        String title = "Verifiable Credential\n\n";
+        int start = sb.length();
+        sb.append(title);
+        int end = sb.length();
+
+        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        for (Claim claim : vc.getCredentialSubject().getClaims()) {
             sb.append(claim.getCaption());
-            sb.append(" ] ");
             sb.append("\n");
 
-            if(claim.getValue().contains("data:image"))
-                imageView.setImageBitmap(BitmapFactory.decodeByteArray(Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT), 0, Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT).length));
-            else
+            if (claim.getValue().contains("data:image")) {
+                byte[] decoded = Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT);
+                imageView.setImageBitmap(BitmapFactory.decodeByteArray(decoded, 0, decoded.length));
+            } else {
                 sb.append(claim.getValue());
-            sb.append("\n");
-            sb.append("\n");
-        }
-        return sb.toString();
+            }
 
+            sb.append("\n\n");
+        }
+
+        return sb;
     }
+
+
+
+    private CharSequence displayZkpCredential(Credential credential) throws ExecutionException, InterruptedException {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+
+        sb.append("\n\n");
+
+        String title = "Zero-Knowledge Proof\n\n";
+        int start = sb.length(); // 주황색 시작 위치
+        sb.append(title);
+        int end = sb.length(); // 주황색 끝 위치
+
+        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2, /*"\n\n" 제외*/ Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        // credentialSchema 조회
+        CredentialSchema schema = CaUtil.getCredentialSchema(activity, credential.getSchemaId());
+        CaLog.d("schema: "+GsonWrapper.getGson().toJson(schema));
+
+        for (AttributeType type: schema.getAttrTypes()) {
+            String namespace = type.getNamespace().getId();
+            for (Map.Entry<String, AttributeValue> entry : credential.getValues().entrySet()) {
+                String keyEntry = entry.getKey();
+                if (keyEntry.startsWith(namespace) && keyEntry.length() > namespace.length()) {
+                    String label = keyEntry.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
+                    String nmId = type.getNamespace().getId();
+                    if (nmId.equals(namespace)) {
+                        for (AttributeDef attrDef : type.getItems()) {
+                            if (attrDef.getLabel().equals(label)) {
+                                AttributeValue value = entry.getValue();
+                                sb.append(attrDef.getCaption());
+                                sb.append("\n");
+                                sb.append(value.getRaw());
+                                sb.append("\n\n");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return sb;
+    }
+
     private void showDialog() {
+
         CustomDialog customDialog = new CustomDialog(activity, Constants.DIALOG_CONFIRM_TYPE);
         customDialog.setMessage("Are you sure you want to delete it?");
         customDialog.setCancelable(false);
@@ -183,7 +296,25 @@ public class DetailVcFragment extends Fragment {
             @Override
             public void yesBtnClicked(String btnName) {
                 try {
-                    revokePreVc(vcId);
+
+                    String vcStatus = CaUtil.getVcMeta(activity, vcId);
+                    if (vcStatus.equals("ACTIVE") || vcStatus.equals("INACTIVE")) {
+                        revokePreVc(vcId);
+                    } else {
+                        hWalletToken = getWalletToken.getWalletTokenDataAPI(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC).get();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    WalletApi.getInstance(activity).deleteCredentials(hWalletToken, vcId);
+                                } catch (WalletException | WalletCoreException | UtilityException e) {
+                                    ContextCompat.getMainExecutor(activity).execute(()  -> {
+                                        CaUtil.showErrorDialog(activity, e.getMessage());
+                                    });
+                                }
+                            }
+                        }).start();
+                    }
                 } catch (ExecutionException | InterruptedException e) {
                     Throwable cause = e.getCause();
                     if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
@@ -244,13 +375,14 @@ public class DetailVcFragment extends Fragment {
             revokeVc.revokeVcProcess(pin).get();
             navController.navigate(R.id.action_detailVcFragment_to_vcListFragment);
         } catch (ExecutionException | InterruptedException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
-                CaLog.e("revoke error : " + e.getMessage());
-                ContextCompat.getMainExecutor(activity).execute(()  -> {
-                    CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
-                });
+            Throwable cause = e.getCause();  // RuntimeException 포함
+            if (cause instanceof CompletionException) {
+                cause = cause.getCause();
             }
+            CaLog.e("revoke error : " + cause.getMessage());
+            ContextCompat.getMainExecutor(activity).execute(()  -> {
+                CaUtil.showErrorDialog(activity, e.getMessage());
+            });
         }
     }
 }

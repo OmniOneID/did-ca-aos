@@ -17,12 +17,12 @@
 package org.omnione.did.ca.network.protocol.user;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
@@ -32,6 +32,7 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.EllipticCurveType;
@@ -54,7 +55,6 @@ import org.omnione.did.sdk.utility.DataModels.EcType;
 import org.omnione.did.sdk.utility.DataModels.MultibaseType;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
-import org.omnione.did.sdk.wallet.WalletApi;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.List;
@@ -169,14 +169,13 @@ public class UpdateUser {
             reqEcdh.setPublicKey(dhKeyPair.getPublicKey());
             reqEcdh.setCandidate(new ReqEcdh.Ciphers(List.of(SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC)));
             reqEcdh = (ReqEcdh) walletApi.addProofsToDocument(reqEcdh, List.of("keyagree"), did, Constants.DID_TYPE_HOLDER, null, false);
-        } catch (Exception e) {
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
         }
         requestVo.setReqEcdh(reqEcdh);
-        String request = requestVo.toJson();
-        return request;
+        return requestVo.toJson();
     }
 
     private String M141_RequestCreateToken(ServerTokenSeed serverTokenSeed){
@@ -237,7 +236,7 @@ public class UpdateUser {
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
-        } catch (Exception e){
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -253,7 +252,7 @@ public class UpdateUser {
             WalletApi walletApi = WalletApi.getInstance(context);
             String did = walletApi.getDIDDocument(1).getId();
             signedWalletInfo = walletApi.getSignedWalletInfo();
-        } catch (Exception e){
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -273,7 +272,7 @@ public class UpdateUser {
         JSONObject json = new JSONObject();
         try {
             json.put("appId", appId);
-        } catch (Exception e){
+        } catch (JSONException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -302,7 +301,7 @@ public class UpdateUser {
                         DIDDocument holderDIDDoc = walletApi.getDIDDocument(Constants.DID_TYPE_HOLDER);
                         DIDAuth signedDIDAuth = (DIDAuth) walletApi.addProofsToDocument(didAuth, List.of("bio"), holderDIDDoc.getId(), Constants.DID_TYPE_HOLDER, null, true);
                         updateUser(signedDIDAuth, navController);
-                    } catch (Exception e){
+                    } catch (WalletException | UtilityException | WalletCoreException e) {
                         CaLog.e("bio authentication fail" + e.getMessage());
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
@@ -338,7 +337,7 @@ public class UpdateUser {
     private void updateUser(DIDAuth signedDIDAuth, NavController navController){
         try {
             updateUserProcess(signedDIDAuth).get();
-        } catch (Exception e) {
+        } catch (ExecutionException | InterruptedException e) {
             CaLog.e("updateUser error : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());

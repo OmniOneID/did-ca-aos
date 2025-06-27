@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,14 +42,15 @@ public class Constants {
     public final static int WEBVIEW_VC_INFO = 2;
 
     // pin message
-    public final static String PIN_REGISTER_TEXT = "Please register a Pin";
-    public final static String PIN_INPUT_TEXT = "Please input a Pin";
-    public final static String PIN_REGISTER_LOCK_TEXT = "Please register a Lock/Unlock Pin";
-    public final static String PIN_INPUT_LOCK_TEXT = "Please input a Lock/Unlock Pin";
-    public final static String PIN_NOT_MATCH_TEXT = "Pin number does not match!!!!!!!!!";
-
+    public final static String PIN_REGISTER_TEXT = "Please register a PIN";
+    public final static String PIN_INPUT_TEXT = "Please input a PIN";
+    public final static String PIN_REGISTER_LOCK_TEXT = "Please register a Unlock PIN";
+    public final static String PIN_INPUT_LOCK_TEXT = "Please input a Unlock PIN";
+    public final static String PIN_NOT_MATCH_TEXT = "PIN does not match";
+    public final static String PIN_CHANGE_TEXT = "Please input new PIN";
+    public final static String PIN_RE_ENTER_TEXT = "Please re-enter your PIN";
     // dialog message
-    public final static String DIALOG_MESSAGE_SET_LOCK = "Would you like to set the Wallet for lock type ?";
+    public final static String DIALOG_MESSAGE_SET_LOCK = "Would you like to set the Wallet for lock type?";
 
     // intent Key
     public final static String INTENT_IS_REGISTRATION = "IS_REGISTRATION"; // true: reg, false: auth
@@ -61,6 +62,8 @@ public class Constants {
     public final static int PIN_TYPE_STATUS_UNLOCK = 3;
     public final static int PIN_TYPE_REG_KEY = 4;
     public final static int PIN_TYPE_USE_KEY = 5;
+    public final static int PIN_TYPE_CHANGE_SIGNING_PIN = 6;
+    public final static int PIN_TYPE_CHANGE_UNLOCK_PIN = 7;
 
     // did type
     public final static int DID_TYPE_DEVICE = 1;

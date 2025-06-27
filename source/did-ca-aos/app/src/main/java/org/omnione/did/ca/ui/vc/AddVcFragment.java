@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import android.widget.GridView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -40,6 +41,7 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.network.protocol.vc.IssueVc;
+import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.vc.issue.VCPlan;
@@ -48,6 +50,9 @@ import org.omnione.did.sdk.datamodel.vc.issue.VCPlanList;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AddVcFragment extends Fragment {
     NavController navController;
@@ -56,6 +61,9 @@ public class AddVcFragment extends Fragment {
     String vcPlanStr = "";
     VCPlanList vcPlanList;
     ActivityResultLauncher<Intent> qrActivityResultLauncher;
+
+    private ProgressCircle progressCircle;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_add_vc, container, false);
@@ -64,12 +72,18 @@ public class AddVcFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
         navController = Navigation.findNavController(view);
+
+        progressCircle = new ProgressCircle(activity);
+
         try {
             vcPlanStr = getVcPlan().get();
-        } catch (Exception e){
+        } catch (ExecutionException | InterruptedException e) {
             CaLog.e("getVcPlan error " + e.getMessage());
-            CaUtil.showErrorDialog(activity, e.getMessage());
+            ContextCompat.getMainExecutor(activity).execute(()  -> {
+                CaUtil.showErrorDialog(activity, e.getMessage());
+            });
         }
         vcPlanList = MessageUtil.deserialize(vcPlanStr, VCPlanList.class);
         GridView gridView = (GridView) view.findViewById(R.id.gridView);
@@ -88,23 +102,39 @@ public class AddVcFragment extends Fragment {
             adapter.addItem(new AddVcListItem(vcPlan.getName(), vcPlan.getDescription(), vcForm));
         }
         gridView.setAdapter(adapter);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                try {
+                showLoading();
+
+                executor.execute(() -> {
                     IssueVc issueVc = IssueVc.getInstance(activity);
-                    String issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
-                    Bundle bundle = new Bundle();
-                    bundle.putString("result", issueProfile);
-                    bundle.putString("type", "user_init");
-                    navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
-                } catch (Exception e){
-                    CaLog.e("item click error " + e.getMessage());
-                    CaUtil.showErrorDialog(activity, e.getMessage());
-                }
+                    String issueProfile;
+                    try {
+                        issueProfile = issueVc.issueVcPreProcess(vcPlanList.getItems().get(position).getVcPlanId(), vcPlanList.getItems().get(position).getAllowedIssuers().get(0), null).get();
+                    } catch (ExecutionException | InterruptedException e) {
+                        ContextCompat.getMainExecutor(activity).execute(() -> {
+                            CaUtil.showErrorDialog(activity, e.getMessage());
+                        });
+                        progressCircle.dismiss();
+                        return;
+                    }
+
+                    hideLoading();
+
+                    new Thread(() -> getActivity().runOnUiThread(() -> {
+                        Bundle bundle = new Bundle();
+                        bundle.putString("result", issueProfile);
+                        bundle.putString("type", "user_init");
+                        bundle.putString("vcSchemaId", vcPlanList.getItems().get(position).getCredentialSchema().getId());
+                        navController.navigate(R.id.action_addVcFragment_to_profileFragment, bundle);
+                    })).start();
+                });
             }
         });
-        Button cancelBtn = (Button) view.findViewById(R.id.cancelBtn);
+        Button cancelBtn = view.findViewById(R.id.cancelBtn);
         cancelBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -113,6 +143,18 @@ public class AddVcFragment extends Fragment {
             }
         });
 
+    }
+
+    public void showLoading() {
+        new Thread(() -> getActivity().runOnUiThread(() -> {
+            progressCircle.show();
+        })).start();
+    }
+
+    public void hideLoading() {
+        new Thread(() -> getActivity().runOnUiThread(() -> {
+            progressCircle.dismiss();
+        })).start();
     }
 
     static class VcListAdapter extends BaseAdapter {

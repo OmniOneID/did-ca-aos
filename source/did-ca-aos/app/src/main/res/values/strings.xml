@@ -1,4 +1,14 @@
 <resources>
     <string name="app_name">DID CA</string>
     <string name="msg_token_fmt">TOKEN : %s</string>
+
+
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="issue">issue</string>
+    <string name="verify">verify</string>
+
+    <string name="hello_main_fragment">Hello main fragment</string>
+    <string name="hello_issue_fragment">Hello issue fragment</string>
+    <string name="hello_verify_fragment">Hello verify fragment</string>
 </resources>

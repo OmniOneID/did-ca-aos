@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public class CaLog {
 
     private static String buildLogMsg(String message) {
         StackTraceElement ste = Thread.currentThread().getStackTrace()[4];
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         if(ste.getFileName() != null) {
             sb.append(" [ ");
             sb.append(ste.getFileName().replace(".java", ""));
@@ -41,15 +41,35 @@ public class CaLog {
     }
 
     public static void d(String logMsg) {
-        Log.d("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        if(logMsg.length() > 4000) {
+            Log.d("CA_LOG", logMsg.substring(0, 4000));
+            CaLog.d(logMsg.substring(4000));
+        } else {
+            Log.d("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        }
     }
     public static void e(String logMsg) {
-        Log.e("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        if(logMsg.length() > 4000) {
+            Log.e("CA_LOG", logMsg.substring(0, 4000));
+            CaLog.e(logMsg.substring(4000));
+        } else {
+            Log.e("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        }
     }
     public static void v(String logMsg) {
-        Log.v("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        if(logMsg.length() > 4000) {
+            Log.v("CA_LOG", logMsg.substring(0, 4000));
+            CaLog.v(logMsg.substring(4000));
+        } else {
+            Log.v("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        }
     }
     public static void i(String logMsg) {
-        Log.i("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        if(logMsg.length() > 4000) {
+            Log.i("CA_LOG", logMsg.substring(0, 4000));
+            CaLog.i(logMsg.substring(4000));
+        } else {
+            Log.i("CA_LOG", buildLogMsg(logMsg + " :: " + lineOut()));
+        }
     }
 }

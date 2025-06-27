@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ package org.omnione.did.ca.network.protocol.vc;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
-
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 
+import org.json.JSONException;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
@@ -33,6 +32,7 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.did.DIDDocument;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.protocol.P210RequestVo;
@@ -54,9 +54,9 @@ import org.omnione.did.sdk.utility.DataModels.EcType;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.utility.DataModels.MultibaseType;
-import org.omnione.did.sdk.wallet.WalletApi;
 
 import org.json.JSONObject;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletErrorCode;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -94,8 +94,6 @@ public class IssueVc {
         String api2 = "/tas/api/v1/request-ecdh";
         String api3 = "/tas/api/v1/request-create-token";
         String api4 = "/tas/api/v1/request-issue-profile";
-        String api5 = "/tas/api/v1/request-issue-vc";
-        String api6 = "/tas/api/v1/confirm-issue-vc";
 
         String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
         String api_cas2 = "/cas/api/v1/request-attested-appinfo";
@@ -107,7 +105,9 @@ public class IssueVc {
                 .thenCompose(_M210_ProposeIssueVc -> {
                     txId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getTxId();
                     refId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getRefId();
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M210_RequestEcdh(_M210_ProposeIssueVc)));
+                    return CompletableFuture.supplyAsync(() -> {
+                        return httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M210_RequestEcdh(_M210_ProposeIssueVc));
+                    });
                 })
                 .thenCompose(_M210_RequestEcdh -> {
                     ecdhResult = _M210_RequestEcdh;
@@ -144,8 +144,11 @@ public class IssueVc {
                 });
 
     }
-    public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) {
+    public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) throws WalletException {
         String _M210_RequestIssueVc = M210_RequestIssueVc(txId, serverToken, refId, profile, signedDIDAuth);
+
+        if(_M210_RequestIssueVc.isEmpty())
+            throw new WalletException(WalletErrorCode.ERR_CODE_WALLET_ISSUE_CREDENTIAL_FAIL);
         String api6 = "/tas/api/v1/confirm-issue-vc"; //VC 발급 완료
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
@@ -181,14 +184,14 @@ public class IssueVc {
             reqEcdh.setPublicKey(dhKeyPair.getPublicKey());
             reqEcdh.setCandidate(new ReqEcdh.Ciphers(List.of(SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC)));
             reqEcdh = (ReqEcdh) walletApi.addProofsToDocument(reqEcdh, List.of("keyagree"), did, Constants.DID_TYPE_HOLDER, null, false);
-        } catch (Exception e) {
+        } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
         }
         requestVo.setReqEcdh(reqEcdh);
-        String request = requestVo.toJson();
-        return request;
+
+        return requestVo.toJson();
     }
 
     private String M210_RequestCreateToken(ServerTokenSeed serverTokenSeed){
@@ -210,6 +213,7 @@ public class IssueVc {
 
         final String[] resultHolder = new String[1];
         final CountDownLatch latch = new CountDownLatch(1);
+        resultHolder[0] = "";
 
         new Thread(new Runnable() {
             @Override
@@ -258,7 +262,7 @@ public class IssueVc {
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
-        } catch (Exception e){
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -274,7 +278,7 @@ public class IssueVc {
             WalletApi walletApi = WalletApi.getInstance(context);
             String did = walletApi.getDIDDocument(1).getId();
             signedWalletInfo = walletApi.getSignedWalletInfo();
-        } catch (Exception e){
+        } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -295,7 +299,7 @@ public class IssueVc {
         JSONObject json = new JSONObject();
         try {
             json.put("appId", appId);
-        } catch (Exception e){
+        } catch (JSONException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());
             });
@@ -307,7 +311,7 @@ public class IssueVc {
         WalletApi walletApi = WalletApi.getInstance(context);
         return walletApi.isSavedKey(Constants.KEY_ID_BIO);
     }
-    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException {
+    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException, ExecutionException, InterruptedException {
         WalletApi walletApi = WalletApi.getInstance(context);
         DIDAuth signedDIDAuth = walletApi.getSignedDIDAuth(authNonce, pin);
         issueVc(signedDIDAuth, navController);
@@ -324,11 +328,17 @@ public class IssueVc {
                         DIDDocument holderDIDDoc = walletApi.getDIDDocument(Constants.DID_TYPE_HOLDER);
                         DIDAuth signedDIDAuth = (DIDAuth) walletApi.addProofsToDocument(didAuth, List.of("bio"), holderDIDDoc.getId(), Constants.DID_TYPE_HOLDER, null, true);
                         issueVc(signedDIDAuth, navController);
-                    } catch (Exception e){
+                    } catch (WalletException | UtilityException | WalletCoreException e) {
                         CaLog.e("bio ahentication fail  " + e.getMessage());
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
                         });
+
+                        Bundle bundle = new Bundle();
+                        bundle.putString("type",Constants.TYPE_ISSUE);
+                        navController.navigate(R.id.action_profileFragment_to_addVcFragment, bundle);
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
                 @Override
@@ -357,16 +367,9 @@ public class IssueVc {
         }
     }
 
-    private void issueVc(DIDAuth signedDIDAuth, NavController navController){
-        P210ResponseVo vcPofile = MessageUtil.deserialize(profile, P210ResponseVo.class);
-        try {
-            issueVcProcess(vcPofile.getProfile(), signedDIDAuth).get();
-        } catch (Exception e) {
-            CaLog.e("issueVC error : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
-        }
+    private void issueVc(DIDAuth signedDIDAuth, NavController navController) throws WalletException, ExecutionException, InterruptedException {
+        P210ResponseVo vcProfile = MessageUtil.deserialize(profile, P210ResponseVo.class);
+        issueVcProcess(vcProfile.getProfile(), signedDIDAuth).get();
         Bundle bundle = new Bundle();
         bundle.putString("type",Constants.TYPE_ISSUE);
         navController.navigate(R.id.action_profileFragment_to_resultFragment, bundle);

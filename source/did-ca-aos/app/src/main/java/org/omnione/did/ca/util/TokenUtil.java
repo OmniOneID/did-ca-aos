@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 OmniOne.
+ * Copyright 2024-2025 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@
 package org.omnione.did.ca.util;
 
 import android.content.Context;
-import android.util.Log;
 
-
-import androidx.core.content.ContextCompat;
 
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.datamodel.security.AccEcdh;
 import org.omnione.did.sdk.datamodel.token.WalletTokenData;
@@ -39,12 +37,9 @@ import org.omnione.did.sdk.utility.DigestUtils;
 import org.omnione.did.sdk.utility.Encodings.Base16;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
-import org.omnione.did.sdk.wallet.WalletApi;
-import org.omnione.did.sdk.wallet.WalletCore;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 public class TokenUtil {
@@ -56,7 +51,6 @@ public class TokenUtil {
         walletToken = Base16.toHex(DigestUtils.getDigest(walletToken.getBytes(), DigestEnum.DIGEST_ENUM.SHA_256));
         CaLog.d("walletToken by CA : " + walletToken + " / " + walletTokenData.getSeed().getPurpose().toString());
         return walletToken;
-
     }
 
     public static String createServerToken(String std, String ecdh, byte[] clientNonce, EcKeyPair dhKeyPair) throws UtilityException{
@@ -96,8 +90,7 @@ public class TokenUtil {
 
         byte[] serverNonce = MultibaseUtils.decode(accEcdh.getServerNonce());
         byte[] mergedNonce = mergeNonce(clientNonce, serverNonce);
-        byte[] sessKey = mergeSharedSecretAndNonce(secretKey, mergedNonce, SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC);
-        return  sessKey;
+        return mergeSharedSecretAndNonce(secretKey, mergedNonce, SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC);
     }
 
     public static byte[] mergeNonce(byte[] clientNonce, byte[] serverNonce) throws UtilityException {
