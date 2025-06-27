@@ -51,7 +51,6 @@ public class TokenUtil {
         walletToken = Base16.toHex(DigestUtils.getDigest(walletToken.getBytes(), DigestEnum.DIGEST_ENUM.SHA_256));
         CaLog.d("walletToken by CA : " + walletToken + " / " + walletTokenData.getSeed().getPurpose().toString());
         return walletToken;
-
     }
 
     public static String createServerToken(String std, String ecdh, byte[] clientNonce, EcKeyPair dhKeyPair) throws UtilityException{
@@ -91,8 +90,7 @@ public class TokenUtil {
 
         byte[] serverNonce = MultibaseUtils.decode(accEcdh.getServerNonce());
         byte[] mergedNonce = mergeNonce(clientNonce, serverNonce);
-        byte[] sessKey = mergeSharedSecretAndNonce(secretKey, mergedNonce, SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC);
-        return  sessKey;
+        return mergeSharedSecretAndNonce(secretKey, mergedNonce, SymmetricCipherType.SYMMETRIC_CIPHER_TYPE.AES256CBC);
     }
 
     public static byte[] mergeNonce(byte[] clientNonce, byte[] serverNonce) throws UtilityException {

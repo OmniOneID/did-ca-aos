@@ -45,8 +45,6 @@ public class ReferentListActivity extends AppCompatActivity {
     private CredentialIdAdapter credentialIdAdapter;
     private ListView listView_value;
     private TextView textView_referentName;
-    private Button okBtn;
-    private Button cancelBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +72,10 @@ public class ReferentListActivity extends AppCompatActivity {
         textView_referentName.setText(caption);
 
         for (int i = 0; i < attrSubReferentList.size(); i++) {
-            credentialIdArrayList.add(CaUtil.extractSchemaName(attrSubReferentList.get(i).getCredentialDefId()) + "\n" + attrSubReferentList.get(i).getRaw());
+            String vcStatus = CaUtil.getVcMeta(this, attrSubReferentList.get(i).getCredentialId());
+            if (vcStatus.equals("ACTIVE")) {
+                credentialIdArrayList.add(CaUtil.extractSchemaName(attrSubReferentList.get(i).getCredentialDefId()) + "\n" + attrSubReferentList.get(i).getRaw());
+            }
         }
 
         credentialIdAdapter = new CredentialIdAdapter();
@@ -96,22 +97,7 @@ public class ReferentListActivity extends AppCompatActivity {
                 putIntent.putExtra("pos", pos);
 
                 credentialIdAdapter.setSelectedPosition(i);
-            }
-        });
-
-        okBtn = findViewById(R.id.okBtn);
-        okBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
                 setResult(Activity.RESULT_OK, putIntent);
-                finish();
-            }
-        });
-
-        cancelBtn = findViewById(R.id.cancelBtn);
-        cancelBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
                 finish();
             }
         });

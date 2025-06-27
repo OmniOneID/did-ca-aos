@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,12 +42,14 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.network.protocol.token.GetWalletToken;
 import org.omnione.did.ca.network.protocol.vc.IssueVc;
+import org.omnione.did.ca.network.protocol.vp.VerifyProof;
 import org.omnione.did.ca.network.protocol.vp.VerifyVp;
 import org.omnione.did.ca.ui.ScanQrActivity;
 import org.omnione.did.ca.ui.common.CustomDialog;
@@ -84,6 +85,9 @@ public class VcListFragment extends Fragment {
     ActivityResultLauncher<Intent> qrActivityResultLauncher;
     String hWalletToken;
     GridView gridView;
+
+    ProgressCircle progressCircle;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_vc_list, container, false);
@@ -93,13 +97,12 @@ public class VcListFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
-        TextView nameView = (TextView) view.findViewById(R.id.name);
+        TextView nameView = view.findViewById(R.id.name);
         nameView.setText(Preference.getUsernameForDemo(activity));
 
-        ProgressCircle progressCircle = new ProgressCircle(activity);
-        progressCircle.show();
+        progressCircle = new ProgressCircle(activity);
 
-        Button addVcBtn = (Button) view.findViewById(R.id.addVcBtn);
+        Button addVcBtn = view.findViewById(R.id.addVcBtn);
         addVcBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -107,7 +110,7 @@ public class VcListFragment extends Fragment {
             }
         });
 
-        Button qrBtn = (Button) view.findViewById(R.id.qrBtn);
+        Button qrBtn = view.findViewById(R.id.qrBtn);
         qrBtn.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -154,10 +157,18 @@ public class VcListFragment extends Fragment {
                             } else if(payloadData.getPayloadType().equals("SUBMIT_VP")){
                                 CaLog.d("Submit VP Profile");
                                 VerifyOfferPayload offer = MessageUtil.deserialize(payload, VerifyOfferPayload.class);
-                                VerifyVp verifyVp = VerifyVp.getInstance(activity);
                                 try {
-                                    String verifyProfile = verifyVp.verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId(), offer.getType().getValue()).get();
-                                    CaLog.d("verifyProfile: "+verifyProfile);
+                                    String verifyProfile;
+
+                                    if (offer.getType().getValue().toString().equals(VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer.toString())) {
+                                        verifyProfile = VerifyProof.getInstance(activity).verifyProofPreProcess(offer.getOfferId(),payloadData.getTxId()).get();
+                                        CaLog.d("verifyProofPreProcess verifyProfile: "+verifyProfile);
+
+
+                                    } else {
+                                        verifyProfile = VerifyVp.getInstance(activity).verifyVpPreProcess(offer.getOfferId(),payloadData.getTxId()).get();
+                                        CaLog.d("verifyVpPreProcess verifyProfile: "+verifyProfile);
+                                    }
 
                                     Bundle bundle = new Bundle();
                                     bundle.putString("result", verifyProfile);
@@ -172,7 +183,6 @@ public class VcListFragment extends Fragment {
                                     });
                                 }
                             }
-
                         } else if(result.getResultCode() == Activity.RESULT_CANCELED){
                             CaUtil.showErrorDialog(activity,"[Information] canceled by user");
                         }
@@ -186,6 +196,8 @@ public class VcListFragment extends Fragment {
         adapter = new VcListAdapter();
         List<VcDetail> vcDetails = new ArrayList<>();
         GetWalletToken getWalletToken = GetWalletToken.getInstance(activity);
+
+        new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.show())).start();
 
         new Thread(new Runnable() {
             @Override
@@ -216,27 +228,36 @@ public class VcListFragment extends Fragment {
                         }
                         vcDetails.add(setVcInfo(vcSchema));
                     }
-
-
-                        List<String> ids = new ArrayList<>();
-                        for(VcDetail vcDetail : vcDetails){
-                            ids.add(vcDetail.getVcId());
-                            boolean hasZkp = false;
-                            if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcDetail.getVcId())) {
-                                List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
-                                if (credentials.size() > 0) {
-                                    hasZkp = true;
-                                }
-                            }
-                            adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), hasZkp, vcDetail.getImage()));
-                            ids.clear();
+                    if (WalletApi.getInstance(activity).isAnyZkpCredentialsSaved()) {
+                        List<Credential> zkpVcList = walletApi.getAllZkpCredentials(hWalletToken);
+                        CaLog.d("Zkp list size : " + zkpVcList.size());
+                        for (Credential credential : zkpVcList) {
+                            CaLog.d("Zkp list id : " + credential.getCredentialId());
                         }
+                    }
+
+                    List<String> ids = new ArrayList<>();
+                    for(VcDetail vcDetail : vcDetails) {
+                        ids.add(vcDetail.getVcId());
+                        boolean hasZkp = false;
+                        if (WalletApi.getInstance(activity).isZkpCredentialsSaved(vcDetail.getVcId())) {
+                            List<Credential> credentials = WalletApi.getInstance(activity).getZkpCredentials(hWalletToken, ids);
+                            if (credentials.size() > 0) {
+                                hasZkp = true;
+                            }
+                        }
+                        // VCMeta조회 후 화면 표시 vcStatus
+                        String vcStatus = CaUtil.getVcMeta(activity, vcDetail.getVcId());
+
+                        adapter.addItem(new VcListItem(vcDetail.getTitle(), vcDetail.getValidUntil(), vcDetail.getIssuanceDate(), vcStatus, hasZkp, vcDetail.getImage()));
+                        ids.clear();
+                    }
 
                     activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             gridView.setAdapter(adapter);
-                            //progressCircle.dismiss();
+                            new Thread(() -> requireActivity().runOnUiThread(() -> progressCircle.dismiss())).start();
                         }
                     });
                 } catch (WalletException | WalletCoreException | UtilityException e){
@@ -262,7 +283,6 @@ public class VcListFragment extends Fragment {
             }
         }).start();
 
-
         //String vcForm = "data:image/png;base64,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";
 
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -273,7 +293,6 @@ public class VcListFragment extends Fragment {
                 navController.navigate(R.id.action_vcListFragment_to_detailVcFragment, bundle);
             }
         });
-
     }
 
     static class VcListAdapter extends BaseAdapter {
@@ -314,7 +333,7 @@ public class VcListFragment extends Fragment {
             view.setValidUntil(item.getValidUntil());
             view.setIssuanceDate(item.getIssuanceDate());
             view.setImage(item.getImg());
-
+            view.setVcStatus(item.getVcStatus());
             view.setIsZkp(item.isZkp());
 
             return view;

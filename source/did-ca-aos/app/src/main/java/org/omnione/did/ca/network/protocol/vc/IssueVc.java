@@ -94,8 +94,6 @@ public class IssueVc {
         String api2 = "/tas/api/v1/request-ecdh";
         String api3 = "/tas/api/v1/request-create-token";
         String api4 = "/tas/api/v1/request-issue-profile";
-        String api5 = "/tas/api/v1/request-issue-vc";
-        String api6 = "/tas/api/v1/confirm-issue-vc";
 
         String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
         String api_cas2 = "/cas/api/v1/request-attested-appinfo";
@@ -313,7 +311,7 @@ public class IssueVc {
         WalletApi walletApi = WalletApi.getInstance(context);
         return walletApi.isSavedKey(Constants.KEY_ID_BIO);
     }
-    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException {
+    public void getSignedDIDAuthByPin(String authNonce, String pin, NavController navController) throws WalletException, WalletCoreException, UtilityException, ExecutionException, InterruptedException {
         WalletApi walletApi = WalletApi.getInstance(context);
         DIDAuth signedDIDAuth = walletApi.getSignedDIDAuth(authNonce, pin);
         issueVc(signedDIDAuth, navController);
@@ -335,6 +333,12 @@ public class IssueVc {
                         ContextCompat.getMainExecutor(context).execute(()  -> {
                             CaUtil.showErrorDialog(context, e.getMessage());
                         });
+
+                        Bundle bundle = new Bundle();
+                        bundle.putString("type",Constants.TYPE_ISSUE);
+                        navController.navigate(R.id.action_profileFragment_to_addVcFragment, bundle);
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
                 @Override
@@ -363,16 +367,9 @@ public class IssueVc {
         }
     }
 
-    private void issueVc(DIDAuth signedDIDAuth, NavController navController){
-        P210ResponseVo vcPofile = MessageUtil.deserialize(profile, P210ResponseVo.class);
-        try {
-            issueVcProcess(vcPofile.getProfile(), signedDIDAuth).get();
-        } catch (ExecutionException | WalletException | InterruptedException e) {
-            CaLog.e("issueVC error : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
-        }
+    private void issueVc(DIDAuth signedDIDAuth, NavController navController) throws WalletException, ExecutionException, InterruptedException {
+        P210ResponseVo vcProfile = MessageUtil.deserialize(profile, P210ResponseVo.class);
+        issueVcProcess(vcProfile.getProfile(), signedDIDAuth).get();
         Bundle bundle = new Bundle();
         bundle.putString("type",Constants.TYPE_ISSUE);
         navController.navigate(R.id.action_profileFragment_to_resultFragment, bundle);

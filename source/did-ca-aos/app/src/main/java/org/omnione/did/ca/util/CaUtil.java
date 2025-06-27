@@ -34,9 +34,13 @@ import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
+import org.omnione.did.sdk.datamodel.vc.issue.VcMeta;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatusVo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeDef;
 import org.omnione.did.sdk.datamodel.zkp.AttributeInfo;
 import org.omnione.did.sdk.datamodel.zkp.AttributeType;
+import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinitionVo;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
@@ -75,8 +79,7 @@ public class CaUtil {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
         byte[] byteArray = byteStream.toByteArray();
-        String baseString = "data:image/png;base64," + Base64.encodeToString(byteArray,Base64.DEFAULT);
-        return baseString;
+        return "data:image/png;base64," + Base64.encodeToString(byteArray,Base64.DEFAULT);
     }
 
     public static String getPackageName(Context context) {
@@ -92,8 +95,7 @@ public class CaUtil {
             throw new RuntimeException(e);
         }
 
-        String strDateTime = format.format(date);
-        return  strDateTime;
+        return format.format(date);
     }
 
     public static String createMessageId(Context context) {
@@ -113,8 +115,7 @@ public class CaUtil {
     public static String createCaAppId() throws UtilityException{
         Date today = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMM");
-        String messageId = "AID" + dateFormat.format(today) + "a" + Base16.toHex(CryptoUtils.generateNonce(5));
-        return messageId;
+        return "AID" + dateFormat.format(today) + "a" + Base16.toHex(CryptoUtils.generateNonce(5));
     }
     public static boolean isLock(Context context) {
         final boolean[] resultHolder = new boolean[1];
@@ -218,6 +219,40 @@ public class CaUtil {
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
                 });
+    }
+
+    public static String getVcMeta(Context context, final String vcId) {
+        ExecutorService es = Executors.newCachedThreadPool();
+        Future<String> future = es.submit(new Callable<String>() {
+            @Override
+            public String call() {
+                try {
+                    String vcStatusJson = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL+"/api-gateway/api/v1/vc-meta?vcId="+vcId, "GET","");
+                    CaLog.d("vcStatusJson >>>>>>>>>> " + vcStatusJson);
+
+                    VcStatusVo vcStatusVo = MessageUtil.deserialize(vcStatusJson, VcStatusVo.class);
+                    VcMeta vcMeta = MessageUtil.deserialize(new String(MultibaseUtils.decode(vcStatusVo.getVcMeta())), VcMeta.class);
+
+                    CaLog.d("vcStatus >>>>>>>>>> " + vcMeta.getStatus());
+                    return vcMeta.getStatus();
+                } catch (UtilityException e) {
+                    ContextCompat.getMainExecutor(context).execute(()  -> {
+                        CaUtil.showErrorDialog(context, e.getMessage());
+                    });
+                }
+                return null;
+            }
+        });
+
+        try {
+            return future.get();
+
+        } catch (ExecutionException | InterruptedException e) {
+            ContextCompat.getMainExecutor(context).execute(()  -> {
+                CaUtil.showErrorDialog(context, e.getMessage());
+            });
+        }
+        return null;
     }
 
     public static CredentialSchema getCredentialSchema(Context context, final String schemaId) {
@@ -331,26 +366,25 @@ public class CaUtil {
                     CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
                     CaLog.d("credentialSchema: "+ GsonWrapper.getGson().toJson(credentialSchema));
 
+                    for (AttributeType type: credentialSchema.getAttrTypes()) {
+                        String namespace = type.getNamespace().getId();
 
-                    String[] parts = attrName.split("\\.");
-                    if (parts.length != 2) {
-                        return null;
-                    }
-
-                    String namespaceId = parts[0];
-                    String label = parts[1];
-
-                    for (AttributeType attrType : credentialSchema.getAttrTypes()) {
-                        if (attrType.getNamespace().getId().equals(namespaceId)) {
-                            for (AttributeDef item : attrType.getItems()) {
-                                if (item.getLabel().equals(label)) {
-                                    return item.getCaption();
+                            CaLog.d("attrName: "+attrName);
+                            if (attrName.startsWith(namespace) && attrName.length() > namespace.length()) {
+                                String label = attrName.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
+                                String nmId = type.getNamespace().getId();
+                                CaLog.d("label: "+label);
+                                CaLog.d("nmId: "+nmId);
+                                if (nmId.equals(namespace)) {
+                                    for (AttributeDef attrDef : type.getItems()) {
+                                        if (attrDef.getLabel().equals(label)) {
+                                            return attrDef.getCaption();
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
 
-                    return null;
+                    }
 
                 } catch (UtilityException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {

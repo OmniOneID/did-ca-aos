@@ -34,8 +34,9 @@ import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
-import org.omnione.did.sdk.datamodel.protocol.P310ZkpResponseVo;
+import org.omnione.did.sdk.datamodel.protocol.P311ResponseVo;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
+import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.issue.ReturnEncVP;
 import org.omnione.did.sdk.datamodel.profile.VerifyProfile;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
@@ -48,6 +49,8 @@ import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -71,22 +74,15 @@ public class VerifyVp {
         return instance;
     }
 
-    public CompletableFuture<String> verifyVpPreProcess(String offerId, final String txId, String type) {
-        String api1;
-
-        if (type.equals(VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer.toString())) {
-            api1 = "/verifier/api/v1/request-proof-request-profile";
-        } else {
-            api1 = "/verifier/api/v1/request-profile";
-        }
-
+    public CompletableFuture<String> verifyVpPreProcess(String offerId, final String txId) {
+        String api1 = "/verifier/api/v1/request-profile";
         String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
         return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.VERIFIER_URL + api1, "POST", M310_RequestProfile(offerId, txId)))
                 .thenCompose(_M310_RequestProfile -> {
-                    this.txId = MessageUtil.deserialize(_M310_RequestProfile, P310ZkpResponseVo.class).getTxId();
+                    this.txId = MessageUtil.deserialize(_M310_RequestProfile, P311ResponseVo.class).getTxId();
                     verifyProfile = _M310_RequestProfile;
                     return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
                 })
@@ -136,19 +132,33 @@ public class VerifyVp {
             public void run() {
 
             try {
+
+
                 WalletApi walletApi = WalletApi.getInstance(context);
                 String vcId = "";
                 List<VerifiableCredential> vcList = walletApi.getAllCredentials(hWalletToken);
+
+                List<String> claimCode = new ArrayList<>();
                 for(VerifiableCredential vc : vcList){
                     if(vpProfile.getProfile().filter.getCredentialSchemas().get(0).getId().equals(vc.getCredentialSchema().getId())){
                         vcId = vc.getId();
                         CaLog.d("submit to VC ID : " + vcId);
+                        if (vpProfile.getProfile().filter.getCredentialSchemas().get(0).isPresentAll()) {
+                            for (Claim claim : vc.getCredentialSubject().getClaims()) {
+                                claimCode.add(claim.getCode());
+                            }
+                        }
                     }
                 }
-                List<String> claimCode = vpProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims;
-                CaLog.d("submit to VC ID : " + GsonWrapper.getGson().toJson(claimCode));
+
+                if (claimCode.isEmpty()) {
+                    claimCode = vpProfile.getProfile().filter.getCredentialSchemas().get(0).requiredClaims;
+                }
+
+                CaLog.d("submit to claimCode : " + GsonWrapper.getGson().toJson(claimCode));
                 String nonce = vpProfile.getProfile().process.verifierNonce;
                 ReturnEncVP returnEncVP = walletApi.createEncVp(hWalletToken, vcId, claimCode, vpProfile.getProfile().process.reqE2e, pin, nonce, vpProfile.getProfile().process.authType);
+
                 CaLog.d("returnEncVP: "+GsonWrapper.getGson().toJson(returnEncVP));
                 P310RequestVo requestVo = new P310RequestVo(CaUtil.createMessageId(context));
                 requestVo.setTxId(txId);

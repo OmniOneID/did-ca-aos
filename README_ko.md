@@ -5,13 +5,16 @@
 
 
 ## S/W 사양
-| 구분 | 내용                |
-|------|----------------------------|
-| OS  | Android 14|
-| Language  | Java 17|
-| IDE  | Android Studio 4|
-| Build System  | Gradle 8.2 |
-| Compatibility | Android API level 34 or higher  |
+| 구분             | 내용                                                     |
+| ---------------- | ------------------------------------------------------ |
+| OS               | Android 14                                             |
+| Language         | Java 21                                                |
+| IDE              | Android Studio 4                                       |
+| Build System     | Gradle 8.2                                             |
+| Compatibility    | Android API level 34 or higher                         |
+| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26) |
+|                  | Recommended Requirements: Android 14 (API Level 34)    |
+
 
 ## DIDCA 프로젝트 클론 및 체크아웃
 ```git
@@ -38,11 +41,7 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
 
 ## SDK 적용 방법
 아래 Android SDK를 did-client-sdk-aos로 지칭합니다.
-- *did-core-sdk-aos-1.0.0.jar*
-- *did-utility-sdk-aos-1.0.0.jar*
-- *did-datamodel-sdk-aos-1.0.0.jar*
-- *did-wallet-sdk-aos-1.0.0.jar*
-- *did-communication-sdk-aos-1.0.0.jar*
+- *did-wallet-sdk-aos-2.0.0.jar*
 
 각 SDK가 사용하는 타사 라이브러리에 대한 자체 라이선스는 해당 링크를 참고해주세요. <br>
 [Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)

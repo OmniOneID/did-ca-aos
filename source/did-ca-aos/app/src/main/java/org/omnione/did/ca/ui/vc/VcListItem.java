@@ -18,18 +18,21 @@ package org.omnione.did.ca.ui.vc;
 
 import android.text.BoringLayout;
 
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
+
 public class VcListItem {
     String title;
     String validUntil;
     String issuanceDate;
-
+    String vcStatus;
     boolean isZkp;
     String img;
 
-    public VcListItem(String title, String validUntil, String issuanceDate, boolean isZkp, String img) {
+    public VcListItem(String title, String validUntil, String issuanceDate, String vcStatus, boolean isZkp, String img) {
         this.title = title;
         this.validUntil = validUntil;
         this.issuanceDate = issuanceDate;
+        this.vcStatus = vcStatus;
         this.isZkp = isZkp;
         this.img = img;
     }
@@ -40,6 +43,14 @@ public class VcListItem {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getVcStatus() {
+        return vcStatus;
+    }
+
+    public void setVcStatus(String vcStatus) {
+        this.vcStatus = vcStatus;
     }
 
     public boolean isZkp() {
@@ -79,6 +90,7 @@ public class VcListItem {
         return "SingerItem{" +
                 "title='" + title + '\'' +
                 ", validUntil='" + validUntil + '\'' +
+                ", vcStatus='" + vcStatus + '\'' +
                 ", isZkp='" + isZkp + '\'' +
                 '}';
     }

@@ -26,6 +26,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -38,7 +40,10 @@ public class VcListItemView extends LinearLayout {
     TextView textView;
     TextView textView2;
     TextView textView3;
-    TextView textView4;
+    TextView textVc;
+
+    TextView textVcStatus;
+    TextView textZkp;
     ImageView imageView;
 
     public VcListItemView(Context context) {
@@ -59,7 +64,9 @@ public class VcListItemView extends LinearLayout {
         textView2 = (TextView) findViewById(R.id.textView2);
         textView3 = (TextView) findViewById(R.id.textView3);
         textView3 = (TextView) findViewById(R.id.textView3);
-        textView4 = (TextView) findViewById(R.id.textView4);
+        textVc = (TextView) findViewById(R.id.textVc);
+        textVcStatus = (TextView) findViewById(R.id.textVcStatus);
+        textZkp = (TextView) findViewById(R.id.textZkp);
         imageView = (ImageView) findViewById(R.id.imageView);
 
     }
@@ -95,10 +102,22 @@ public class VcListItemView extends LinearLayout {
     }
 
     public void setIsZkp(boolean isZkp) {
-        if (isZkp)
-            textView4.setText("ZKP included");
-        else
-            textView4.setVisibility(GONE);
+        if (isZkp) {
+            textZkp.setVisibility(VISIBLE);
+        } else {
+            textZkp.setVisibility(INVISIBLE);
+        }
+    }
+
+    public void setVcStatus(String vcStatus) {
+
+        if (vcStatus.equals("ACTIVE")) {
+            textVcStatus.setText("ACTIVE");
+        } else if (vcStatus.equals("INACTIVE")) {
+            textVcStatus.setText("INACTIVE");
+        } else {
+            textVcStatus.setText("REVOKED");
+        }
     }
 
     public void setImage(String img){

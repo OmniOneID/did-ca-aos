@@ -26,6 +26,9 @@
         <action
             android:id="@+id/action_profileFragment_to_VerifyFragment"
             app:destination="@id/VerifyFragment" />
+        <action
+            android:id="@+id/action_profileFragment_to_addVcFragment"
+            app:destination="@id/addVcFragment" />
     </fragment>
     <fragment
         android:id="@+id/vpFragment"
@@ -48,14 +51,6 @@
             app:destination="@id/vcListFragment" />
     </fragment>
     <fragment
-        android:id="@+id/vcFragment"
-        android:name="org.omnione.did.ca.VcFragment"
-        android:label="VcFragment" >
-        <action
-            android:id="@+id/action_vcFragment_to_profileFragment"
-            app:destination="@id/profileFragment" />
-    </fragment>
-    <fragment
         android:id="@+id/VerifyFragment"
         android:name="org.omnione.did.ca.zkp.VerifyFragment"
         android:label="@string/hello_verify_fragment"
@@ -63,14 +58,14 @@
         <action
             android:id="@+id/action_VerifyFragment_to_vcListFragment"
             app:destination="@id/vcListFragment" />
+        <action
+            android:id="@+id/action_VerifyFragment_to_resultFragment2"
+            app:destination="@id/resultFragment" />
     </fragment>
     <fragment
         android:id="@+id/vcListFragment"
         android:name="org.omnione.did.ca.ui.vc.VcListFragment"
         android:label="VcListFragment" >
-        <action
-            android:id="@+id/action_vcListFragment_to_vcFragment"
-            app:destination="@id/vcFragment" />
         <action
             android:id="@+id/action_vcListFragment_to_detailVcFragment"
             app:destination="@id/detailVcFragment" />

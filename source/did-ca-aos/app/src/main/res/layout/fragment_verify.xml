@@ -52,7 +52,9 @@
             android:layout_marginLeft="10dp"
             android:layout_marginTop="10dp"
             android:text="Attributes"
+            android:id="@+id/textView_attributes"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView
@@ -72,7 +74,9 @@
             android:layout_marginLeft="10dp"
             android:layout_marginTop="15dp"
             android:text="Predicates"
+            android:id="@+id/textView_predicates"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView
@@ -91,8 +95,10 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_marginTop="15dp"
+            android:id="@+id/textView_self_attributes"
             android:text="Self-Attributes"
             android:textSize="17sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <ListView
@@ -140,35 +146,5 @@
             android:text="OK"
             android:background="@drawable/primary_btn_default_selector" />
     </LinearLayout>
-
-
-    <RelativeLayout
-        android:id="@+id/main_progress"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@android:color/transparent"
-        android:elevation="20dp"
-        android:focusableInTouchMode="false"
-
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:visibility="invisible">
-        <ProgressBar
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent"
-            android:scaleX="0.2"
-            android:scaleY="0.2"
-            android:indeterminateDrawable="@drawable/progress"
-            android:elevation="10dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-
-            />
-    </RelativeLayout>
 
 </RelativeLayout>
