@@ -31,11 +31,17 @@ public class Constants {
     public final static String PREFERENCE_DEVICE_DID = "device_did";
     public final static String PREFERENCE_PROFILE = "profile";
     public final static String PREFERENCE_PUSH_TOKEN = "push_token";
+    public final static String PREFERENCE_DEFAULT_AUTH = "default_authenticator";
     
     public final static int DIALOG_CONFIRM_TYPE = 1;
     public final static int DIALOG_INPUT_TYPE = 2;
+
     public final static int DIALOG_ERROR_TYPE = 3;
+
+    // get ca User ID, set wallet Type(lock/unlock)
     public final static int STEP1 = 1;
+
+    // generate pin,bio sign Key, DID Document
     public final static int STEP2 = 2;
     public final static int STEP3 = 3;
     public final static int WEBVIEW_USER_INFO = 1;

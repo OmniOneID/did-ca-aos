@@ -15,6 +15,31 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        def isProd = project.hasProperty('isProdMode') && project.property('isProdMode').toBoolean()
+
+        if (isProd) {
+            // 운영(Prod) 모드 URL
+            def serverUrl = "\"http://192.168.3.130";
+            buildConfigField "String", "TAS_URL", serverUrl+":18090\""
+            buildConfigField "String", "CAS_URL", serverUrl+":18094\""
+            buildConfigField "String", "API_GW_URL", serverUrl+":18093\""
+            buildConfigField "String", "VERIFIER_URL", serverUrl+":18092\""
+            buildConfigField "String", "WALLET_URL", serverUrl+":18095\""
+            buildConfigField "String", "DEMO_URL", serverUrl+":18099\""
+            buildConfigField "boolean", "IS_PROD_MODE", "true"
+        } else {
+            // 개발(Dev) 모드 URL
+            def serverUrl = "\"http://192.168.3.110";
+            buildConfigField "String", "TAS_URL", serverUrl+":8099\""
+            buildConfigField "String", "CAS_URL", serverUrl+":8099\""
+            buildConfigField "String", "API_GW_URL", serverUrl+":8099\""
+            buildConfigField "String", "VERIFIER_URL", serverUrl+":8099\""
+            buildConfigField "String", "DATA_PORTAL_URL", serverUrl+":8099\""
+            buildConfigField "String", "WALLET_URL", serverUrl+":8099\""
+            buildConfigField "String", "DEMO_URL", serverUrl+":8099\""
+            buildConfigField "boolean", "IS_PROD_MODE", "true"
+        }
     }
 
     buildTypes {
@@ -28,6 +53,12 @@ android {
     }
     dataBinding {
         enabled = true
+    }
+
+    buildFeatures {
+        viewBinding true
+        dataBinding true
+        buildConfig true
     }
 }
 

@@ -75,16 +75,14 @@ public class VerifyVp {
     }
 
     public CompletableFuture<String> verifyVpPreProcess(String offerId, final String txId) {
-        String api1 = "/verifier/api/v1/request-profile";
-        String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.VERIFIER_URL + api1, "POST", M310_RequestProfile(offerId, txId)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.Verifier.REQUEST_VERIFY_PROFILE, "POST", M310_RequestProfile(offerId, txId)))
                 .thenCompose(_M310_RequestProfile -> {
                     this.txId = MessageUtil.deserialize(_M310_RequestProfile, P311ResponseVo.class).getTxId();
                     verifyProfile = _M310_RequestProfile;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_WALLET_TOKENDATA, "POST", M000_GetWalletTokenData()));
                 })
                 .thenApply(_M000_GetWalletTokenData -> {
                     try {
@@ -103,13 +101,12 @@ public class VerifyVp {
 
     }
     public CompletableFuture<String> verifyVpProcess(String pin) {
-        String api1 = "/verifier/api/v1/request-verify";
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
         P310ResponseVo profile = MessageUtil.deserialize(verifyProfile, P310ResponseVo.class);
         VerifyProfile vpProfile2 = profile.getProfile();
         String requestVp = M310_RequestVerify(vpProfile2, pin);
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.VERIFIER_URL + api1, "POST", requestVp))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.Verifier.REQUEST_VERIFY_VP, "POST", requestVp))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
@@ -246,7 +243,7 @@ public class VerifyVp {
                     CaLog.e("bio onFail");
                 }
             });
-            walletApi.authenticateBioKey(fragment, context);
+            walletApi.authenticateBioKey(context);
         } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio authentication fail");
             ContextCompat.getMainExecutor(context).execute(()  -> {

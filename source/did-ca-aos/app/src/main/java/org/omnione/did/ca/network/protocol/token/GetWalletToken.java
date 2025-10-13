@@ -57,7 +57,7 @@ public class GetWalletToken {
 
         return CompletableFuture.supplyAsync(() -> {
                     try {
-                        return httpUrlConnection.send(Config.CAS_URL + api1, "POST", M000_GetWalletTokenData(purpose));
+                        return httpUrlConnection.send(Config.CAS.BASE_URL + api1, "POST", M000_GetWalletTokenData(purpose));
                     } catch (WalletCoreException | UtilityException | CommunicationException |
                              WalletException e) {
                         throw new CompletionException(e);

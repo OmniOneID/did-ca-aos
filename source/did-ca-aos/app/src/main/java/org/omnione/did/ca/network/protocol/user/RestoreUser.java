@@ -98,15 +98,15 @@ public class RestoreUser {
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api1, "POST", M142_ProposeRestoreDidDoc(did, offerId)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.BASE_URL + api1, "POST", M142_ProposeRestoreDidDoc(did, offerId)))
                 .thenCompose(_M142_ProposeRestoreDidDoc -> {
                     txId = MessageUtil.deserialize(_M142_ProposeRestoreDidDoc, P142ResponseVo.class).getTxId();
                     authNonce = txId = MessageUtil.deserialize(_M142_ProposeRestoreDidDoc, P142ResponseVo.class).getAuthNonce();
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M142_RequestEcdh(_M142_ProposeRestoreDidDoc)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.BASE_URL + api2, "POST", M142_RequestEcdh(_M142_ProposeRestoreDidDoc)));
                 })
                 .thenCompose(_M142_RequestEcdh -> {
                     ecdhResult = _M142_RequestEcdh;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.BASE_URL + api_cas1, "POST", M000_GetWalletTokenData()));
                 })
                 .thenCompose(_M000_GetWalletTokenData -> {
                     try {
@@ -116,11 +116,11 @@ public class RestoreUser {
                         throw new CompletionException(e);
                     }
                     String appId = Preference.getCaAppId(context);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.BASE_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
                 })
                 .thenCompose(_M000_GetAttestedAppInfo -> {
                     ServerTokenSeed serverTokenSeed = createServerTokenSeed(_M000_GetAttestedAppInfo);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api3, "POST", M142_RequestCreateToken(serverTokenSeed)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.BASE_URL + api3, "POST", M142_RequestCreateToken(serverTokenSeed)));
                 })
                 .thenApply(_M142_RequestCreateToken -> {
                     try {
@@ -141,7 +141,7 @@ public class RestoreUser {
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api6, "POST", M142_ConfirmRestoreDidDoc()))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.BASE_URL + api6, "POST", M142_ConfirmRestoreDidDoc()))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
@@ -196,7 +196,7 @@ public class RestoreUser {
             public void run() {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
-                    String result = walletApi.requestRestoreUser(hWalletToken, Config.TAS_URL, serverToken, signedDIDAuth, txId).get();
+                    String result = walletApi.requestRestoreUser(hWalletToken, Config.TAS.BASE_URL, serverToken, signedDIDAuth, txId).get();
                     resultHolder[0] = result;
                 } catch (WalletException | UtilityException | WalletCoreException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -328,7 +328,7 @@ public class RestoreUser {
                     CaLog.e("bio onFail : " + result);
                 }
             });
-            walletApi.authenticateBioKey(fragment, context);
+            walletApi.authenticateBioKey(context);
         } catch (WalletException | WalletCoreException | UtilityException e) {
             CaLog.e("bio key authentication fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {

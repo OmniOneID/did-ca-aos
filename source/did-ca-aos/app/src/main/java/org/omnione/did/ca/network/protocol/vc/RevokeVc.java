@@ -99,16 +99,16 @@ public class RevokeVc {
         credentialId = vcId;
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api1, "POST", M220_ProposeRevokeVc(vcId)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.BASE_URL + api1, "POST", M220_ProposeRevokeVc(vcId)))
                 .thenCompose(_M220_ProposeRevokeVc -> {
                     txId = MessageUtil.deserialize(_M220_ProposeRevokeVc, P220ResponseVo.class).getTxId();
                     issuerNonce = MessageUtil.deserialize(_M220_ProposeRevokeVc, P220ResponseVo.class).getIssuerNonce();
                     authType = MessageUtil.deserialize(_M220_ProposeRevokeVc, P220ResponseVo.class).getAuthType();
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M220_RequestEcdh(_M220_ProposeRevokeVc)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.BASE_URL + api2, "POST", M220_RequestEcdh(_M220_ProposeRevokeVc)));
                 })
                 .thenCompose(_M220_RequestEcdh -> {
                     ecdhResult = _M220_RequestEcdh;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.BASE_URL + api_cas1, "POST", M000_GetWalletTokenData()));
                 })
                 .thenCompose(_M000_GetWalletTokenData -> {
                     try {
@@ -118,11 +118,11 @@ public class RevokeVc {
                         throw new CompletionException(e);
                     }
                     String appId = Preference.getCaAppId(context);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.BASE_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
                 })
                 .thenCompose(_M000_GetAttestedAppInfo -> {
                     ServerTokenSeed serverTokenSeed = createServerTokenSeed(_M000_GetAttestedAppInfo);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api3, "POST", M220_RequestCreateToken(serverTokenSeed)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.BASE_URL + api3, "POST", M220_RequestCreateToken(serverTokenSeed)));
                 })
                 .thenApply(_M220_RequestCreateToken -> {
                     try {
@@ -149,7 +149,7 @@ public class RevokeVc {
             String api6 = "/tas/api/v1/confirm-revoke-vc";
             HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-            return httpUrlConnection.send(context, Config.TAS_URL + api6, "POST", M220_ConfirmRevokeVc());
+            return httpUrlConnection.send(context, Config.TAS.BASE_URL + api6, "POST", M220_ConfirmRevokeVc());
         });
     }
     private String M220_ProposeRevokeVc(String vcId){
@@ -203,7 +203,7 @@ public class RevokeVc {
             public void run() {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
-                    String result = walletApi.requestRevokeVc(hWalletToken, Config.TAS_URL, serverToken, txId, vcId, issuerNonce, pin, authType).get();
+                    String result = walletApi.requestRevokeVc(hWalletToken, Config.TAS.BASE_URL, serverToken, txId, vcId, issuerNonce, pin, authType).get();
                     resultHolder[0] = result;
                 } catch (WalletException | UtilityException | WalletCoreException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -351,7 +351,7 @@ public class RevokeVc {
                     CaLog.e("bio onFail : " + result);
                 }
             });
-            walletApi.authenticateBioKey(fragment, context);
+            walletApi.authenticateBioKey(context);
         } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio authentication fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {

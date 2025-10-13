@@ -90,28 +90,20 @@ public class IssueVc {
     }
 
     public CompletableFuture<String> issueVcPreProcess(String vcPlanId, String did, String offerId) {
-        String api1 = "/tas/api/v1/propose-issue-vc";
-        String api2 = "/tas/api/v1/request-ecdh";
-        String api3 = "/tas/api/v1/request-create-token";
-        String api4 = "/tas/api/v1/request-issue-profile";
-
-        String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
-        String api_cas2 = "/cas/api/v1/request-attested-appinfo";
-
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api1, "POST", M210_ProposeIssueVc(vcPlanId, did, offerId)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.PROPOSE_ISSUE_VC, "POST", M210_ProposeIssueVc(vcPlanId, did, offerId)))
                 .thenCompose(_M210_ProposeIssueVc -> {
                     txId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getTxId();
                     refId = MessageUtil.deserialize(_M210_ProposeIssueVc, P210ResponseVo.class).getRefId();
                     return CompletableFuture.supplyAsync(() -> {
-                        return httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M210_RequestEcdh(_M210_ProposeIssueVc));
+                        return httpUrlConnection.send(context, Config.TAS.REQUEST_ECDH, "POST", M210_RequestEcdh(_M210_ProposeIssueVc));
                     });
                 })
                 .thenCompose(_M210_RequestEcdh -> {
                     ecdhResult = _M210_RequestEcdh;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_WALLET_TOKENDATA, "POST", M000_GetWalletTokenData()));
                 })
                 .thenCompose(_M000_GetWalletTokenData -> {
                     try {
@@ -121,11 +113,11 @@ public class IssueVc {
                         throw new CompletionException(e);
                     }
                     String appId = Preference.getCaAppId(context);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_ATTESTED_APPINFO, "POST", M000_GetAttestedAppInfo(appId)));
                 })
                 .thenCompose(_M000_GetAttestedAppInfo -> {
                     ServerTokenSeed serverTokenSeed = createServerTokenSeed(_M000_GetAttestedAppInfo);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api3, "POST", M210_RequestCreateToken(serverTokenSeed)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.REQUEST_CREATE_TOKEN, "POST", M210_RequestCreateToken(serverTokenSeed)));
                 })
                 .thenCompose(_M210_RequestCreateToken -> {
                     try {
@@ -133,7 +125,7 @@ public class IssueVc {
                     } catch (UtilityException e) {
                         throw new CompletionException(e);
                     }
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api4, "POST", M210_RequestIssueProfile(serverToken)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.REQUEST_ISSUE_PROFILE, "POST", M210_RequestIssueProfile(serverToken)));
                 })
                 .thenApply(_M210_RequestIssueProfile -> {
                     profile = _M210_RequestIssueProfile;
@@ -146,14 +138,12 @@ public class IssueVc {
     }
     public CompletableFuture<String> issueVcProcess(IssueProfile profile, DIDAuth signedDIDAuth) throws WalletException {
         String _M210_RequestIssueVc = M210_RequestIssueVc(txId, serverToken, refId, profile, signedDIDAuth);
-
         if(_M210_RequestIssueVc.isEmpty())
             throw new WalletException(WalletErrorCode.ERR_CODE_WALLET_ISSUE_CREDENTIAL_FAIL);
-        String api6 = "/tas/api/v1/confirm-issue-vc"; //VC 발급 완료
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api6, "POST", M210_ConfirmIssueVc(_M210_RequestIssueVc)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.CONFIRM_ISSUE_VC, "POST", M210_ConfirmIssueVc(_M210_RequestIssueVc)))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
@@ -220,7 +210,7 @@ public class IssueVc {
             public void run() {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
-                    String result = walletApi.requestIssueVc(hWalletToken, Config.TAS_URL, Config.API_GATEWAY_URL, serverToken, refId, profile, signedDIDAuth, txId).get();
+                    String result = walletApi.requestIssueVc(hWalletToken, Config.TAS.BASE_URL, Config.ApiGW.BASE_URL, serverToken, refId, profile, signedDIDAuth, txId).get();
                     resultHolder[0] = result;
                 } catch (WalletException | UtilityException | WalletCoreException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -358,7 +348,7 @@ public class IssueVc {
                     CaLog.e("bio onFail");
                 }
             });
-            walletApi.authenticateBioKey(fragment, context);
+            walletApi.authenticateBioKey(context);
         } catch (WalletException | WalletCoreException | UtilityException e) {
             CaLog.e("bio authentication fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {

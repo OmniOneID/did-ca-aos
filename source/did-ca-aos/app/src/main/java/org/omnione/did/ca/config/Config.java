@@ -16,14 +16,16 @@
 
 package org.omnione.did.ca.config;
 
-public class Config {
-    //////////// SERVER URL ////////////////
-    public final static String CAS_URL = "http://192.168.3.130:18094"; //dev server
-    public final static String TAS_URL = "http://192.168.3.130:18090"; //dev server
-    public final static String VERIFIER_URL = "http://192.168.3.130:18092"; //dev server
-        public final static String DEMO_URL = "http://192.168.3.130:18099"; //dev
-    public final static String WALLET_URL = "http://192.168.3.130:18095"; //dev
-    public final static String API_GATEWAY_URL = "http://192.168.3.130:18093"; //dev
+import static org.omnione.did.ca.BuildConfig.API_GW_URL;
+import static org.omnione.did.ca.BuildConfig.CAS_URL;
+import static org.omnione.did.ca.BuildConfig.DEMO_URL;
+import static org.omnione.did.ca.BuildConfig.TAS_URL;
+import static org.omnione.did.ca.BuildConfig.VERIFIER_URL;
+import static org.omnione.did.ca.BuildConfig.WALLET_URL;
+
+import android.net.Uri;
+
+public final class Config {
 
     //////////// pin config ////////////////
     public final static int PIN_MAX_VALUE = 6;
@@ -31,4 +33,63 @@ public class Config {
 
     //////////// Splash config  ////////////////
     public final static int SPLASH_DELAY = 2000;
+
+    //////////// API ////////////////
+    public static final class CAS {
+        private CAS() {}
+        public static final String BASE_URL = CAS_URL;
+
+        public static final String REQUEST_WALLET_TOKENDATA = BASE_URL + "/cas/api/v1/request-wallet-tokendata";
+        public static final String REQUEST_ATTESTED_APPINFO = BASE_URL + "/cas/api/v1/request-attested-appinfo";
+    }
+    public static final class TAS {
+        private TAS() {}
+        public static final String BASE_URL = TAS_URL;
+
+        public static final String VC_PLAN_LIST = BASE_URL + "/list/api/v1/vcplan/list";
+
+        // update user
+        public static final String PROPOSE_UPDATE_USER = BASE_URL + "/tas/api/v1/propose-update-diddoc";
+        public static final String CONFIRM_UPDATE_USER = BASE_URL + "/tas/api/v1/confirm-update-diddoc";
+
+
+        // reg user
+        public static final String RETRIEVE_KYC = BASE_URL + "/tas/api/v1/retrieve-kyc";
+        public static final String PROPOSE_REGISTER_USER = BASE_URL + "/tas/api/v1/propose-register-user";
+        public static final String REQUEST_ECDH = BASE_URL + "/tas/api/v1/request-ecdh";
+        public static final String REQUEST_CREATE_TOKEN = BASE_URL + "/tas/api/v1/request-create-token";
+        public static final String CONFIRM_REGISTER_USER = BASE_URL + "/tas/api/v1/confirm-register-user";
+
+        // issue vc
+        public static final String PROPOSE_ISSUE_VC = BASE_URL + "/tas/api/v1/propose-issue-vc";
+        public static final String REQUEST_ISSUE_PROFILE = BASE_URL + "/tas/api/v1/request-issue-profile";
+        public static final String CONFIRM_ISSUE_VC = BASE_URL + "/tas/api/v1/confirm-issue-vc";
+
+    }
+
+
+    public static final class Verifier {
+        private Verifier() {}
+        public static final String BASE_URL = VERIFIER_URL;
+
+        public static final String REQUEST_PROOF_REQUEST_PROFILE = "/verifier/api/v1/request-proof-request-profile";
+        public static final String REQUEST_VERIFY_PROOF = "/verifier/api/v1/request-verify-proof";
+        public static final String REQUEST_VERIFY_PROFILE = BASE_URL + "/verifier/api/v1/request-profile";
+        public static final String REQUEST_VERIFY_VP = BASE_URL + "/verifier/api/v1/request-verify";
+    }
+
+    public static final class WAS {
+        private WAS() {}
+        public static final String BASE_URL = WALLET_URL;
+    }
+
+
+    public static final class Base_Demo {
+        private Base_Demo() {}
+        public static final String BASE_URL = DEMO_URL;
+    }
+    public static final class ApiGW {
+        private ApiGW() {}
+        public static final String BASE_URL = API_GW_URL;
+    }
 }

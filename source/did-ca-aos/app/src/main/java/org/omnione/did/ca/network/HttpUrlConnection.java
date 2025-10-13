@@ -28,7 +28,7 @@ public class HttpUrlConnection implements NetworkManager {
     public String send(Context context, String url, String method, String request) {
         try {
             HttpUrlConnectionTask httpFunc = new HttpUrlConnectionTask();
-            return httpFunc.makeHttpRequest(url, method, request);
+            return httpFunc.makeHttpRequest(url, method, request, "");
         } catch (CommunicationException e) {
             CaLog.e("HttpUrlConnectionTask error : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {

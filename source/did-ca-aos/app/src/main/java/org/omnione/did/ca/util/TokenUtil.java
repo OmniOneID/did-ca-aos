@@ -46,7 +46,7 @@ public class TokenUtil {
     public static String createHashWalletToken(String walletTokenDataStr, Context context) throws WalletException, UtilityException, WalletCoreException, ExecutionException, InterruptedException {
         WalletApi walletApi = WalletApi.getInstance(context);
         WalletTokenData walletTokenData = MessageUtil.deserialize(walletTokenDataStr, WalletTokenData.class);
-        String resultNonce = walletApi.createNonceForWalletToken(Config.API_GATEWAY_URL, walletTokenData);
+        String resultNonce = walletApi.createNonceForWalletToken(Config.ApiGW.BASE_URL, walletTokenData);
         String walletToken = walletTokenData.toJson() + resultNonce;
         walletToken = Base16.toHex(DigestUtils.getDigest(walletToken.getBytes(), DigestEnum.DIGEST_ENUM.SHA_256));
         CaLog.d("walletToken by CA : " + walletToken + " / " + walletTokenData.getSeed().getPurpose().toString());

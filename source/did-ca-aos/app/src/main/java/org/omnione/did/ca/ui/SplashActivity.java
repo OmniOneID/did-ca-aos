@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -40,7 +41,6 @@ import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
-import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.logger.CommunicationLogger;
@@ -54,11 +54,12 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 
-public class SplashActivity extends AppCompatActivity {
+@SuppressLint("CustomSplashScreen")
+public class SplashActivity extends BaseActivity {
     ActivityResultLauncher<Intent> pinActivityResultLauncher;
     ActivityResultLauncher<Intent> pinActivityPushResultLauncher;
     WalletApi walletApi;
-    ProgressCircle progressCircle;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,8 +71,8 @@ public class SplashActivity extends AppCompatActivity {
         CommunicationLogger communicationLogger = CommunicationLogger.getInstance();
         communicationLogger.enable();
 
-        progressCircle = new ProgressCircle(this);
-        progressCircle.show();
+        showProgress();
+
         Handler handler = new Handler();
 
         handler.postDelayed(() -> {
@@ -122,7 +123,7 @@ public class SplashActivity extends AppCompatActivity {
         try {
             walletApi = WalletApi.getInstance(this);
             if(!walletApi.isExistWallet())
-               walletApi.createWallet(Config.WALLET_URL, Config.TAS_URL);
+               walletApi.createWallet(Config.WAS.BASE_URL, Config.TAS.BASE_URL);
 
             if(Preference.getCaAppId(this).isEmpty()) {
                 Preference.saveCaAppId(this, CaUtil.createCaAppId());
@@ -139,12 +140,12 @@ public class SplashActivity extends AppCompatActivity {
                 finish();
             }
 
-            progressCircle.dismiss();
+            dismissProgress();
 
         } catch (WalletException | UtilityException | WalletCoreException e) {
             CaLog.e("Error creating wallet : " + e.getMessage());
             try {
-                walletApi.deleteWallet();
+                walletApi.deleteWallet(true);
             } catch (WalletCoreException ex) {
                 throw new RuntimeException(ex);
             }
@@ -155,7 +156,7 @@ public class SplashActivity extends AppCompatActivity {
         } catch (ExecutionException | InterruptedException e) {
             CaLog.e("Error creating wallet : " + e.getMessage());
             try {
-                walletApi.deleteWallet();
+                walletApi.deleteWallet(true);
             } catch (WalletCoreException ex) {
                 throw new RuntimeException(ex);
             }
@@ -223,7 +224,7 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        progressCircle.dismiss();
+        dismissProgress();
     }
 
 }

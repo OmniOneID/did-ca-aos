@@ -42,7 +42,7 @@ public class Preference {
     }
     public static String loadTasUrl(Context context) {
         SharedPreferences prefs = getPreference(context);
-        return prefs.getString(Constants.PREFERENCE_TAS_URL, Config.TAS_URL);
+        return prefs.getString(Constants.PREFERENCE_TAS_URL, Config.TAS.BASE_URL);
     }
     public static void saveVerifierUrl(Context context, String url) {
         SharedPreferences prefs = getPreference(context);
@@ -53,7 +53,7 @@ public class Preference {
 
     public static String loadVerifierUrl(Context context) {
         SharedPreferences prefs = getPreference(context);
-        return prefs.getString(Constants.PREFERENCE_VERIFIER_URL, Config.VERIFIER_URL);
+        return prefs.getString(Constants.PREFERENCE_VERIFIER_URL, Config.Verifier.BASE_URL);
     }
 
     public static void saveCaAppId(Context context, String caAppId) {
@@ -136,5 +136,17 @@ public class Preference {
         SharedPreferences.Editor editor = pref.edit();
         editor.clear();
         editor.apply();
+    }
+
+    public static void setDefaultAuthenticator(Context context, String pin) {
+        SharedPreferences prefs = getPreference(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(Constants.PREFERENCE_DEFAULT_AUTH, pin);
+        editor.apply();
+    }
+
+    public static String getDefaultAuthenticator(Context context) {
+        SharedPreferences prefs = getPreference(context);
+        return prefs.getString(Constants.PREFERENCE_DEFAULT_AUTH,"");
     }
 }
