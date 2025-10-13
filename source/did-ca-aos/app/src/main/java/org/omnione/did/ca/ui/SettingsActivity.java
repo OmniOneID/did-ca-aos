@@ -26,78 +26,83 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
+import org.omnione.did.ca.databinding.ActivitySettingsBinding;
+import org.omnione.did.ca.databinding.ActivitySettingsExpandableBinding;
 import org.omnione.did.ca.settings.SettingListViewAdapter;
 import org.omnione.did.ca.ui.common.CustomDialog;
+import org.omnione.did.ca.ui.viewmodel.AddBioViewModel;
+import org.omnione.did.ca.ui.viewmodel.SettingViewModel;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 
 public class SettingsActivity extends AppCompatActivity {
-//    int cnt = 0;
-    ListView listView;
-    SettingListViewAdapter adapter;
+    private ActivitySettingsBinding binding;
+    private SettingListViewAdapter adapter;
+    private SettingViewModel viewModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_settings);
-        listView = findViewById(R.id.listView);
+
+        binding = ActivitySettingsBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        viewModel = new ViewModelProvider(this).get(SettingViewModel.class);
+        binding.setLifecycleOwner(this);
+        binding.setViewModel(viewModel);
+        binding.setHandle(this);
 
         adapter = new SettingListViewAdapter();
         setListView();
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        binding.listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                if(i == 0){
-                    //wallet delete : hidden
-//                    cnt++;
-//                    if(cnt == 2) {
-//                        try {
-//                            WalletApi walletApi = WalletApi.getInstance(SettingsActivity.this);
-//                            walletApi.deleteWallet();
-//                            Preference.deleteAllPref(SettingsActivity.this);
-//                            Toast.makeText(SettingsActivity.this, "wallet delete",Toast.LENGTH_SHORT).show();
-//                            cnt = 0;
-//                        } catch (WalletCoreException e) {
-//                            CaUtil.showErrorDialog(SettingsActivity.this, "[error] Wallet instance creation fail");
-//                        }
-//                    }
-                }
-                else if (i == 1 ){
-                    //showDialog(Preference.loadVerifierUrl(SettingsActivity.this), Constants.PREFERENCE_VERIFIER_URL);
-                } else if (i == 2) {
-                    String copyText = Preference.getDID(SettingsActivity.this);
-                    ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                    ClipData clipData = ClipData.newPlainText("copyText",copyText);
-                    clipboardManager.setPrimaryClip(clipData);
-                    Toast.makeText(getApplicationContext(),"The DID has been copied to the clipboard.", Toast.LENGTH_SHORT).show();
+                if (i == 2) {
+                    copyDidValue();
                 } else if (i == 3) {
                     startActivity(new Intent(SettingsActivity.this, SettingsExpandableActivity.class));
                     finish();
-                } else if (i == 4) {
-                    Toast.makeText(SettingsActivity.this,"did document update", Toast.LENGTH_SHORT).show();
-                } else if (i == 5) {
-                    Toast.makeText(SettingsActivity.this,"did document restore", Toast.LENGTH_SHORT).show();
                 }
+//                else if (i == 4) {
+//                    Toast.makeText(SettingsActivity.this,"did document update", Toast.LENGTH_SHORT).show();
+//                } else if (i == 5) {
+//                    Toast.makeText(SettingsActivity.this,"did document restore", Toast.LENGTH_SHORT).show();
+//                }
             }
         });
     }
+
+    private void copyDidValue() {
+        String copyText = Preference.getDID(SettingsActivity.this);
+        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        ClipData clipData = ClipData.newPlainText("copyText",copyText);
+        clipboardManager.setPrimaryClip(clipData);
+        Toast.makeText(getApplicationContext(),"The DID has been copied to the clipboard.", Toast.LENGTH_SHORT).show();
+    }
+
     private void setListView() {
-        listView.setAdapter(adapter);
+        binding.listView.setAdapter(adapter);
+
         adapter.addItem("TAS URL", Preference.loadTasUrl(this));
         adapter.addItem("Verifier URL", Preference.loadVerifierUrl(this));
-        if(Preference.getDID(this).isEmpty())
-            adapter.addItem("DID","not registered");
-        else
-            adapter.addItem("DID",Preference.getDID(this));
+
+        String did = Preference.getDID(this);
+        if (did == null || did.isEmpty()) {
+            adapter.addItem("DID", "not registered");
+        } else {
+            adapter.addItem("DID", did);
+        }
 
         adapter.addItem("User Authentication settings","Provides management of authentication methods.");
 //        adapter.addItem("DID Document Update","");
 //        adapter.addItem("DID Document Restore","");
+        adapter.notifyDataSetChanged();
     }
     @Override
     protected void onResume() {
@@ -123,7 +128,7 @@ public class SettingsActivity extends AppCompatActivity {
                     Preference.saveVerifierUrl(SettingsActivity.this, input);
                 }
                 adapter.removeAll();
-                listView.setAdapter(adapter);
+                binding.listView.setAdapter(adapter);
                 setListView();
             }
             @Override
