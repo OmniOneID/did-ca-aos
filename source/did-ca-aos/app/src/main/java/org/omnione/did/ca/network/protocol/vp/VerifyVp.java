@@ -32,7 +32,6 @@ import org.omnione.did.ca.network.HttpUrlConnection;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.core.api.WalletApi;
-import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.protocol.P310ResponseVo;
 import org.omnione.did.sdk.datamodel.protocol.P311ResponseVo;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
@@ -50,7 +49,6 @@ import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;

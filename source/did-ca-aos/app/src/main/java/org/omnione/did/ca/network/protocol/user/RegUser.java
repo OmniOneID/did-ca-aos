@@ -23,7 +23,6 @@ import android.os.Looper;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.navigation.NavController;
 
 import org.json.JSONException;
