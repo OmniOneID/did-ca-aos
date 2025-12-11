@@ -198,7 +198,7 @@ public class RestoreUser {
                     WalletApi walletApi = WalletApi.getInstance(context);
                     String result = walletApi.requestRestoreUser(hWalletToken, Config.TAS.BASE_URL, serverToken, signedDIDAuth, txId).get();
                     resultHolder[0] = result;
-                } catch (WalletException | UtilityException | WalletCoreException e) {
+                } catch (WalletException | WalletCoreException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
                         CaUtil.showErrorDialog(context, e.getMessage());
                     });
