@@ -40,6 +40,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
+import org.omnione.did.ca.ui.BaseFragment;
 import org.omnione.did.ca.ui.PinActivity;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
@@ -60,7 +61,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 
-public class StepFragment extends Fragment {
+public class StepFragment extends BaseFragment {
     NavController navController;
     Activity activity;
     int step = Constants.STEP1;
@@ -102,10 +103,20 @@ public class StepFragment extends Fragment {
             step = requireArguments().getInt("step");
             initStep(step);
         } else {
-            if (Preference.getUsernameForDemo(activity).length() != 0) {
+            // step1 completed
+            if (!Preference.getUsernameForDemo(activity).isEmpty()) {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(activity);
-                    if (walletApi.isSavedKey(Constants.KEY_ID_PIN)) {
+                    String holderDIDDoc = "";
+                    boolean isPinActuallyAvailable = false;
+                    try {
+                        holderDIDDoc = walletApi.getDIDDocument(2).getId();
+                        isPinActuallyAvailable = walletApi.isSavedKey(Constants.KEY_ID_PIN);
+                    } catch (WalletCoreException | UtilityException | WalletException e) {
+                        CaLog.d("isPinAuthAvailable ex: "+e.getMessage());
+                    }
+
+                    if (!holderDIDDoc.isEmpty() && isPinActuallyAvailable) {
                         //step3
                         step = Constants.STEP3;
                         initStep(Constants.STEP3);
@@ -115,61 +126,58 @@ public class StepFragment extends Fragment {
                         step = Constants.STEP2;
                         initStep(Constants.STEP2);
                     }
-                } catch (WalletCoreException | UtilityException | WalletException e) {
+                } catch (WalletCoreException e) {
                     CaLog.e("step error : " + e.getMessage());
                     CaUtil.showErrorDialog(activity, e.getMessage());
                 }
-
             }
         }
 
-        Button button1 = view.findViewById(R.id.button);
-        button1.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(step == Constants.STEP1) {
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("type", Constants.WEBVIEW_USER_INFO);
-                    navController.navigate(R.id.action_stepFragment_to_webviewFragment, bundle);
-                } else if(step == Constants.STEP2){
-                    // step2 : pin authentication
-                    regUserPreProcess();
-                } else if(step == Constants.STEP3){
-                    // step3 : pin key signing
-                    Intent intent = new Intent(getContext(), PinActivity.class);
-                    intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
-                    intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
-                    pinActivityResultLauncher.launch(intent);
-                }
+        Button nextBtn = view.findViewById(R.id.button);
+        nextBtn.setOnClickListener(v -> {
+            showProgress();
+            if(step == Constants.STEP1) {
+                Bundle bundle = new Bundle();
+                bundle.putInt("type", Constants.WEBVIEW_USER_INFO);
+                navController.navigate(R.id.action_stepFragment_to_webviewFragment, bundle);
+            } else if(step == Constants.STEP2){
+                // step2 : pin authentication
+                regUserPreProcess();
+            } else if(step == Constants.STEP3){
+                // step3 : pin key signing
+                Intent intent = new Intent(getContext(), PinActivity.class);
+                intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
+                pinActivityResultLauncher.launch(intent);
             }
         });
 
         pinActivityResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            try {
-                                String pin = result.getData().getStringExtra("pin");
-                                RegUser regUser = RegUser.getInstance(activity);
-                                if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_REG_KEY) {
-                                    CaLog.d( "Register sign pin : " + pin);
-                                    regUser.regUser(Constants.PIN_TYPE_REG_KEY, pin, StepFragment.this, navController);
-                                    showDialog();
-                                } else if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_USE_KEY) {
-                                    CaLog.d( "Authenticate sign Pin : " + pin);
-                                    regUser.regUser(Constants.PIN_TYPE_USE_KEY, pin, StepFragment.this, navController);
+                result -> {
+                    dismissProgress();
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        try {
+                            String pin = result.getData().getStringExtra("pin");
+                            RegUser regUser = RegUser.getInstance(activity);
 
-                                }
-                            } catch (WalletException | WalletCoreException | UtilityException e){
-                                CaLog.e("generateKeyPair error : " + e.getMessage());
-                                CaUtil.showErrorDialog(activity, e.getMessage());
+                            if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_REG_KEY) {
+                                CaLog.d( "Register sign pin : " + pin);
+                                regUser.regUser(Constants.PIN_TYPE_REG_KEY, pin, StepFragment.this, navController);
+                                showDialog();
                             }
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaLog.e("pin authentication fail");
-                            CaUtil.showErrorDialog(activity,"[Information] canceled by user");
+                            else if(result.getData().getIntExtra("reg", 0) == Constants.PIN_TYPE_USE_KEY) {
+                                CaLog.d( "Authenticate sign Pin : " + pin);
+                                regUser.regUser(Constants.PIN_TYPE_USE_KEY, pin, StepFragment.this, navController);
+                            }
+
+                        } catch (WalletException | WalletCoreException | UtilityException e){
+                            CaLog.e("generateKeyPair error : " + e.getMessage());
+                            CaUtil.showErrorDialog(activity, e.getMessage());
                         }
+                    } else if(result.getResultCode() == Activity.RESULT_CANCELED){
+                        CaLog.e("pin authentication fail");
+                        CaUtil.showErrorDialog(activity,"[Information] canceled by user");
                     }
                 }
         );
@@ -214,20 +222,37 @@ public class StepFragment extends Fragment {
     }
     public void regUserPreProcess(){
         RegUser regUser = RegUser.getInstance(activity);
-        try {
-            txId = MessageUtil.deserialize(regUser.regUserPreProcess().get(), P210ResponseVo.class).getTxId();
-        } catch (ExecutionException | InterruptedException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof CompletionException && cause.getCause() instanceof CommunicationException) {
+
+        regUser.regUserPreProcess().whenComplete((response, ex) -> {
+            if (ex != null) {
+                // Handle error
+                Throwable cause = ex.getCause();
+                String errorMessage = (cause != null) ? cause.getMessage() : ex.getMessage();
                 ContextCompat.getMainExecutor(activity).execute(() -> {
-                    CaUtil.showErrorDialog(activity, cause.getCause().getMessage());
+                    dismissProgress();
+                    CaUtil.showErrorDialog(activity, errorMessage);
                 });
+            } else {
+                // Handle success
+                try {
+                    txId = MessageUtil.deserialize(response, P210ResponseVo.class).getTxId();
+                    ContextCompat.getMainExecutor(activity).execute(() -> {
+                        dismissProgress();
+                        Intent intent = new Intent(getContext(), PinActivity.class);
+                        intent.putExtra(Constants.INTENT_IS_REGISTRATION, true);
+                        intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_REG_KEY);
+                        pinActivityResultLauncher.launch(intent);
+                    });
+                } catch (Exception e) {
+                    // Handle JSON deserialization error
+                    String errorMessage = e.getMessage();
+                    ContextCompat.getMainExecutor(activity).execute(() -> {
+                        dismissProgress();
+                        CaUtil.showErrorDialog(activity, errorMessage);
+                    });
+                }
             }
-        }
-        Intent intent = new Intent(getContext(), PinActivity.class);
-        intent.putExtra(Constants.INTENT_IS_REGISTRATION, true);
-        intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_REG_KEY);
-        pinActivityResultLauncher.launch(intent);
+        });
     }
 
     private void showDialog() {

@@ -24,18 +24,19 @@ import android.widget.ExpandableListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.databinding.DataBindingUtil;
+import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
+import org.omnione.did.ca.databinding.ActivitySettingsExpandableBinding;
 import org.omnione.did.ca.logger.CaLog;
-import org.omnione.did.ca.ui.common.ProgressCircle;
+import org.omnione.did.ca.ui.viewmodel.AddBioViewModel;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.ca.util.UserAuthHelper;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -44,29 +45,93 @@ import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
-public class SettingsExpandableActivity extends AppCompatActivity {
-    int cnt = 0;
+public class SettingsExpandableActivity extends BaseActivity {
+    ActivityResultLauncher<Intent> pinActivityResultLauncher;
     ActivityResultLauncher<Intent> pinActivityChangeSigningPinResultLauncher;
     ActivityResultLauncher<Intent> pinActivityChangeUnlockPinResultLauncher;
-    ProgressCircle progressCircle;
+    private AddBioViewModel viewModel;
+    private ActivitySettingsExpandableBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_settings_expandable);
 
+        binding = ActivitySettingsExpandableBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        viewModel = new ViewModelProvider(this).get(AddBioViewModel.class);
+        binding.setLifecycleOwner(this);
+        binding.setViewModel(viewModel);
+        binding.setHandle(this);
+
+        initialize();
+
+        observeViewModel();
+    }
+
+    private void observeViewModel() {
+
+        viewModel.getPreProcessDidUpdateLiveData().observe(this, result -> {
+            switch (result.status) {
+                case LOADING:
+                    CaLog.d("UpdateBioActivity preProcess LOADING");
+                    showProgress();
+                    break;
+                case SUCCESS:
+                    CaLog.d("UpdateBioActivity preProcess SUCCESS");
+
+                    Intent intent = new Intent(SettingsExpandableActivity.this, PinActivity.class);
+                    intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                    intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);
+                    pinActivityResultLauncher.launch(intent);
+                    dismissProgress();
+                    break;
+                case ERROR:
+                    CaLog.d("UpdateBioActivity preProcess ERROR");
+                    dismissProgress();
+                    break;
+            }
+        });
+
+        viewModel.getProcessDidUpdateLiveData().observe(this, result -> {
+            switch (result.status) {
+                case LOADING:
+                    CaLog.d("DID UpdateBioActivity process LOADING");
+                    showProgress();
+                    break;
+                case SUCCESS:
+                    CaLog.d("DID UpdateBioActivity process SUCCESS");
+                    dismissProgress();
+
+                    try {
+                        walletApi.saveDocument();
+                        Toast.makeText(SettingsExpandableActivity.this, "reg fingerprint completed", Toast.LENGTH_SHORT).show();
+                    } catch (WalletException | UtilityException | WalletCoreException e) {
+                        CaLog.d("DID UpdateBioActivity process exception : " + e.getMessage());
+                        dismissProgress();
+                    }
+                    break;
+                case ERROR:
+                    CaLog.d("DID UpdateBioActivity process ERROR : " + result.errorMessage);
+                    dismissProgress();
+                    break;
+            }
+        });
+    }
+
+    private void initialize() {
         ArrayList<HashMap<String, String>> groupData = new ArrayList<>();
         ArrayList<ArrayList<HashMap<String, String>>> childData = new ArrayList<>();
 
         HashMap<String, String> groupA = new HashMap<>();
         groupA.put("group", "PIN Settings");
 
-//        HashMap<String, String> groupB = new HashMap<>();
-//        groupB.put("group", "Fingerprint Settings");
-//
+        HashMap<String, String> groupB = new HashMap<>();
+        groupB.put("group", "Fingerprint Settings");
+
         groupData.add(groupA);
-//        groupData.add(groupB);
+        groupData.add(groupB);
 
         ArrayList<HashMap<String, String>> childListA = new ArrayList<>();
 
@@ -86,161 +151,151 @@ public class SettingsExpandableActivity extends AppCompatActivity {
         childBA.put("data", "Setting up a fingerprint for Signing");
         childListB.add(childBA);
 
-        HashMap<String, String> childBB = new HashMap<>();
-        childBB.put("data", "Setting up a fingerprint for Unlock");
-        childListB.add(childBB);
+//        HashMap<String, String> childBB = new HashMap<>();
+//        childBB.put("data", "Setting up a fingerprint for Unlock");
+//        childListB.add(childBB);
 
         childData.add(childListB);
 
         SimpleExpandableListAdapter adapter = new SimpleExpandableListAdapter(
                 this, groupData,
                 android.R.layout.simple_expandable_list_item_1,
-                new String[] {"group"}, new int[] { android.R.id.text1},
+                new String[]{"group"}, new int[]{android.R.id.text1},
 
-                childData, android.R.layout.simple_expandable_list_item_2,
-                new String[] {"data"}, new int[] { android.R.id.text1 } );
+                childData, android.R.layout.simple_expandable_list_item_1,
+                new String[]{"data"}, new int[]{android.R.id.text1});
 
-
-        ExpandableListView listView = (ExpandableListView) findViewById(R.id.expandableListView);
-        listView.setAdapter(adapter);
-
-        listView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
-            @Override
-            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                if(groupPosition == 0) {
-                    if (childPosition == 0) {
-                        progressCircle = new ProgressCircle(SettingsExpandableActivity.this);
-                        progressCircle.show();
-                        Intent intent = new Intent(SettingsExpandableActivity.this, PinActivity.class);
-                        intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
-                        intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_CHANGE_SIGNING_PIN);
-                        pinActivityChangeSigningPinResultLauncher.launch(intent);
-                    }
-                    else if (childPosition == 1) {
-                        
-                        progressCircle = new ProgressCircle(SettingsExpandableActivity.this);
-                        progressCircle.show();
-                        Intent intent = new Intent(SettingsExpandableActivity.this, PinActivity.class);
-                        intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
-                        intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_CHANGE_UNLOCK_PIN);
-                        pinActivityChangeUnlockPinResultLauncher.launch(intent);
-                    }
-                } else if(groupPosition == 1) {
-                    if (childPosition == 0) {
-                        // todo: bio key 존재 유무 체크
-                        Toast.makeText(SettingsExpandableActivity.this, "signing fingerprint", Toast.LENGTH_SHORT).show();
-                        try {
-                            WalletApi walletApi = WalletApi.getInstance(SettingsExpandableActivity.this);
-                            walletApi.setBioPromptListener(new BioPromptHelper.BioPromptInterface() {
-                                @Override
-                                public void onSuccess(String result) {
-                                    new Thread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            try {
-                                                //walletApi.createHolderDIDDoc(hWalletToken); // todo: DID Doc bio키 갱신
-//                                                ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
-//                                                    Bundle bundle = new Bundle();
-//                                                    bundle.putInt("step", Constants.STEP3);
-//                                                    navController.navigate(R.id.action_stepFragment_self, bundle);
-//                                                });
-                                                CaLog.d("is bio key : " + walletApi.isSavedKey(Constants.KEY_ID_BIO));
-                                                CaLog.d("get DID Document : " + walletApi.getDIDDocument(2).toJson());
-                                            } catch (WalletException | WalletCoreException | UtilityException e) {
-                                                CaLog.e("bio key creation fail " + e.getMessage());
-                                                ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
-                                                    CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
-                                                });
-                                            }
-                                        }
-                                    }).start();
-                                }
-
-                                @Override
-                                public void onError(String result) {
-                                    ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
-                                        CaUtil.showErrorDialog(SettingsExpandableActivity.this, "[Error] Authentication failed.\nPlease try again later.");
-                                    });
-                                }
-
-                                @Override
-                                public void onCancel(String result) {
-                                    ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
-                                        CaUtil.showErrorDialog(SettingsExpandableActivity.this, "[Information] canceled by user");
-                                    });
-                                }
-
-                                @Override
-                                public void onFail(String result) {
-                                    CaLog.e("RegUser registerBioKey onFail : " + result);
-                                }
-                            });
-                            walletApi.registerBioKey(SettingsExpandableActivity.this);
-                        } catch (WalletException | WalletCoreException e) {
-                            CaLog.e("bio key creation fail : " + e.getMessage());
-                            ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
-                                CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
-                            });
-                        }
-                    }
-                    else if (childPosition == 1)
-                        Toast.makeText(SettingsExpandableActivity.this, "unlock fingerprint", Toast.LENGTH_SHORT).show();
+        binding.expandableListView.setAdapter(adapter);
+        binding.expandableListView.setOnChildClickListener((parent, v, groupPosition, childPosition, id) -> {
+            if (groupPosition == 0) {
+                if (childPosition == 0) {
+                    showProgress();
+                    Intent intent = new Intent(SettingsExpandableActivity.this, PinActivity.class);
+                    intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                    intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_CHANGE_SIGNING_PIN);
+                    pinActivityChangeSigningPinResultLauncher.launch(intent);
+                } else if (childPosition == 1) {
+                    showProgress();
+                    Intent intent = new Intent(SettingsExpandableActivity.this, PinActivity.class);
+                    intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
+                    intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_CHANGE_UNLOCK_PIN);
+                    pinActivityChangeUnlockPinResultLauncher.launch(intent);
                 }
-                return false;
+                // Fingerprint Settings
+            } else if (groupPosition == 1) {
+                // Setting up a fingerprint for signing
+                if (childPosition == 0) {
+                    new Thread(() -> {
+                        if (UserAuthHelper.isBiometricAuthAvailable(SettingsExpandableActivity.this, true)) {
+                            ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
+                                CaUtil.showErrorDialog(SettingsExpandableActivity.this, "already reg bio");
+                            });
+                        } else {
+                            viewModel.preProcess(SettingsExpandableActivity.this);
+                        }
+                    }).start();
+                }
+                // Setting up a fingerprint for lock
+//                else if (childPosition == 1)
+//                    Toast.makeText(SettingsExpandableActivity.this, "unlock fingerprint", Toast.LENGTH_SHORT).show();
+            }
+            return false;
+        });
+
+        pinActivityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+            if (result.getResultCode() == Activity.RESULT_OK) {
+                String pin = result.getData().getStringExtra("pin");
+                CaLog.d("Authenticate sign Pin : " + pin);
+
+                try {
+
+                    WalletApi walletApi = WalletApi.getInstance(context);
+                    walletApi.setBioPromptListener(new BioPromptHelper.BioPromptInterface() {
+                        @Override
+                        public void onSuccess(String result) {
+                            CaLog.d("[onSuccess] bio");
+                            Map<String, String> requestData = new HashMap<>();
+                            requestData.put("pin", pin);
+                            viewModel.process(context, requestData);
+                        }
+                        @Override
+                        public void onError(String result) {
+                            CaLog.d("[onError] Authentication failed.\nPlease try again later.");
+                            dismissProgress();
+                        }
+                        @Override
+                        public void onCancel(String result) {
+                            CaLog.d("[onCancel] UpdateUser registerBioKey onCancel : " + result);
+                            dismissProgress();
+                        }
+                        @Override
+                        public void onFail(String result) {
+                            CaLog.d("[onFail] UpdateUser registerBioKey onFail : " + result);
+                            dismissProgress();
+                        }
+                    });
+
+                    try {
+                        walletApi.registerBioKey(SettingsExpandableActivity.this);
+                    } catch (WalletException e) {
+                        CaLog.d("WalletException :: Failed to create biometric key. : " + e.getMessage());
+                    }
+
+                } catch (WalletCoreException e) {
+                    CaLog.d("registerBioKey error: "+e.getMessage());
+                    dismissProgress();
+                }
+
+            } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
+                CaLog.e("pin authentication fail");
+                CaUtil.showErrorDialog(context, "[Information] canceled by user");
             }
         });
 
         pinActivityChangeSigningPinResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            //progressCircle.dismiss();
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    //progressCircle.dismiss();
+                    try {
+                        WalletApi walletApi = WalletApi.getInstance(SettingsExpandableActivity.this);
+                        String oldPin = result.getData().getStringExtra("oldPin");
+                        String newPin = result.getData().getStringExtra("newPin");
+                        walletApi.changePin(Constants.KEY_ID_PIN, oldPin, newPin);
+                    } catch (WalletCoreException | UtilityException e) {
+                        CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
+                    }
+                } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
+                    CaUtil.showErrorDialog(SettingsExpandableActivity.this, "[Information] canceled by user");
+                }
+                dismissProgress();
+            }
+        );
+        pinActivityChangeUnlockPinResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
                             try {
                                 WalletApi walletApi = WalletApi.getInstance(SettingsExpandableActivity.this);
-                                String oldPin = result.getData().getStringExtra("oldPin");
-                                String newPin = result.getData().getStringExtra("newPin");
-                                walletApi.changePin(Constants.KEY_ID_PIN, oldPin, newPin);
-                            } catch (WalletCoreException | UtilityException e) {
-                                CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
+                                String oldPassCode = result.getData().getStringExtra("oldPassCode");
+                                String newPassCode = result.getData().getStringExtra("newPassCode");
+                                walletApi.changeLock(oldPassCode, newPassCode);
+                            } catch (WalletCoreException | UtilityException |
+                                     WalletException e) {
+                                ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(() -> {
+                                    CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
+                                });
                             }
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaUtil.showErrorDialog(SettingsExpandableActivity.this,"[Information] canceled by user");
                         }
-                        progressCircle.dismiss();
-                    }
-                }
-        );
+                    }).start();
 
-        pinActivityChangeUnlockPinResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        WalletApi walletApi = WalletApi.getInstance(SettingsExpandableActivity.this);
-                                        String oldPassCode = result.getData().getStringExtra("oldPassCode");
-                                        String newPassCode = result.getData().getStringExtra("newPassCode");
-                                        walletApi.changeLock(oldPassCode, newPassCode);
-                                    } catch (WalletCoreException | UtilityException | WalletException e) {
-                                        ContextCompat.getMainExecutor(SettingsExpandableActivity.this).execute(()  -> {
-                                            CaUtil.showErrorDialog(SettingsExpandableActivity.this, e.getMessage());
-                                        });
-                                    }
-                                }
-                            }).start();
-
-                        } else if(result.getResultCode() == Activity.RESULT_CANCELED){
-                            CaUtil.showErrorDialog(SettingsExpandableActivity.this,"[Information] canceled by user");
-                        }
-                        progressCircle.dismiss();
-                    }
+                } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
+                    CaUtil.showErrorDialog(SettingsExpandableActivity.this, "[Information] canceled by user");
                 }
+                dismissProgress();
+            }
         );
     }
 }

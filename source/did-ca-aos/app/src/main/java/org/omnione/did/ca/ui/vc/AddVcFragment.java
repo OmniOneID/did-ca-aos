@@ -210,7 +210,7 @@ public class AddVcFragment extends Fragment {
         String api = "/list/api/v1/vcplan/list"; //VC Plan
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(activity, Config.TAS_URL + api, "GET", ""))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(activity, Config.TAS.BASE_URL + api, "GET", ""))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);

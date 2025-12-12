@@ -18,6 +18,8 @@ package org.omnione.did.ca.network.protocol.user;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -87,28 +89,18 @@ public class RegUser {
     }
 
     public CompletableFuture<String> regUserPreProcess() {
-        String prefixTas = "/tas/api/v1";
-        String prefixCas = "/cas/api/v1";
-
-        String api1 = prefixTas + "/propose-register-user";
-        String api2 = prefixTas + "/request-ecdh";
-        String api3 = prefixTas + "/request-create-token";
-        String api4 = prefixTas + "/retrieve-kyc";
-        String api5 = prefixTas + "/request-register-user";
-
-        String api_cas1 = prefixCas + "/request-wallet-tokendata";
-        String api_cas2 = prefixCas + "/request-attested-appinfo";
-
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api1, "POST", M132_ProposeRegisterUser()))
+        return CompletableFuture.supplyAsync(() -> {
+                    return httpUrlConnection.send(context, Config.TAS.PROPOSE_REGISTER_USER, "POST", M132_ProposeRegisterUser());
+                })
                 .thenCompose(_M132_ProposeRegisterUser -> {
                     txId = MessageUtil.deserialize(_M132_ProposeRegisterUser, P132ResponseVo.class).getTxId();
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api2, "POST", M132_RequestEcdh()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.REQUEST_ECDH, "POST", M132_RequestEcdh()));
                 })
                 .thenCompose(_M132_RequestEcdh -> {
                     ecdhResult = _M132_RequestEcdh;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_WALLET_TOKENDATA, "POST", M000_GetWalletTokenData()));
                 })
                 .thenCompose(_M000_GetWalletTokenData -> {
                     try {
@@ -118,11 +110,11 @@ public class RegUser {
                         throw new CompletionException(e);
                     }
                     String appId = Preference.getCaAppId(context);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas2, "POST", M000_GetAttestedAppInfo(appId)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_ATTESTED_APPINFO, "POST", M000_GetAttestedAppInfo(appId)));
                 })
                 .thenCompose(_M000_GetAttestedAppInfo -> {
                     ServerTokenSeed serverTokenSeed = createServerTokenSeed(_M000_GetAttestedAppInfo);
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api3, "POST", M132_RequestCreateToken(serverTokenSeed)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.REQUEST_CREATE_TOKEN, "POST", M132_RequestCreateToken(serverTokenSeed)));
                 })
                 .thenCompose(_M132_RequestCreateToken -> {
                     try {
@@ -130,7 +122,7 @@ public class RegUser {
                     } catch (UtilityException e) {
                         throw new CompletionException(e);
                     }
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api4, "POST", M132_RetrieveKyc(serverToken)));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.RETRIEVE_KYC, "POST", M132_RetrieveKyc(serverToken)));
                 })
                 .thenApply(_M132_RetrieveKyc -> _M132_RetrieveKyc)
                 .exceptionally(ex -> {
@@ -138,12 +130,12 @@ public class RegUser {
                 });
     }
     public CompletableFuture<String> regUserProcess(SignedDidDoc signedDIDDoc) {
-        String api6 = "/tas/api/v1/confirm-register-user";
+
         String _M132_RequestRegisterUser = M132_RequestRegisterUser(txId, serverToken, signedDIDDoc);
 
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS_URL + api6, "POST", M132_ConfirmRegisterUser(_M132_RequestRegisterUser)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context,Config.TAS.CONFIRM_REGISTER_USER, "POST", M132_ConfirmRegisterUser(_M132_RequestRegisterUser)))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
@@ -208,7 +200,7 @@ public class RegUser {
             public void run() {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(context);
-                    String result = walletApi.requestRegisterUser(hWalletToken, Config.TAS_URL, txId, serverToken, signedDIDDoc).get();
+                    String result = walletApi.requestRegisterUser(hWalletToken, Config.TAS.BASE_URL, txId, serverToken, signedDIDDoc).get();
                     resultHolder[0] = result;
                 } catch (WalletException | WalletCoreException e) {
                     ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -298,6 +290,11 @@ public class RegUser {
                 @Override
                 public void run() {
                     try {
+                        try {
+                            walletApi.deleteKey(hWalletToken, List.of("pin", "keyagree"));
+                        } catch (WalletException | UtilityException | WalletCoreException e) {
+                            CaLog.d("deleteKey error: " + e.getMessage());
+                        }
                         walletApi.generateKeyPair(hWalletToken, pin);
                     } catch (WalletException | UtilityException | WalletCoreException e) {
                         ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -320,55 +317,64 @@ public class RegUser {
     }
 
     private void authenticateBio(DIDDocument holderDIDDoc, String pin, Fragment fragment, NavController navController) {
-        try {
-            WalletApi walletApi = WalletApi.getInstance(context);
-            walletApi.setBioPromptListener(new BioPromptHelper.BioPromptInterface() {
-                @Override
-                public void onSuccess(String result) {
-                    CaLog.d("RegUser authenticateBioKey onSuccess");
-                    try {
-                        DIDDocument ownerDIDDoc = (DIDDocument) walletApi.addProofsToDocument(holderDIDDoc, List.of("pin", "bio"), holderDIDDoc.getId(), Constants.DID_TYPE_HOLDER, pin, false);
-                        registerUser(walletApi.createSignedDIDDoc(ownerDIDDoc));
-                        Preference.setInit(context, true);
-                        navController.navigate(R.id.action_stepFragment_to_vcListFragment);
-                    } catch (WalletException | UtilityException | WalletCoreException e) {
-                        CaLog.e("bio key signing fail" + e.getMessage());
-                        ContextCompat.getMainExecutor(context).execute(()  -> {
-                            CaUtil.showErrorDialog(context, e.getMessage());
-                        });
-                    }
-                }
-                @Override
-                public void onError(String result) {
+
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    WalletApi walletApi = WalletApi.getInstance(context);
+                    walletApi.setBioPromptListener(new BioPromptHelper.BioPromptInterface() {
+                        @Override
+                        public void onSuccess(String result) {
+                            CaLog.d("RegUser authenticateBioKey onSuccess");
+                            try {
+                                DIDDocument ownerDIDDoc = (DIDDocument) walletApi.addProofsToDocument(holderDIDDoc, List.of("pin", "bio"), holderDIDDoc.getId(), Constants.DID_TYPE_HOLDER, pin, false);
+                                registerUser(walletApi.createSignedDIDDoc(ownerDIDDoc));
+                                Preference.setInit(context, true);
+                                navController.navigate(R.id.action_stepFragment_to_vcListFragment);
+                            } catch (WalletException | UtilityException | WalletCoreException e) {
+                                CaLog.e("bio key signing fail" + e.getMessage());
+                                ContextCompat.getMainExecutor(context).execute(() -> {
+                                    CaUtil.showErrorDialog(context, e.getMessage());
+                                });
+                            }
+                        }
+                        @Override
+                        public void onError(String result) {
+                            ContextCompat.getMainExecutor(context).execute(()  -> {
+                                CaUtil.showErrorDialog(context,"[Error] Authentication failed.\nPlease try again later.");
+                            });
+                        }
+                        @Override
+                        public void onCancel(String result) {
+                            ContextCompat.getMainExecutor(context).execute(()  -> {
+                                CaUtil.showErrorDialog(context,"[Information] canceled by user");
+                            });
+                        }
+                        @Override
+                        public void onFail(String result) {
+                            CaLog.e("registerBioKey onFail : " + result);
+                        }
+                    });
+
+                    walletApi.authenticateBioKey(context);
+
+                } catch (WalletException | WalletCoreException e) {
+                    CaLog.e("bio authentication fail : " + e.getMessage());
                     ContextCompat.getMainExecutor(context).execute(()  -> {
-                        CaUtil.showErrorDialog(context,"[Error] Authentication failed.\nPlease try again later.");
+                        CaUtil.showErrorDialog(context, e.getMessage());
                     });
                 }
-                @Override
-                public void onCancel(String result) {
-                    ContextCompat.getMainExecutor(context).execute(()  -> {
-                        CaUtil.showErrorDialog(context,"[Information] canceled by user");
-                    });
-                }
-                @Override
-                public void onFail(String result) {
-                    CaLog.e("registerBioKey onFail : " + result);
-                }
-            });
-            walletApi.authenticateBioKey(fragment, context);
-        } catch (WalletException | WalletCoreException e) {
-            CaLog.e("bio authentication fail : " + e.getMessage());
-            ContextCompat.getMainExecutor(context).execute(()  -> {
-                CaUtil.showErrorDialog(context, e.getMessage());
-            });
-        }
+            }
+        });
     }
     // create Holder didDoc
     public void createHolderDocByPin(NavController navController) {
+        CaLog.d("createHolderDocByPin");
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletApi.createHolderDIDDoc(hWalletToken);
-            ContextCompat.getMainExecutor(context).execute(()  -> {
+            ContextCompat.getMainExecutor(context).execute(() -> {
                 Bundle bundle = new Bundle();
                 bundle.putInt("step", Constants.STEP3);
                 navController.navigate(R.id.action_stepFragment_self, bundle);
@@ -381,27 +387,37 @@ public class RegUser {
         }
     }
     public void createHolderDocByBio(NavController navController) {
+        CaLog.d("createHolderDocByBio");
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
             walletApi.setBioPromptListener(new BioPromptHelper.BioPromptInterface() {
                 @Override
                 public void onSuccess(String result) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                walletApi.createHolderDIDDoc(hWalletToken);
-                                ContextCompat.getMainExecutor(context).execute(()  -> {
-                                    Bundle bundle = new Bundle();
-                                    bundle.putInt("step", Constants.STEP3);
-                                    navController.navigate(R.id.action_stepFragment_self, bundle);
-                                });
-                            } catch (WalletException | UtilityException | WalletCoreException e) {
-                                CaLog.e("bio key creation fail " + e.getMessage());
-                                ContextCompat.getMainExecutor(context).execute(()  -> {
-                                    CaUtil.showErrorDialog(context, e.getMessage());
-                                });
-                            }
+                    new Thread(() -> {
+                        try {
+
+//                            try {
+//                                DIDDocument hDoc = walletApi.getDIDDocument(2);
+//
+//                                CaLog.d("hDoc saved: "+ hDoc.toJson());
+//                            } catch (WalletException | UtilityException | WalletCoreException e) {
+//                                CaLog.e("bio key creation fail " + e.getMessage());
+//                            }
+                                CaLog.d("pin saved: "+ walletApi.isSavedKey("pin"));
+                                CaLog.d("bio saved: "+ walletApi.isSavedKey("bio"));
+
+                            walletApi.createHolderDIDDoc(hWalletToken);
+
+                            ContextCompat.getMainExecutor(context).execute(()  -> {
+                                Bundle bundle = new Bundle();
+                                bundle.putInt("step", Constants.STEP3);
+                                navController.navigate(R.id.action_stepFragment_self, bundle);
+                            });
+                        } catch (WalletException | UtilityException | WalletCoreException e) {
+                            CaLog.e("bio key creation fail " + e.getMessage());
+                            ContextCompat.getMainExecutor(context).execute(()  -> {
+                                CaUtil.showErrorDialog(context, e.getMessage());
+                            });
                         }
                     }).start();
                 }
@@ -422,7 +438,17 @@ public class RegUser {
                     CaLog.e("RegUser registerBioKey onFail : " + result);
                 }
             });
+            new Thread(() -> {
+                try {
+                    walletApi.deleteKey(hWalletToken, List.of("bio"));
+
+                } catch (WalletException | UtilityException | WalletCoreException e) {
+                    CaLog.d("deleteKey error: " + e.getMessage());
+                }
+            }).start();
+
             walletApi.registerBioKey(context);
+
         } catch (WalletException | WalletCoreException e) {
             CaLog.e("bio key creation fail : " + e.getMessage());
             ContextCompat.getMainExecutor(context).execute(()  -> {
@@ -435,9 +461,12 @@ public class RegUser {
         try {
             regUserProcess(signedDIDDoc).get();
             WalletApi walletApi = WalletApi.getInstance(context);
+
+            walletApi.saveDocument();
+            CaLog.d("saveDocument");
             Preference.setDID(context, walletApi.getDIDDocument( Constants.DID_TYPE_HOLDER).getId());
-        } catch (WalletException | WalletCoreException | UtilityException | ExecutionException |
-                 InterruptedException e) {
+
+        } catch (WalletException | WalletCoreException | UtilityException | ExecutionException | InterruptedException e) {
              CaLog.e("registerUser error : " + e.getMessage());
              ContextCompat.getMainExecutor(context).execute(()  -> {
                  CaUtil.showErrorDialog(context, e.getMessage());

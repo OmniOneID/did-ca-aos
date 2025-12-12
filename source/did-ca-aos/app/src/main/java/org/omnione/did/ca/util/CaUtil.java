@@ -214,7 +214,7 @@ public class CaUtil {
         CaLog.d("Update push token : " + updatePushToken);
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS_URL + api, "POST", updatePushToken))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.TAS.BASE_URL + api, "POST", updatePushToken))
                 .thenCompose(CompletableFuture::completedFuture)
                 .exceptionally(ex -> {
                     throw new CompletionException(ex);
@@ -227,7 +227,7 @@ public class CaUtil {
             @Override
             public String call() {
                 try {
-                    String vcStatusJson = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL+"/api-gateway/api/v1/vc-meta?vcId="+vcId, "GET","");
+                    String vcStatusJson = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL+"/api-gateway/api/v1/vc-meta?vcId="+vcId, "GET","");
                     CaLog.d("vcStatusJson >>>>>>>>>> " + vcStatusJson);
 
                     VcStatusVo vcStatusVo = MessageUtil.deserialize(vcStatusJson, VcStatusVo.class);
@@ -261,7 +261,7 @@ public class CaUtil {
             @Override
             public CredentialSchema call() {
                 try {
-                    String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
+                    String schema = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
                     CaLog.d("getSchema >>>>>>>>>> " + schema);
                     CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);
                     CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
@@ -294,7 +294,7 @@ public class CaUtil {
             @Override
             public CredentialDefinition call() {
                 try {
-                    String credDef = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-def?id="+credDefId, "GET","");
+                    String credDef = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL + "/api-gateway/api/v1/zkp-cred-def?id="+credDefId, "GET","");
                     CaLog.d("getCredDef >>>>>>>>>> " + credDef);
                     CredentialDefinitionVo credentialDefinitionVo = MessageUtil.deserialize(credDef, CredentialDefinitionVo.class);
                     CredentialDefinition credentialDefinition = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialDefinitionVo.getCredDef())), CredentialDefinition.class);
@@ -359,7 +359,7 @@ public class CaUtil {
             @Override
             public String call() {
                 try {
-                    String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
+                    String schema = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL + "/api-gateway/api/v1/zkp-cred-schema?id="+schemaId, "GET","");
                     CaLog.d("getSchema >>>>>>>>>> " + schema);
 
                     CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);

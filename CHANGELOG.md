@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.1 (2025-10-13)
+
+### 🚀 New Features
+- Add biometric authentication
+- development method pattern change in progress
+
 ## v2.0.0 (2025-05-27)
 
 ### 🚀 New Features

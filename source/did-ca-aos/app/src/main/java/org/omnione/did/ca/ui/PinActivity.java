@@ -25,21 +25,18 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
-import org.omnione.did.ca.ui.common.ProgressCircle;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
-
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
-public class PinActivity extends AppCompatActivity {
+public class PinActivity extends BaseActivity {
     Button[] button = new Button[10];
     ImageView[] pw = new ImageView[6];
     String password = "";
@@ -59,7 +56,6 @@ public class PinActivity extends AppCompatActivity {
     boolean isChange = false;
     String oldPin = "";
     WalletApi walletApi;
-    ProgressCircle progressCircle;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,13 +63,13 @@ public class PinActivity extends AppCompatActivity {
 
         initPin();
 
-        for(int i = 0; i < button.length; i++){
+        for(int i = 0; i < button.length; i++) {
             final int index;
             index = i;
             button[index].setOnClickListener(new Button.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(password.length() < 6) {
+                    if (password.length() < 6) {
                         if (password.length() == 0) {
                             password = button[index].getTag().toString();
                         } else {
@@ -81,6 +77,7 @@ public class PinActivity extends AppCompatActivity {
                         }
                         pw[password.length() - 1].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_out));
                     }
+
                     if (password.length() == Config.PIN_MAX_VALUE) {
                         switch(authenticationType) {
                             case Constants.PIN_TYPE_SET_LOCK:
@@ -114,7 +111,7 @@ public class PinActivity extends AppCompatActivity {
             delBtn.setOnClickListener(new Button.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(password.length() != 0) {
+                    if (password.length() != 0) {
                         pw[password.length()-1].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
                         password = password.substring(0, password.length() - 1);
                     }
@@ -137,34 +134,34 @@ public class PinActivity extends AppCompatActivity {
         }
         isRegistration = getIntent().getBooleanExtra(Constants.INTENT_IS_REGISTRATION, false);
         authenticationType = getIntent().getIntExtra(Constants.INTENT_TYPE_AUTHENTICATION, 0);
-        if(isRegistration){
+
+        if (isRegistration){
             isRegister = true;
             TextView message = findViewById(R.id.status_text);
-            if(authenticationType == Constants.PIN_TYPE_SET_LOCK || 
-                    authenticationType == Constants.PIN_TYPE_SET_UNLOCK ||
-                    authenticationType == Constants.PIN_TYPE_STATUS_UNLOCK) {
+            if(authenticationType == Constants.PIN_TYPE_SET_LOCK || authenticationType == Constants.PIN_TYPE_SET_UNLOCK || authenticationType == Constants.PIN_TYPE_STATUS_UNLOCK) {
                 message.setText(Constants.PIN_REGISTER_LOCK_TEXT);
-            } else if(authenticationType == Constants.PIN_TYPE_REG_KEY ||
-                    authenticationType == Constants.PIN_TYPE_USE_KEY) {
+            } else if(authenticationType == Constants.PIN_TYPE_REG_KEY || authenticationType == Constants.PIN_TYPE_USE_KEY) {
                 message.setText(Constants.PIN_REGISTER_TEXT);
             } else {
                 message.setText(Constants.PIN_REGISTER_TEXT); //default message
             }
         }
 
-        if(authenticationType == Constants.PIN_TYPE_CHANGE_UNLOCK_PIN ||
+        if (authenticationType == Constants.PIN_TYPE_CHANGE_UNLOCK_PIN ||
             authenticationType == Constants.PIN_TYPE_STATUS_UNLOCK) {
             TextView message = findViewById(R.id.status_text);
             message.setText(Constants.PIN_INPUT_LOCK_TEXT);
         }
         delBtn = findViewById(R.id.button_delete);
         cancelBtn = findViewById(R.id.button_cancel);
-        for(int i=0;i<=9; i++){
+
+        for(int i=0 ; i<=9 ; i++){
             button[i] = findViewById(Rid_button[i]);
             button[i].setTag(i);
             button[i].setText(String.valueOf(i));
         }
-        for(int i=0;i<=5; i++){
+
+        for(int i=0 ; i<=5 ; i++){
             pw[i] = findViewById(Rid_pw[i]);
             pw[i].setTag(i);
             pw[i].setImageDrawable(ContextCompat.getDrawable(PinActivity.this, R.drawable.omni_pin_num_in));
@@ -174,7 +171,7 @@ public class PinActivity extends AppCompatActivity {
         enableButton(true);
     }
     private void setLockRegisterPin(){
-        if(isRegister) {
+        if (isRegister) {
             TextView message = findViewById(R.id.status_text);
             message.setText(Constants.PIN_INPUT_LOCK_TEXT);
             for (int i = 0; i <= 5; i++) {
@@ -205,8 +202,8 @@ public class PinActivity extends AppCompatActivity {
         }
     }
 
-    private void genKeyRegisterPin(){
-        if(isRegister) {
+    private void genKeyRegisterPin() {
+        if (isRegister) {
             TextView message = findViewById(R.id.status_text);
             message.setText(Constants.PIN_INPUT_TEXT);
 
@@ -237,20 +234,18 @@ public class PinActivity extends AppCompatActivity {
             }
         }
     }
-    private void setUnlockAuthenticatePin(){
+    private void setUnlockAuthenticatePin() {
         authenticateLock(password);
         registerLock(password, false);
         password = "";
-
     }
 
     private void authenticatePin(){
         authenticateLock(password);
         password = "";
     }
-    private void useKeyAuthenticatePin(){
-        progressCircle = new ProgressCircle(this);
-        progressCircle.show();
+    private void useKeyAuthenticatePin() {
+        showProgress();
         Intent resultIntent = new Intent();
         resultIntent.putExtra("reg", Constants.PIN_TYPE_USE_KEY);
         resultIntent.putExtra("pin", password);
@@ -305,7 +300,6 @@ public class PinActivity extends AppCompatActivity {
             password = "";
             isChange = true;
             isRegister = true;
-
         }
     }
 
@@ -356,7 +350,6 @@ public class PinActivity extends AppCompatActivity {
             password = "";
             isChange = true;
             isRegister = true;
-
         }
     }
     private void registerLock(String passCode, boolean isLock) {
@@ -398,7 +391,6 @@ public class PinActivity extends AppCompatActivity {
                 }
             }
         }).start();
-
     }
 
     private void cancelPin(){
@@ -407,7 +399,7 @@ public class PinActivity extends AppCompatActivity {
         finish();
     }
     private void enableButton(boolean isEnable){
-        for(int i=0;i<=9; i++){
+        for(int i = 0 ; i <= 9 ; i++){
             button[i].setEnabled(isEnable);
         }
         delBtn.setEnabled(isEnable);
@@ -417,7 +409,6 @@ public class PinActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(progressCircle != null)
-            progressCircle.dismiss();
+        dismissProgress();
     }
 }

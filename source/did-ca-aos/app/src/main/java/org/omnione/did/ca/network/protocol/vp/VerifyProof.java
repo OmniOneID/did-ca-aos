@@ -17,7 +17,6 @@
 package org.omnione.did.ca.network.protocol.vp;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -32,11 +31,9 @@ import org.omnione.did.sdk.datamodel.profile.ProofRequestProfile;
 import org.omnione.did.sdk.datamodel.protocol.P311RequestVo;
 import org.omnione.did.sdk.datamodel.protocol.P311ResponseVo;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
-import org.omnione.did.sdk.datamodel.vc.issue.ReturnEncVP;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.token.WalletTokenSeed;
-import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinition;
 import org.omnione.did.sdk.datamodel.zkp.CredentialDefinitionVo;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
@@ -49,7 +46,6 @@ import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
@@ -76,16 +72,13 @@ public class VerifyProof {
     }
 
     public CompletableFuture<String> verifyProofPreProcess(String offerId, final String txId) {
-        String api1 = "/verifier/api/v1/request-proof-request-profile";
-        String api_cas1 = "/cas/api/v1/request-wallet-tokendata";
-
         HttpUrlConnection httpUrlConnection = new HttpUrlConnection();
 
-        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.VERIFIER_URL + api1, "POST", M311_RequestProofProfile(offerId, txId)))
+        return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.Verifier.REQUEST_PROOF_REQUEST_PROFILE, "POST", M311_RequestProofProfile(offerId, txId)))
                 .thenCompose(_M310_RequestProfile -> {
                     this.txId = MessageUtil.deserialize(_M310_RequestProfile, P311ResponseVo.class).getTxId();
                     proofRequestProfileVo = _M310_RequestProfile;
-                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS_URL + api_cas1, "POST", M000_GetWalletTokenData()));
+                    return CompletableFuture.supplyAsync(() -> httpUrlConnection.send(context, Config.CAS.REQUEST_WALLET_TOKENDATA, "POST", M000_GetWalletTokenData()));
                 })
                 .thenApply(_M000_GetWalletTokenData -> {
                     try {
@@ -108,10 +101,9 @@ public class VerifyProof {
     public String verifyProofProcess(List<ProofParam> proofParams, Map<String, String> selfAttr) {
         ExecutorService es = Executors.newCachedThreadPool();
         Future<String> future = es.submit(() -> {
-            String api1 = "/verifier/api/v1/request-verify-proof";
             P311ResponseVo profile = MessageUtil.deserialize(proofRequestProfileVo, P311ResponseVo.class);
             String requestProof = M311_RequestVerify(profile.getProofRequestProfile(), proofParams, selfAttr);
-            String result = new HttpUrlConnection().send(context, Config.VERIFIER_URL + api1, "POST", requestProof);
+            String result = new HttpUrlConnection().send(context, Config.Verifier.REQUEST_VERIFY_PROOF, "POST", requestProof);
             CaLog.d("verifyProofProcess >>>>>>>>>> " + result);
             return result;
         });
@@ -140,7 +132,7 @@ public class VerifyProof {
 
         new Thread(() -> {
             try {
-                P311RequestVo requestVo = WalletApi.getInstance(context).createZkpProof(hWalletToken, vpProfile, proofParams, selfAttr, txId);
+                P311RequestVo requestVo = WalletApi.getInstance(context).createEncZkpProof(hWalletToken, vpProfile, proofParams, selfAttr, txId);
                 requestVo.setId(CaUtil.createMessageId(context));
                 CaLog.d("P311RequestVo requestVo.toJson(): "+GsonWrapper.getGson().toJson(requestVo.toJson()));
                 result[0] = requestVo.toJson();
@@ -186,7 +178,7 @@ public class VerifyProof {
         ExecutorService es = Executors.newCachedThreadPool();
         Future<CredentialDefinition> future = es.submit(() -> {
             try {
-                String credDef = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-def?id="+credDefId, "GET","");
+                String credDef = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL + "/api-gateway/api/v1/zkp-cred-def?id="+credDefId, "GET","");
                 CaLog.d("getCredDef >>>>>>>>>> " + credDef);
                 CredentialDefinitionVo credentialDefinitionVo = MessageUtil.deserialize(credDef, CredentialDefinitionVo.class);
                 CredentialDefinition credentialDefinition = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialDefinitionVo.getCredDef())), CredentialDefinition.class);
@@ -215,7 +207,7 @@ public class VerifyProof {
         ExecutorService es = Executors.newCachedThreadPool();
         Future<CredentialSchema> future = es.submit(() -> {
             try {
-                String schema = new HttpUrlConnection().send(context, Config.API_GATEWAY_URL + "/api-gateway/api/v1/zkp-cred-schema?id=" + schemaId, "GET", "");
+                String schema = new HttpUrlConnection().send(context, Config.ApiGW.BASE_URL + "/api-gateway/api/v1/zkp-cred-schema?id=" + schemaId, "GET", "");
                 CredentialSchemaVo credentialSchemaVo = MessageUtil.deserialize(schema, CredentialSchemaVo.class);
                 CredentialSchema credentialSchema = MessageUtil.deserialize(new String(MultibaseUtils.decode(credentialSchemaVo.getCredSchema())), CredentialSchema.class);
                 CaLog.d("credentialSchema: " + GsonWrapper.getGson().toJson(credentialSchema));
