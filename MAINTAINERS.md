@@ -11,4 +11,4 @@ If you have any questions or require support, please reach out to the maintainer
 | Name         | GitHub     | email                   |
 | ------------ | ---------- | ----------------------- |
 | Sangjun Kim  | k3255      | sjkim@raoncorp.com      |
-| Dongjun Park | djpark0402 | djpark0402@raoncorp.com |
+| EunJeong Kim | ejkim4619  | ejkim4619@raoncorp.com  |

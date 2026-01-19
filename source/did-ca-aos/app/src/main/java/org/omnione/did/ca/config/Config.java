@@ -72,8 +72,8 @@ public final class Config {
         private Verifier() {}
         public static final String BASE_URL = VERIFIER_URL;
 
-        public static final String REQUEST_PROOF_REQUEST_PROFILE = "/verifier/api/v1/request-proof-request-profile";
-        public static final String REQUEST_VERIFY_PROOF = "/verifier/api/v1/request-verify-proof";
+        public static final String REQUEST_PROOF_REQUEST_PROFILE = BASE_URL + "/verifier/api/v1/request-proof-request-profile";
+        public static final String REQUEST_VERIFY_PROOF = BASE_URL + "/verifier/api/v1/request-verify-proof";
         public static final String REQUEST_VERIFY_PROFILE = BASE_URL + "/verifier/api/v1/request-profile";
         public static final String REQUEST_VERIFY_VP = BASE_URL + "/verifier/api/v1/request-verify";
     }
