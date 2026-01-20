@@ -103,9 +103,13 @@ public class VerifyProof {
         Future<String> future = es.submit(() -> {
             P311ResponseVo profile = MessageUtil.deserialize(proofRequestProfileVo, P311ResponseVo.class);
             String requestProof = M311_RequestVerify(profile.getProofRequestProfile(), proofParams, selfAttr);
-            String result = new HttpUrlConnection().send(context, Config.Verifier.REQUEST_VERIFY_PROOF, "POST", requestProof);
-            CaLog.d("verifyProofProcess >>>>>>>>>> " + result);
-            return result;
+            if (requestProof != null) {
+                String result = new HttpUrlConnection().send(context, Config.Verifier.REQUEST_VERIFY_PROOF, "POST", requestProof);
+                CaLog.d("verifyProofProcess >>>>>>>>>> " + result);
+                return result;
+            } else {
+                return null;
+            }
         });
 
         try {
