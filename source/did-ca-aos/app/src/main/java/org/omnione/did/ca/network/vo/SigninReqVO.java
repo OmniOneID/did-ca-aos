@@ -18,16 +18,13 @@ package org.omnione.did.ca.network.vo;
 
 public class SigninReqVO {
     private String loginId;
-    private String password;
     private String walletId;
 
-    public SigninReqVO(String loginId, String password, String walletId) {
+    public SigninReqVO(String loginId, String walletId) {
         this.loginId = loginId;
-        this.password = password;
         this.walletId = walletId;
     }
 
     public String getLoginId() { return loginId; }
-    public String getPassword() { return password; }
     public String getWalletId() { return walletId; }
 }

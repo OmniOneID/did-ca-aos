@@ -33,6 +33,7 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import org.omnione.did.ca.config.Config;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -42,14 +43,18 @@ import androidx.navigation.Navigation;
 
 import org.omnione.did.ca.ui.BaseFragment;
 import org.omnione.did.ca.ui.PinActivity;
-import org.omnione.did.ca.ui.sign.SignActivity;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
+import org.omnione.did.ca.network.TokenAwareHttpClient;
 import org.omnione.did.ca.network.protocol.user.RegUser;
+import org.omnione.did.ca.network.vo.CasTokenResVO;
+import org.omnione.did.ca.network.vo.SignupReqVO;
 import org.omnione.did.ca.ui.common.CustomDialog;
+import org.omnione.did.ca.util.AuthTokenHelper;
 import org.omnione.did.ca.util.CaUtil;
+import com.google.gson.Gson;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
@@ -58,6 +63,7 @@ import org.omnione.did.sdk.datamodel.protocol.P210ResponseVo;
 import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -66,7 +72,6 @@ public class StepFragment extends BaseFragment {
     NavController navController;
     Activity activity;
     int step = Constants.STEP1;
-    ActivityResultLauncher<Intent> signActivityResultLauncher;
     ActivityResultLauncher<Intent> pinActivityResultLauncher;
     String txId;
     TextView stepTitle1, stepTitle2, stepTitle3;
@@ -135,22 +140,11 @@ public class StepFragment extends BaseFragment {
             }
         }
 
-        signActivityResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == Activity.RESULT_OK) {
-                        navController.navigate(R.id.action_stepFragment_to_setLockFragment);
-                    }
-                }
-        );
-
         Button nextBtn = view.findViewById(R.id.button);
         nextBtn.setOnClickListener(v -> {
             if(step == Constants.STEP1) {
-                // SignActivity를 즉시 실행 — async 작업 없으므로 progress 불필요
-                Intent signIntent = new Intent(getContext(), SignActivity.class);
-                signIntent.putExtra(SignActivity.EXTRA_IS_FROM_REGISTRATION, true);
-                signActivityResultLauncher.launch(signIntent);
+                showProgress();
+                signup();
             } else if(step == Constants.STEP2){
                 // step2 : pin authentication
                 showProgress();
@@ -233,6 +227,35 @@ public class StepFragment extends BaseFragment {
             }
         }
     }
+    private void signup() {
+        new Thread(() -> {
+            try {
+                String loginId = UUID.randomUUID().toString();
+                String walletId = Preference.getCaAppId(activity);
+                SignupReqVO req = new SignupReqVO(loginId, walletId);
+                String body = new Gson().toJson(req);
+
+                String response = TokenAwareHttpClient.send(activity, Config.CAS.SIGNUP, "POST", body);
+                CasTokenResVO token = MessageUtil.deserialize(response, CasTokenResVO.class);
+
+                Preference.setLoginId(activity, loginId);
+                AuthTokenHelper.saveAccessToken(activity, token.getAccessToken());
+                AuthTokenHelper.saveRefreshToken(activity, token.getRefreshToken());
+
+                ContextCompat.getMainExecutor(activity).execute(() -> {
+                    dismissProgress();
+                    navController.navigate(R.id.action_stepFragment_to_setLockFragment);
+                });
+            } catch (Exception e) {
+                CaLog.e("signup error: " + e.getMessage());
+                ContextCompat.getMainExecutor(activity).execute(() -> {
+                    dismissProgress();
+                    CaUtil.showErrorDialog(activity, e.getMessage());
+                });
+            }
+        }).start();
+    }
+
     public void regUserPreProcess(){
         RegUser regUser = RegUser.getInstance(activity);
 
