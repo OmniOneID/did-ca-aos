@@ -173,7 +173,7 @@ public abstract class BaseOperation {
             WalletApi walletApi = WalletApi.getInstance(context);
             WalletTokenSeed walletTokenSeed = walletApi.createWalletTokenSeed(WalletTokenPurpose.WALLET_TOKEN_PURPOSE.UPDATE_DID,
                     CaUtil.getPackageName(context),
-                    Preference.getUserIdForDemo(context));
+                    Preference.getLoginId(context));
             String result = new HttpUrlConnection().send(context, Config.CAS.REQUEST_WALLET_TOKENDATA, "POST", walletTokenSeed.toJson());
             String token = TokenUtil.createHashWalletToken(result, context);
             protocolData.sethWalletToken(token);

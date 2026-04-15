@@ -42,6 +42,7 @@ import androidx.navigation.Navigation;
 
 import org.omnione.did.ca.ui.BaseFragment;
 import org.omnione.did.ca.ui.PinActivity;
+import org.omnione.did.ca.ui.sign.SignActivity;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
@@ -65,6 +66,7 @@ public class StepFragment extends BaseFragment {
     NavController navController;
     Activity activity;
     int step = Constants.STEP1;
+    ActivityResultLauncher<Intent> signActivityResultLauncher;
     ActivityResultLauncher<Intent> pinActivityResultLauncher;
     String txId;
     TextView stepTitle1, stepTitle2, stepTitle3;
@@ -104,7 +106,7 @@ public class StepFragment extends BaseFragment {
             initStep(step);
         } else {
             // step1 completed
-            if (!Preference.getUsernameForDemo(activity).isEmpty()) {
+            if (!Preference.getLoginId(activity).isEmpty()) {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(activity);
                     String holderDIDDoc = "";
@@ -133,18 +135,29 @@ public class StepFragment extends BaseFragment {
             }
         }
 
+        signActivityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        navController.navigate(R.id.action_stepFragment_to_setLockFragment);
+                    }
+                }
+        );
+
         Button nextBtn = view.findViewById(R.id.button);
         nextBtn.setOnClickListener(v -> {
-            showProgress();
             if(step == Constants.STEP1) {
-                Bundle bundle = new Bundle();
-                bundle.putInt("type", Constants.WEBVIEW_USER_INFO);
-                navController.navigate(R.id.action_stepFragment_to_webviewFragment, bundle);
+                // SignActivity를 즉시 실행 — async 작업 없으므로 progress 불필요
+                Intent signIntent = new Intent(getContext(), SignActivity.class);
+                signIntent.putExtra(SignActivity.EXTRA_IS_FROM_REGISTRATION, true);
+                signActivityResultLauncher.launch(signIntent);
             } else if(step == Constants.STEP2){
                 // step2 : pin authentication
+                showProgress();
                 regUserPreProcess();
             } else if(step == Constants.STEP3){
                 // step3 : pin key signing
+                showProgress();
                 Intent intent = new Intent(getContext(), PinActivity.class);
                 intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);
                 intent.putExtra(Constants.INTENT_TYPE_AUTHENTICATION, Constants.PIN_TYPE_USE_KEY);

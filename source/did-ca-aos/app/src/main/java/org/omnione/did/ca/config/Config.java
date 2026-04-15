@@ -41,6 +41,15 @@ public final class Config {
 
         public static final String REQUEST_WALLET_TOKENDATA = BASE_URL + "/cas/api/v1/request-wallet-tokendata";
         public static final String REQUEST_ATTESTED_APPINFO = BASE_URL + "/cas/api/v1/request-attested-appinfo";
+
+        // login simplification
+        public static final String CHECK_REGISTRATION_STATUS = BASE_URL + "/cas/api/v1/user/check-registration-status";
+        public static final String SIGNUP = BASE_URL + "/cas/api/v1/user/signup";
+        public static final String SIGNIN = BASE_URL + "/cas/api/v1/user/signin";
+        public static final String SIGNOUT = BASE_URL + "/cas/api/v1/user/signout";
+        public static final String WITHDRAW = BASE_URL + "/cas/api/v1/user/withdraw";
+        public static final String JWT_VERIFY = BASE_URL + "/cas/api/v1/jwt/verify";
+        public static final String JWT_REFRESH = BASE_URL + "/cas/api/v1/jwt/refresh";
     }
     public static final class TAS {
         private TAS() {}

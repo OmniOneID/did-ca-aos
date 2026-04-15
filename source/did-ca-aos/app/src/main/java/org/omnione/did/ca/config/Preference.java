@@ -21,7 +21,7 @@ import android.content.SharedPreferences;
 
 public class Preference {
 
-    private static SharedPreferences getPreference(Context context){
+    public static SharedPreferences getPreference(Context context){
         return context.getSharedPreferences(Constants.PREFERENCE, Context.MODE_PRIVATE);
     }
     public static void setInit(Context context, boolean isInit) {
@@ -148,5 +148,16 @@ public class Preference {
     public static String getDefaultAuthenticator(Context context) {
         SharedPreferences prefs = getPreference(context);
         return prefs.getString(Constants.PREFERENCE_DEFAULT_AUTH,"");
+    }
+
+    public static void setLoginId(Context context, String loginId) {
+        SharedPreferences prefs = getPreference(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(Constants.PREFERENCE_LOGIN_ID, loginId);
+        editor.apply();
+    }
+    public static String getLoginId(Context context) {
+        SharedPreferences prefs = getPreference(context);
+        return prefs.getString(Constants.PREFERENCE_LOGIN_ID, "");
     }
 }

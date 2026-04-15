@@ -40,6 +40,8 @@ import org.omnione.did.ca.R;
 import org.omnione.did.ca.config.Config;
 import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
+import org.omnione.did.ca.ui.sign.SignActivity;
+import org.omnione.did.ca.util.AuthTokenHelper;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
@@ -130,6 +132,17 @@ public class SplashActivity extends BaseActivity {
             }
 
             getFcmToken();
+
+            // If the user is fully registered but has no CAS tokens, go to SignActivity (re-login).
+            if (Preference.getInit(this) && !AuthTokenHelper.hasRefreshToken(this)) {
+                Intent intent = new Intent(SplashActivity.this, SignActivity.class);
+                intent.putExtra(SignActivity.EXTRA_IS_FROM_REGISTRATION, false);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+                return;
+            }
+
             if (CaUtil.isLock(this)) {
                 Intent intent = new Intent(SplashActivity.this, PinActivity.class);
                 intent.putExtra(Constants.INTENT_IS_REGISTRATION, false);

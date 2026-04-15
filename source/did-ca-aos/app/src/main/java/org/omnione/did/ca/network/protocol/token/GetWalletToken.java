@@ -90,7 +90,7 @@ public class GetWalletToken {
 
     private String createWalletTokenSeed(WalletTokenPurpose.WALLET_TOKEN_PURPOSE purpose) throws UtilityException, WalletCoreException, WalletException {
         WalletApi walletApi = WalletApi.getInstance(context);
-        WalletTokenSeed walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserIdForDemo(context));
+        WalletTokenSeed walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getLoginId(context));
         return  walletTokenSeed.toJson();
     }
 }

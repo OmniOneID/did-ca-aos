@@ -109,6 +109,9 @@
             android:id="@+id/action_stepFragment_to_webviewFragment"
             app:destination="@id/webviewFragment" />
         <action
+            android:id="@+id/action_stepFragment_to_setLockFragment"
+            app:destination="@id/setLockFragment" />
+        <action
             android:id="@+id/action_stepFragment_to_vcListFragment"
             app:destination="@id/vcListFragment" />
         <action

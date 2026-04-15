@@ -60,6 +60,8 @@
 
         <activity android:name="org.omnione.did.ca.zkp.ReferentListActivity"/>
 
+        <activity android:name="org.omnione.did.ca.ui.sign.SignActivity"/>
+
         <service
             android:name=".push.PushMessagingService"
             android:exported="false">
