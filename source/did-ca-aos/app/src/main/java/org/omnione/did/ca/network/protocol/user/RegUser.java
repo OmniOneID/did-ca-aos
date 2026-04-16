@@ -32,7 +32,6 @@ import org.omnione.did.ca.config.Constants;
 import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.HttpUrlConnection;
-import org.omnione.did.ca.util.AuthTokenHelper;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
@@ -187,8 +186,8 @@ public class RegUser {
     private String M132_RetrieveKyc(String serverToken){
         P132RequestVo requestVo = new P132RequestVo(CaUtil.createMessageId(context), txId);
         requestVo.setServerToken(serverToken);
-        requestVo.setKycTxId(null);
-        requestVo.setKycToken(AuthTokenHelper.getAccessToken(context));
+        requestVo.setKycTxId(Preference.getUserId(context));
+        requestVo.setKycToken(null);
         String request = requestVo.toJson();
         return request;
     }
@@ -242,7 +241,7 @@ public class RegUser {
         WalletTokenSeed walletTokenSeed = new WalletTokenSeed();
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
-            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getLoginId(context));
+            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserId(context));
         } catch (WalletCoreException | UtilityException | WalletException e){
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());

@@ -89,13 +89,13 @@ public class Preference {
         SharedPreferences prefs = getPreference(context);
         return prefs.getString(Constants.PREFERENCE_USER_NAME_FOR_DEMO, "");
     }
-    public static void setUserIdForDemo(Context context, String userId) {
+    public static void setUserId(Context context, String userId) {
         SharedPreferences prefs = getPreference(context);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(Constants.PREFERENCE_USER_ID_FOR_KYC, userId);
         editor.apply();
     }
-    public static String getUserIdForDemo(Context context) {
+    public static String getUserId(Context context) {
         SharedPreferences prefs = getPreference(context);
         return prefs.getString(Constants.PREFERENCE_USER_ID_FOR_KYC,"");
     }
@@ -150,14 +150,4 @@ public class Preference {
         return prefs.getString(Constants.PREFERENCE_DEFAULT_AUTH,"");
     }
 
-    public static void setLoginId(Context context, String loginId) {
-        SharedPreferences prefs = getPreference(context);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(Constants.PREFERENCE_LOGIN_ID, loginId);
-        editor.apply();
-    }
-    public static String getLoginId(Context context) {
-        SharedPreferences prefs = getPreference(context);
-        return prefs.getString(Constants.PREFERENCE_LOGIN_ID, "");
-    }
 }

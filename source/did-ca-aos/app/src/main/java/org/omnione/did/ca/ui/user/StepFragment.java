@@ -49,10 +49,8 @@ import org.omnione.did.ca.config.Preference;
 import org.omnione.did.ca.logger.CaLog;
 import org.omnione.did.ca.network.TokenAwareHttpClient;
 import org.omnione.did.ca.network.protocol.user.RegUser;
-import org.omnione.did.ca.network.vo.CasTokenResVO;
 import org.omnione.did.ca.network.vo.SignupReqVO;
 import org.omnione.did.ca.ui.common.CustomDialog;
-import org.omnione.did.ca.util.AuthTokenHelper;
 import org.omnione.did.ca.util.CaUtil;
 import com.google.gson.Gson;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
@@ -111,7 +109,7 @@ public class StepFragment extends BaseFragment {
             initStep(step);
         } else {
             // step1 completed
-            if (!Preference.getLoginId(activity).isEmpty()) {
+            if (!Preference.getUserId(activity).isEmpty()) {
                 try {
                     WalletApi walletApi = WalletApi.getInstance(activity);
                     String holderDIDDoc = "";
@@ -230,17 +228,14 @@ public class StepFragment extends BaseFragment {
     private void signup() {
         new Thread(() -> {
             try {
-                String loginId = UUID.randomUUID().toString();
+                String userId = UUID.randomUUID().toString();
                 String walletId = Preference.getCaAppId(activity);
-                SignupReqVO req = new SignupReqVO(loginId, walletId);
+                SignupReqVO req = new SignupReqVO(userId, walletId);
                 String body = new Gson().toJson(req);
 
-                String response = TokenAwareHttpClient.send(activity, Config.CAS.SIGNUP, "POST", body);
-                CasTokenResVO token = MessageUtil.deserialize(response, CasTokenResVO.class);
+                TokenAwareHttpClient.send(activity, Config.CAS.SIGNUP, "POST", body);
 
-                Preference.setLoginId(activity, loginId);
-                AuthTokenHelper.saveAccessToken(activity, token.getAccessToken());
-                AuthTokenHelper.saveRefreshToken(activity, token.getRefreshToken());
+                Preference.setUserId(activity, userId);
 
                 ContextCompat.getMainExecutor(activity).execute(() -> {
                     dismissProgress();

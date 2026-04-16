@@ -187,7 +187,7 @@ public class VerifyVp {
         WalletTokenSeed walletTokenSeed = new WalletTokenSeed();
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
-            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getLoginId(context));
+            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserId(context));
         } catch (WalletException | UtilityException | WalletCoreException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());

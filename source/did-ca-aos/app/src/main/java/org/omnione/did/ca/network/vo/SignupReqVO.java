@@ -17,14 +17,14 @@
 package org.omnione.did.ca.network.vo;
 
 public class SignupReqVO {
-    private String loginId;
+    private String userId;
     private String walletId;
 
-    public SignupReqVO(String loginId, String walletId) {
-        this.loginId = loginId;
+    public SignupReqVO(String userId, String walletId) {
+        this.userId = userId;
         this.walletId = walletId;
     }
 
-    public String getLoginId() { return loginId; }
+    public String getUserId() { return userId; }
     public String getWalletId() { return walletId; }
 }

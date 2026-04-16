@@ -98,7 +98,7 @@ public class VcListFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
         TextView nameView = view.findViewById(R.id.name);
-        nameView.setText(Preference.getLoginId(activity));
+        nameView.setText(Preference.getUserId(activity));
 
         progressCircle = new ProgressCircle(activity);
 

@@ -33,8 +33,6 @@ public class Constants {
     public final static String PREFERENCE_PUSH_TOKEN = "push_token";
     public final static String PREFERENCE_DEFAULT_AUTH = "default_authenticator";
     public final static String PREFERENCE_LOGIN_ID = "login_id";
-    public final static String PREFERENCE_CAS_ACCESS_TOKEN = "cas_access_token";
-    public final static String PREFERENCE_CAS_REFRESH_TOKEN = "cas_refresh_token";
     
     public final static int DIALOG_CONFIRM_TYPE = 1;
     public final static int DIALOG_INPUT_TYPE = 2;

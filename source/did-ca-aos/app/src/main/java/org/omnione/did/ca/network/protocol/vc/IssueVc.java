@@ -251,7 +251,7 @@ public class IssueVc {
         WalletTokenSeed walletTokenSeed = new WalletTokenSeed();
         try {
             WalletApi walletApi = WalletApi.getInstance(context);
-            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getLoginId(context));
+            walletTokenSeed = walletApi.createWalletTokenSeed(purpose, CaUtil.getPackageName(context), Preference.getUserId(context));
         } catch (WalletException | WalletCoreException | UtilityException e) {
             ContextCompat.getMainExecutor(context).execute(()  -> {
                 CaUtil.showErrorDialog(context, e.getMessage());

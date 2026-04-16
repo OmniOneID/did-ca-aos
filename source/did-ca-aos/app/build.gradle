@@ -3,6 +3,10 @@ plugins {
     id 'com.google.gms.google-services'
 }
 
+configurations.configureEach {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk15to18'
+}
+
 android {
     namespace 'org.omnione.did.ca'
     compileSdk 34
@@ -30,15 +34,15 @@ android {
             buildConfigField "boolean", "IS_PROD_MODE", "true"
         } else {
             // 개발(Dev) 모드 URL
-            def serverUrl = "\"http://192.168.3.110";
-            buildConfigField "String", "TAS_URL", serverUrl+":8099\""
-            buildConfigField "String", "CAS_URL", serverUrl+":8099\""
-            buildConfigField "String", "API_GW_URL", serverUrl+":8099\""
-            buildConfigField "String", "VERIFIER_URL", serverUrl+":8099\""
+            def serverUrl = "\"http://10.48.17.123";
+            buildConfigField "String", "TAS_URL", serverUrl+":8090\""
+            buildConfigField "String", "CAS_URL", serverUrl+":8094\""
+            buildConfigField "String", "API_GW_URL", serverUrl+":8093\""
+            buildConfigField "String", "VERIFIER_URL", serverUrl+":8092\""
             buildConfigField "String", "DATA_PORTAL_URL", serverUrl+":8099\""
-            buildConfigField "String", "WALLET_URL", serverUrl+":8099\""
+            buildConfigField "String", "WALLET_URL", serverUrl+":8095\""
             buildConfigField "String", "DEMO_URL", serverUrl+":8099\""
-            buildConfigField "boolean", "IS_PROD_MODE", "true"
+            buildConfigField "boolean", "IS_PROD_MODE", "false"
         }
     }
 
