@@ -18,14 +18,20 @@ package org.omnione.did.ca.ui.webview;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -47,6 +53,28 @@ import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 public class WebviewFragment extends Fragment {
     NavController navController;
     Activity activity;
+
+    private ValueCallback<Uri[]> filePathCallback;
+    private ActivityResultLauncher<Intent> filePickerLauncher;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        filePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    Uri[] uris = null;
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        Uri uri = result.getData().getData();
+                        if (uri != null) uris = new Uri[]{uri};
+                    }
+                    if (filePathCallback != null) {
+                        filePathCallback.onReceiveValue(uris);
+                        filePathCallback = null;
+                    }
+                }
+        );
+    }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -72,6 +100,25 @@ public class WebviewFragment extends Fragment {
         webView.setWebViewClient(new WebViewClient());
         webView.getSettings().setJavaScriptEnabled(true);
         webView.addJavascriptInterface(new WebAppInterface(activity, navController), "android");
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView webView,
+                                             ValueCallback<Uri[]> filePathCallback,
+                                             FileChooserParams fileChooserParams) {
+                if (WebviewFragment.this.filePathCallback != null) {
+                    WebviewFragment.this.filePathCallback.onReceiveValue(null);
+                }
+                WebviewFragment.this.filePathCallback = filePathCallback;
+                try {
+                    filePickerLauncher.launch(fileChooserParams.createIntent());
+                } catch (Exception e) {
+                    WebviewFragment.this.filePathCallback = null;
+                    return false;
+                }
+                return true;
+            }
+        });
 
         try {
             WalletApi walletApi = WalletApi.getInstance(activity);

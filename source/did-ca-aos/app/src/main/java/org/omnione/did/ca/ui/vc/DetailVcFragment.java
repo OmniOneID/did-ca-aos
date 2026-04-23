@@ -34,6 +34,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResult;
@@ -64,6 +65,7 @@ import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.sdk.datamodel.common.enums.ClaimType;
 import org.omnione.did.sdk.datamodel.util.GsonWrapper;
 import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
@@ -91,7 +93,6 @@ public class DetailVcFragment extends Fragment {
 
     Credential credential;
     String vcId;
-    ImageView imageView;
     String hWalletToken = "";
     GetWalletToken getWalletToken;
 
@@ -113,8 +114,7 @@ public class DetailVcFragment extends Fragment {
         getWalletToken = GetWalletToken.getInstance(activity);
         TextView name = view.findViewById(R.id.textView);
         name.setText(Preference.getUsernameForDemo(activity));
-        TextView textView = view.findViewById(R.id.textView2);
-        imageView = view.findViewById(R.id.claimImg);
+        LinearLayout claimContainer = view.findViewById(R.id.claimContainer);
         textVcStatus = view.findViewById(R.id.textVcStatus);
 
         progressCircle = new ProgressCircle(activity);
@@ -136,7 +136,7 @@ public class DetailVcFragment extends Fragment {
 
                         requireActivity().runOnUiThread(() -> {
                             progressCircle.show();
-                            textView.setText(displayVc(vc));
+                            displayVc(vc, claimContainer);
                             progressCircle.dismiss();
                         });
 
@@ -147,7 +147,7 @@ public class DetailVcFragment extends Fragment {
                             requireActivity().runOnUiThread(() -> {
                                 try {
                                     progressCircle.show();
-                                    textView.append(displayZkpCredential(credential));
+                                    displayZkpCredential(credential, claimContainer);
                                     progressCircle.dismiss();
                                 } catch (ExecutionException | InterruptedException e) {
                                     throw new RuntimeException(e);
@@ -215,76 +215,105 @@ public class DetailVcFragment extends Fragment {
         activity = (Activity) context;
     }
 
-    private CharSequence displayVc(VerifiableCredential vc) {
-        SpannableStringBuilder sb = new SpannableStringBuilder();
-
-        String title = "Verifiable Credential\n\n";
-        int start = sb.length();
-        sb.append(title);
-        int end = sb.length();
-
-        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+    private void displayVc(VerifiableCredential vc, LinearLayout container) {
+        TextView title = new TextView(activity);
+        title.setText("Verifiable Credential");
+        title.setTextColor(Color.parseColor("#FF9800"));
+        title.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        titleParams.setMargins(0, 0, 0, dp(12));
+        title.setLayoutParams(titleParams);
+        container.addView(title);
 
         for (Claim claim : vc.getCredentialSubject().getClaims()) {
-            sb.append(claim.getCaption());
-            sb.append("\n");
+            TextView caption = new TextView(activity);
+            caption.setText(claim.getCaption());
+            container.addView(caption);
 
-            if (claim.getValue().contains("data:image")) {
-                byte[] decoded = Base64.decode(claim.getValue().split(",")[1], Base64.DEFAULT);
-                imageView.setImageBitmap(BitmapFactory.decodeByteArray(decoded, 0, decoded.length));
+            if (claim.getValue().contains("data:image") || ClaimType.CLAIM_TYPE.image == claim.getType()) {
+                ImageView img = new ImageView(activity);
+                byte[] decoded = decodeImageBytes(claim.getValue());
+                img.setImageBitmap(BitmapFactory.decodeByteArray(decoded, 0, decoded.length));
+                img.setAdjustViewBounds(true);
+                LinearLayout.LayoutParams imgParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                imgParams.setMargins(0, dp(4), 0, dp(12));
+                img.setLayoutParams(imgParams);
+                container.addView(img);
             } else {
-                sb.append(claim.getValue());
+                TextView value = new TextView(activity);
+                value.setText(claim.getValue());
+                LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                valueParams.setMargins(0, 0, 0, dp(12));
+                value.setLayoutParams(valueParams);
+                container.addView(value);
             }
-
-            sb.append("\n\n");
         }
-
-        return sb;
     }
 
 
 
-    private CharSequence displayZkpCredential(Credential credential) throws ExecutionException, InterruptedException {
-        SpannableStringBuilder sb = new SpannableStringBuilder();
+    private void displayZkpCredential(Credential credential, LinearLayout container) throws ExecutionException, InterruptedException {
+        View divider = new View(activity);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dividerParams.setMargins(0, dp(12), 0, dp(12));
+        divider.setLayoutParams(dividerParams);
+        divider.setBackgroundColor(Color.LTGRAY);
+        container.addView(divider);
 
-        sb.append("\n\n");
+        TextView title = new TextView(activity);
+        title.setText("Zero-Knowledge Proof");
+        title.setTextColor(Color.parseColor("#FF9800"));
+        title.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        titleParams.setMargins(0, 0, 0, dp(12));
+        title.setLayoutParams(titleParams);
+        container.addView(title);
 
-        String title = "Zero-Knowledge Proof\n\n";
-        int start = sb.length(); // 주황색 시작 위치
-        sb.append(title);
-        int end = sb.length(); // 주황색 끝 위치
-
-        sb.setSpan(new ForegroundColorSpan(Color.parseColor("#FF9800")), start, end - 2, /*"\n\n" 제외*/ Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        sb.setSpan(new StyleSpan(Typeface.BOLD), start, end - 2/*"\n\n" 제외*/, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-        // credentialSchema 조회
         CredentialSchema schema = CaUtil.getCredentialSchema(activity, credential.getSchemaId());
-        CaLog.d("schema: "+GsonWrapper.getGson().toJson(schema));
+        CaLog.d("schema: " + GsonWrapper.getGson().toJson(schema));
 
-        for (AttributeType type: schema.getAttrTypes()) {
+        for (AttributeType type : schema.getAttrTypes()) {
             String namespace = type.getNamespace().getId();
             for (Map.Entry<String, AttributeValue> entry : credential.getValues().entrySet()) {
                 String keyEntry = entry.getKey();
                 if (keyEntry.startsWith(namespace) && keyEntry.length() > namespace.length()) {
-                    String label = keyEntry.substring(namespace.length() + 1); // +1은 '.' 문자 제거용
-                    String nmId = type.getNamespace().getId();
-                    if (nmId.equals(namespace)) {
+                    String label = keyEntry.substring(namespace.length() + 1);
+                    if (type.getNamespace().getId().equals(namespace)) {
                         for (AttributeDef attrDef : type.getItems()) {
                             if (attrDef.getLabel().equals(label)) {
-                                AttributeValue value = entry.getValue();
-                                sb.append(attrDef.getCaption());
-                                sb.append("\n");
-                                sb.append(value.getRaw());
-                                sb.append("\n\n");
+                                TextView captionView = new TextView(activity);
+                                captionView.setText(attrDef.getCaption());
+                                container.addView(captionView);
+
+                                TextView valueView = new TextView(activity);
+                                valueView.setText(entry.getValue().getRaw());
+                                LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                                valueParams.setMargins(0, 0, 0, dp(12));
+                                valueView.setLayoutParams(valueParams);
+                                container.addView(valueView);
                             }
                         }
                     }
                 }
             }
         }
+    }
 
-        return sb;
+    private byte[] decodeImageBytes(String value) {
+        if (value.contains(",")) {
+            return Base64.decode(value.split(",")[1], Base64.DEFAULT);
+        }
+        return Base64.decode(value, Base64.DEFAULT);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density);
     }
 
     private void showDialog() {
