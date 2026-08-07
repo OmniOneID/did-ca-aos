@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/issuerCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_issuer_card"
+    android:clickable="true"
+    android:elevation="1dp"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/issuerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/pretendard_semibold"
+            android:lineSpacingMultiplier="1.35"
+            android:textColor="@color/brand_text_primary"
+            android:textSize="14sp"
+            tools:text="National ID Card" />
+
+        <TextView
+            android:id="@+id/formatBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_badge_vc"
+            android:fontFamily="@font/pretendard_semibold"
+            android:letterSpacing="0.027"
+            android:paddingHorizontal="7dp"
+            android:paddingVertical="2dp"
+            android:textColor="@color/badge_vc_fg"
+            android:textSize="11sp"
+            tools:text="VC" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/bg_issuer_add_circle">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_add_orange"
+            app:tint="@color/brand_primary" />
+    </FrameLayout>
+</LinearLayout>

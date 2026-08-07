@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_surface"
+    android:orientation="vertical"
+    tools:context=".ui.docs.DocsActivity">
+
+    <FrameLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/brand_primary">
+
+        <FrameLayout
+            android:id="@+id/appBarContent"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:id="@+id/menuButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical|start"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/settings_title"
+                android:padding="7dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_menu"
+                app:tint="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/pretendard_semibold"
+                android:letterSpacing="0.007"
+                android:text="@string/docs_appbar_title"
+                android:textColor="@color/white"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:id="@+id/addButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical|end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/add_sheet_title"
+                android:padding="7dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_add_white" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/contentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/credentialRecycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:paddingHorizontal="14dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="20dp"
+            android:scrollbars="none"
+            android:visibility="gone"
+            tools:listitem="@layout/item_credential"
+            tools:visibility="visible" />
+
+        <LinearLayout
+            android:id="@+id/emptyContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <FrameLayout
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:background="@drawable/bg_docs_empty_circle"
+                android:elevation="6dp">
+
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_docs_empty" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/pretendard_bold"
+                android:letterSpacing="-0.011"
+                android:text="@string/docs_empty_title"
+                android:textColor="@color/brand_text_primary"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/emptyHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/pretendard_regular"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.6"
+                android:maxWidth="260dp"
+                android:textColor="@color/brand_text_secondary"
+                android:textSize="14sp"
+                tools:text="Tap the + icon at the top to add one." />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/brand_surface"
+        android:orientation="vertical"
+        android:paddingBottom="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/brand_divider" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/presentButton"
+            style="@style/Widget.DidCa.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/docs_present" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,263 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/brand_surface"
+    android:fitsSystemWindows="true">
 
-
-    <TextView
-        android:id="@+id/status_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="100dp"
-        android:textSize="26dp"
-        android:text="Please input a PIN"
-        app:layout_constraintBottom_toTopOf="@+id/linearLayoutCompat"
-        app:layout_constraintEnd_toEndOf="@+id/button_delete"
-        app:layout_constraintStart_toStartOf="@+id/button_cancel"
-        />
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:id="@+id/linearLayoutCompat"
-        android:layout_width="0dp"
-        android:layout_height="20dp"
-        android:layout_marginBottom="40dp"
-        android:gravity="center_horizontal"
-        android:orientation="horizontal"
-        android:weightSum="6"
-        app:layout_constraintBottom_toTopOf="@+id/text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintWidth_percent="0.35">
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw1"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw2"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw3"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw4"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw5"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/img_pw6"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:src="@drawable/omni_pin_num_in" />
-
-    </androidx.appcompat.widget.LinearLayoutCompat>
-
-
-    <TextView
-        android:id="@+id/text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="50dp"
-        android:text="Please input a PIN"
-        app:layout_constraintBottom_toTopOf="@+id/button2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:visibility="gone"
-        />
-
-    <Button
-        android:id="@+id/button1"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintBottom_toBottomOf="@+id/button2"
-        app:layout_constraintEnd_toEndOf="@+id/button4"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-    <Button
-        android:id="@+id/button2"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:layout_marginBottom="10dp"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintBottom_toTopOf="@+id/button5"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button3"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintBottom_toBottomOf="@+id/button2"
-        app:layout_constraintStart_toStartOf="@+id/button6"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button4"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginRight="10dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintBottom_toBottomOf="@+id/button5"
-        app:layout_constraintEnd_toStartOf="@+id/button5"
-        app:layout_constraintTop_toTopOf="@+id/button5"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button5"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        android:layout_marginTop="50dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+    <FrameLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button6"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginLeft="10dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintBottom_toBottomOf="@+id/button5"
-        app:layout_constraintStart_toEndOf="@+id/button5"
-        app:layout_constraintTop_toTopOf="@+id/button5"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button7"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintEnd_toEndOf="@+id/button4"
-        app:layout_constraintTop_toTopOf="@+id/button8"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
-
-    <Button
-        android:id="@+id/button8"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        android:layout_marginTop="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button5"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <Button
-        android:id="@+id/button9"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        app:layout_constraintStart_toStartOf="@+id/button6"
-        app:layout_constraintTop_toTopOf="@+id/button8"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
+        <ImageView
+            android:id="@+id/closeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/common_close"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close" />
+    </FrameLayout>
 
-    <Button
-        android:id="@+id/button0"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_01_state"
-        android:textColor="#FFFFFF"
-        android:textSize="36sp"
-        android:layout_marginTop="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
+    <TextView
+        android:id="@+id/pinTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/brand_text_primary"
+        android:textSize="24sp"
+        android:fontFamily="@font/pretendard_bold"
+        app:layout_constraintTop_toBottomOf="@id/appBar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button8"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
+        tools:text="Set pin" />
 
-    <Button
-        android:id="@+id/button_delete"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_delete_state"
-        android:textColor="#FFFFFF"
-        android:textSize="26sp"
-        app:layout_constraintStart_toStartOf="@+id/button6"
-        app:layout_constraintTop_toTopOf="@+id/button0"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintDimensionRatio="1"
-        />
+    <TextView
+        android:id="@+id/pinSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/brand_text_secondary"
+        android:textSize="14sp"
+        android:fontFamily="@font/pretendard_regular"
+        app:layout_constraintTop_toBottomOf="@id/pinTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:text="Type your pin" />
 
-    <Button
-        android:id="@+id/button_cancel"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:id="@+id/pinDotsArea"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="@drawable/omni_pin_bt_bg_02_state"
-        android:text="x"
-        android:textColor="#FFFFFF"
-        android:textSize="26sp"
-        app:layout_constraintBottom_toBottomOf="@+id/button0"
-        app:layout_constraintDimensionRatio="1"
-        app:layout_constraintHeight_percent="@dimen/layout_constraintWidth_percent"
-        app:layout_constraintStart_toStartOf="@+id/button7" />
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/pinSubtitle"
+        app:layout_constraintBottom_toTopOf="@id/numPad"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <org.omnione.did.ca.ui.pin.widget.PinDotsView
+            android:id="@+id/pinDots"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/pinError"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/brand_error"
+            android:textSize="13sp"
+            android:fontFamily="@font/pretendard_medium"
+            android:visibility="invisible"
+            tools:text="Pins do not match"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <GridLayout
+        android:id="@+id/numPad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="4"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="HardcodedText">
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="1" android:text="1" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="2" android:text="2" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="3" android:text="3" />
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="4" android:text="4" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="5" android:text="5" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="6" android:text="6" />
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="7" android:text="7" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="8" android:text="8" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="9" android:text="9" />
+
+        <Space style="@style/Widget.DidCa.NumPadKey.Empty" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="0" android:text="0" />
+        <ImageView
+            style="@style/Widget.DidCa.NumPadKey.Icon"
+            android:tag="d"
+            android:contentDescription="@string/pin_delete"
+            android:src="@drawable/ic_back" />
+    </GridLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-

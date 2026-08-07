@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="10dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/claimLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/pretendard_medium"
+            android:letterSpacing="0.027"
+            android:textColor="@color/brand_text_secondary"
+            android:textSize="11sp"
+            tools:text="Given name" />
+
+        <TextView
+            android:id="@+id/claimValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:fontFamily="@font/pretendard_regular"
+            android:textColor="@color/brand_text_primary"
+            android:textSize="14sp"
+            tools:text="Raon" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/checkboxFrame"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/bg_vp_checkbox_on"
+        android:clickable="true"
+        android:contentDescription="@string/vp_request_claim_check_cd"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/checkIcon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_check_small"
+            app:tint="@color/white" />
+    </FrameLayout>
+</LinearLayout>

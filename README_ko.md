@@ -1,19 +1,35 @@
 # CA AOS Guide
 
 ## 개요
-본 문서는 OpenDID 인증 클라이언트를 사용하기 위한 가이드이며, 사용자에게 OpenDID에 필요한 WalletToken, Lock/Unlock, Key, DID Document(DID 문서), Verifiable Credential(이하 VC) 정보를 생성, 저장, 관리하는 기능을 제공합니다.
+본 문서는 OpenDID 인증 클라이언트(Certified App)를 사용하기 위한 가이드이며, 사용자에게 OpenDID에 필요한 WalletToken, Lock/Unlock, Key, DID Document(DID 문서), Verifiable Credential(이하 VC) 정보를 생성, 저장, 관리하는 기능을 제공합니다.
+
+3.0 베이스 앱으로, 기존 OpenDID 자체 프로토콜과 함께 **OID4VC**(OID4VCI / OID4VP) 기반 발급·제시와 **DID 기반 SD-JWT(`sd-jwt-did`)** 크리덴셜 포맷을 지원합니다.
+
+### 주요 기능
+| 기능 | 내용 |
+| ---- | ---- |
+| 사용자 등록 | 지갑 생성, DID Document 등록, 사용자 신원 확인 |
+| 인증 | PIN 및 생체(지문 / 얼굴) 인증 |
+| 발급 | OpenDID 자체 프로토콜, OID4VCI (pre-authorized code, 웹뷰 기반 User-Init) |
+| 제시 | OpenDID 자체 프로토콜, OID4VP, ZKP 기반 제시 |
+| 크리덴셜 포맷 | OpenDID VC, DID 기반 SD-JWT(`sd-jwt-did`) |
+| 선택적 제출 | 제시 시 claim 단위 선택 |
+| 크리덴셜 상태 확인 | Token Status List 기반 상태 검증 |
+| 크리덴셜 관리 | 목록 / 상세 조회, 삭제 및 폐기 |
 
 
 ## S/W 사양
 | 구분             | 내용                                                     |
-| ---------------- | ------------------------------------------------------ |
-| OS               | Android 14                                             |
-| Language         | Java 21                                                |
-| IDE              | Android Studio 4                                       |
-| Build System     | Gradle 8.2                                             |
-| Compatibility    | Android API level 34 or higher                         |
-| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26) |
-|                  | Recommended Requirements: Android 14 (API Level 34)    |
+| ---------------- | ------------------------------------------------------- |
+| OS               | Android 16 (API Level 36)                               |
+| Language         | Java 21                                                 |
+| IDE              | Android Studio 2025.3 이상                               |
+| Build System     | Gradle 9.4.1 / Android Gradle Plugin 9.1.0              |
+| Architecture     | MVVM (Activity + ViewModel + LiveData + Repository), Hilt |
+| UI               | View + XML, ViewBinding / DataBinding (Material 3)      |
+| Compatibility    | compileSdk 36, targetSdk 36, minSdk 26                  |
+| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26)  |
+|                  | Recommended Requirements: Android 16 (API Level 36)     |
 
 
 ## DIDCA 프로젝트 클론 및 체크아웃
@@ -36,12 +52,14 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
    - 빌드하기 전에 프로젝트 설정을 확인해야 합니다.
    - File > Project Structure로 이동하여 Modules 섹션에서 Compile SDK Version, Build Tools Version, Min SDK Version 등 빌드 설정을 확인하고 필요 시 수정합니다.
    - build.gradle 파일에서 dependencies, defaultConfig 및 buildTypes 설정을 확인하여 앱의 빌드 구성을 관리할 수 있습니다.
+   - 의존성 좌표는 Gradle 버전 카탈로그(`gradle/libs.versions.toml`)에 정의하고 `app/build.gradle`에서 `libs.*`로 참조합니다.
 5. 앱 빌드 및 실행
    - 타겟 기기를 선택한 후, 상단의 Run 버튼을 클릭하여 앱을 빌드하고 선택한 기기에서 실행할 수 있습니다. 빌드가 성공하면 앱이 선택된 에뮬레이터 또는 기기에서 실행됩니다.
 
 ## SDK 적용 방법
 아래 Android SDK를 did-client-sdk-aos로 지칭합니다.
-- *did-wallet-sdk-aos-2.0.1.jar*
+- *did-wallet-sdk-aos-3.0.0-0807.jar*
+- *did-sd-jwt-vc-sdk-server-2.5.0.jar*
 
 각 SDK가 사용하는 타사 라이브러리에 대한 자체 라이선스는 해당 링크를 참고해주세요. <br>
 [Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)
@@ -68,59 +86,76 @@ Android Studio에서 did-client-sdk-aos 라이브러리를 DIDCA 프로젝트에
 3. build.gradle 파일 수정
 
     a. dependencies 섹션 수정
-   - app 모듈의 build.gradle 파일을 열고, dependencies 섹션에 다음 코드를 추가하여`did-client-sdk-aos 라이브러리를 프로젝트에 포함시킵니다:
+   - app 모듈의 build.gradle 파일을 엽니다. `libs` 폴더의 jar 파일은 `fileTree`로 포함되며, 나머지 의존성은 버전 카탈로그에서 참조합니다:
     ```groovy
     dependencies {
-        .
-        .
-        .
         implementation fileTree(dir: 'libs', include: ['*.jar'])
-        
-        implementation 'com.google.code.gson:gson:2.10.1'
-        implementation 'androidx.biometric:biometric:1.1.0'
-        implementation 'org.bitcoinj:bitcoinj-core:0.15.7'
 
-        implementation 'com.madgag.spongycastle:core:1.54.0.0'
-        implementation 'com.madgag.spongycastle:prov:1.54.0.0'
-        implementation 'com.madgag.spongycastle:pkix:1.54.0.0'
-        implementation 'com.madgag.spongycastle:pg:1.54.0.0'
-        
-        api "androidx.room:room-runtime:2.6.1"
-        annotationProcessor "androidx.room:room-compiler:2.6.1"
+        implementation libs.gson
+        implementation libs.biometric
+        implementation libs.bitcoinj.core
+
+        implementation libs.spongycastle.core
+        implementation libs.spongycastle.prov
+        implementation libs.spongycastle.prix
+        implementation libs.spongycastle.pg
+
+        api libs.room.runtime
+        annotationProcessor libs.room.compiler
+
+        implementation libs.hilt.android
+        annotationProcessor libs.hilt.compiler
+
+        implementation libs.bundles.jackson
+        implementation libs.nimbus.jose.jwt
     }
     ```
 
-    b. minSdkVersion 및 targetSdkVersion 설정 확인
-   - build.gradle 파일의 android 섹션에서 minSdkVersion 및 targetSdkVersion 설정을 확인하고, 프로젝트 요구사항에 맞게 수정합니다.
+   - 실제 버전은 `gradle/libs.versions.toml`에 정의되어 있습니다. 새 의존성은 먼저 이 파일에 추가한 뒤 `libs.<alias>`로 참조합니다.
+
+    b. minSdk 및 targetSdk 설정 확인
+   - build.gradle 파일의 android 섹션에서 minSdk 및 targetSdk 설정을 확인하고, 프로젝트 요구사항에 맞게 수정합니다.
 
     ```groovy
     android {
-        compileSdkVersion 34
+        namespace 'org.omnione.did.ca'
+        compileSdk {
+            version = release(36) {
+                minorApiLevel = 1
+            }
+        }
 
         defaultConfig {
             applicationId "org.omnione.did.ca"
-            minSdkVersion 26
-            targetSdkVersion 34
-            versionCode 1
-            versionName "1.0"
+            minSdk 26
+            targetSdk 36
+            versionCode 30000
+            versionName "3.0.0"
+        }
+
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_21
+            targetCompatibility JavaVersion.VERSION_21
         }
     }
     ```
 
 4. Import 및 사용
 
-    a. URLs 클래스 수정
-   - 프로젝트의 `Config.java` 파일에서 각 사업자의 URL 정보를 수정합니다:
-    ```java
-    public class Config {
-        public static final String TAS_URL = "http://192.168.3.130:8090";
-        public static final String VERIFIER_URL = "http://192.168.3.130:8092";
-        public static final String CAS_URL = "http://192.168.3.130:8094";
-        public static final String WALLET_URL = "http://192.168.3.130:8095";
-        public static final String API_GATEWAY_URL = "http://192.168.3.130:8093";
-        public static final String DEMO_URL = "http://192.168.3.130:8099";
+    a. 사업자 URL 수정
+   - 각 사업자의 URL은 `app/build.gradle`의 `buildConfigField`로 정의되어 있습니다. `url` 값을 사용 환경에 맞게 수정합니다:
+    ```groovy
+    defaultConfig {
+        def url = "http://192.168.3.110"
+        buildConfigField "String", "TAS_URL", "\"${url}:8090\""
+        buildConfigField "String", "CAS_URL", "\"${url}:8094\""
+        buildConfigField "String", "API_GW_URL", "\"${url}:8093\""
+        buildConfigField "String", "WALLET_URL", "\"${url}:8095\""
+        buildConfigField "String", "VERIFIER_URL", "\"${url}:8092\""
+        buildConfigField "String", "DEMO_URL", "\"${url}:8099\""
     }
     ```
+   - 런타임에는 이 값들이 `AppConfig` record(`data/config/AppConfig.java`)를 통해 Hilt로 주입됩니다.
 
     b. did-client-sdk-aos 모듈 사용
    - 사용할 클래스나 메서드가 있는 Java/Kotlin 파일의 최상단에 다음과 같이 임포트합니다:
@@ -165,11 +200,32 @@ Android Studio에서 did-client-sdk-aos 라이브러리를 DIDCA 프로젝트에
 6. 문제 해결
    - 만약 did-client-sdk-aos 라이브러리가 제대로 로드되지 않거나 작동하지 않는 경우, 다음 사항들을 확인해보세요:
 
-        - Correct Dependencies: build.gradle` 파일에서 종속성이 정확하게 설정되었는지 확인합니다.
-        - SDK Version: 프로젝트의 minSdkVersion 및 targetSdkVersion이 사용 중인 SDK와 호환되는지 확인합니다.
+        - Correct Dependencies: `build.gradle` 파일과 `gradle/libs.versions.toml`에서 종속성이 정확하게 설정되었는지 확인합니다.
+        - SDK Version: 프로젝트의 minSdk 및 targetSdk가 사용 중인 SDK와 호환되는지 확인합니다.
         - Permission: AndroidManifest.xml에서 필요한 권한이 제대로 설정되어 있는지 확인합니다.
 
 <br>
+
+## 프로젝트 구조
+```
+source/did-ca-aos/
+└── app/src/main/java/org/omnione/did/ca/
+    ├── config/          상수
+    ├── data/
+    │   ├── config/      AppConfig
+    │   ├── datasource/  로컬 저장소
+    │   ├── model/       도메인 모델
+    │   ├── network/     HTTP 클라이언트 및 프로토콜 오퍼레이션
+    │   ├── repository/  도메인 Repository
+    │   ├── sdk/         did-client-sdk-aos 게이트웨이
+    │   └── statuslist/  Token Status List 처리
+    ├── di/              Hilt 모듈
+    ├── protocol/        OID4VCIProtocol, OID4VPProtocol
+    ├── ui/<feature>/    화면 단위 패키지 (Activity + ViewModel + UiState)
+    └── util/            유틸리티
+```
+
+각 화면은 `ui/<feature>/` 아래에 Activity 와 전용 ViewModel · UiState 로 구현되어 있습니다.
 
 ## 수정내역
 

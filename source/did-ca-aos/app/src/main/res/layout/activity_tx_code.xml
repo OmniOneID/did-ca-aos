@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_surface"
+    android:fitsSystemWindows="true"
+    tools:context=".ui.txcode.TxCodeActivity">
+
+    <FrameLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/closeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/common_close"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/txCodeTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/brand_text_primary"
+        android:textSize="24sp"
+        android:fontFamily="@font/pretendard_bold"
+        android:text="@string/oid4vci_enter_tx_code"
+        app:layout_constraintTop_toBottomOf="@id/appBar"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/txCodeDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/brand_text_secondary"
+        android:textSize="14sp"
+        android:fontFamily="@font/pretendard_regular"
+        app:layout_constraintTop_toBottomOf="@id/txCodeTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:text="Please enter the PIN." />
+
+    <LinearLayout
+        android:id="@+id/txCodeDotsArea"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/txCodeDescription"
+        app:layout_constraintBottom_toTopOf="@id/numPad"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <org.omnione.did.ca.ui.pin.widget.PinDotsView
+            android:id="@+id/txCodeDots"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <GridLayout
+        android:id="@+id/numPad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="4"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="HardcodedText">
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="1" android:text="1" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="2" android:text="2" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="3" android:text="3" />
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="4" android:text="4" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="5" android:text="5" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="6" android:text="6" />
+
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="7" android:text="7" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="8" android:text="8" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="9" android:text="9" />
+
+        <Space style="@style/Widget.DidCa.NumPadKey.Empty" />
+        <TextView style="@style/Widget.DidCa.NumPadKey" android:tag="0" android:text="0" />
+        <ImageView
+            style="@style/Widget.DidCa.NumPadKey.Icon"
+            android:tag="d"
+            android:contentDescription="@string/pin_delete"
+            android:src="@drawable/ic_back" />
+    </GridLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

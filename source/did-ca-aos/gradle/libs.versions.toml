@@ -1,0 +1,65 @@
+[versions]
+agp = "9.1.0"
+appcompat = "1.7.1"
+material = "1.13.0"
+activity = "1.13.0"
+gson = "2.13.2"
+zxingAndroidEmbedded = "4.3.0"
+spongycastle = "1.54.0.0"
+bitcoinj = "0.15.7"
+biometric = "1.1.0"
+room = "2.8.4"
+constraintlayout = "2.2.1"
+coreSplashscreen = "1.2.0"
+viewpager2 = "1.1.0"
+gridlayout = "1.1.0"
+lifecycleExtensions = "2.2.0"
+lifecycleViewmodel = "2.9.4"
+lifecycleLivedata = "2.9.4"
+navigationFragmentKtx = "2.9.8"
+navigationUiKtx = "2.9.8"
+hilt = "2.59.2"
+nimbusJoseJwt = "9.40"
+jackson = "2.15.2"
+annotation = "1.9.1"
+
+[libraries]
+core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
+spongycastle-core = { module = "com.madgag.spongycastle:core", version.ref = "spongycastle" }
+spongycastle-prov = { module = "com.madgag.spongycastle:prov", version.ref = "spongycastle" }
+spongycastle-prix = { module = "com.madgag.spongycastle:pkix", version.ref = "spongycastle" }
+spongycastle-pg = { module = "com.madgag.spongycastle:pg", version.ref = "spongycastle" }
+bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj" }
+biometric= { module = "androidx.biometric:biometric", version.ref = "biometric" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+lifecycle-extensions = { module = "androidx.lifecycle:lifecycle-extensions", version.ref = "lifecycleExtensions" }
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycleViewmodel" }
+lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycleLivedata" }
+viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "viewpager2" }
+gridlayout = { group = "androidx.gridlayout", name = "gridlayout", version.ref = "gridlayout" }
+navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
+navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+
+[bundles]
+jackson = ["jackson-core", "jackson-databind", "jackson-annotations"]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+
+
+

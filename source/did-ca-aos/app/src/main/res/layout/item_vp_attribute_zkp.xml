@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="10dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/attrLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/pretendard_medium"
+            android:letterSpacing="0.045"
+            android:textColor="@color/brand_text_secondary"
+            android:textSize="11sp"
+            tools:text="Region" />
+
+        <TextView
+            android:id="@+id/attrValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:background="?attr/selectableItemBackground"
+            android:fontFamily="@font/pretendard_regular"
+            android:textColor="@color/brand_text_primary"
+            android:textSize="14sp"
+            tools:text="Seoul" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/eyeIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/vp_request_reveal_cd"
+        android:padding="4dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_eye_off"
+        app:tint="@color/brand_gray500" />
+</LinearLayout>

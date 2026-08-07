@@ -1,19 +1,35 @@
 # CA AOS Guide
 
 ## Overview
-This document is a guide for using the OpenDID authentication client, providing users with the functionality to create, store, and manage WalletToken, Lock/Unlock, Key, DID Document, and Verifiable Credential (VC) information required for OpenDID.
+This document is a guide for using the OpenDID authentication client (Certified App), providing users with the functionality to create, store, and manage WalletToken, Lock/Unlock, Key, DID Document, and Verifiable Credential (VC) information required for OpenDID.
+
+This is the 3.0 base application. In addition to the native OpenDID protocol, it supports credential issuance and presentation over **OID4VC** (OID4VCI / OID4VP) and handles the **DID-based SD-JWT (`sd-jwt-did`)** credential format.
+
+### Key Features
+| Feature | Details |
+| ------- | ------- |
+| User registration | Wallet creation, DID Document registration, user identity verification |
+| Authentication | PIN and biometric (fingerprint / face) authentication |
+| Issuance | Native OpenDID protocol, OID4VCI (pre-authorized code, user-initiated via WebView) |
+| Presentation | Native OpenDID protocol, OID4VP, ZKP-based presentation |
+| Credential format | OpenDID VC, DID-based SD-JWT (`sd-jwt-did`) |
+| Selective disclosure | Claim-level selection when submitting a presentation |
+| Credential status | Credential status verification via Token Status List |
+| Credential management | Credential list / detail view, deletion and revocation |
 
 
 ## S/W Specifications
-| Category         | Details                                                |
-| ---------------- | ------------------------------------------------------ |
-| OS               | Android 14                                             |
-| Language         | Java 21                                                |
-| IDE              | Android Studio 4                                       |
-| Build System     | Gradle 8.2                                             |
-| Compatibility    | Android API level 34 or higher                         |
-| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26) |
-|                  | Recommended Requirements: Android 14 (API Level 34)    |
+| Category         | Details                                                 |
+| ---------------- | ------------------------------------------------------- |
+| OS               | Android 16 (API Level 36)                               |
+| Language         | Java 21                                                 |
+| IDE              | Android Studio 2025.3 or later                          |
+| Build System     | Gradle 9.4.1 / Android Gradle Plugin 9.1.0              |
+| Architecture     | MVVM (Activity + ViewModel + LiveData + Repository), Hilt |
+| UI               | View + XML with ViewBinding / DataBinding (Material 3)  |
+| Compatibility    | compileSdk 36, targetSdk 36, minSdk 26                  |
+| Test Environment | Minimum Requirements: Android 8.0 (Oreo, API Level 26)  |
+|                  | Recommended Requirements: Android 16 (API Level 36)     |
 
 ## DIDCA Project Clone and Checkout
 ```git
@@ -35,12 +51,14 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
    - Before building, you need to verify the project settings.
    - Go to File > Project Structure and in the Modules section, verify the Compile SDK Version, Build Tools Version, Min SDK Version, etc., and modify them if necessary.
    - In the build.gradle file, check the dependencies, defaultConfig, and buildTypes settings to manage the app's build configuration.
+   - Dependency coordinates are declared in the Gradle version catalog (`gradle/libs.versions.toml`) and referenced as `libs.*` from `app/build.gradle`.
 5. Build and run the app
    - After selecting the target device, click the Run button at the top to build the app and run it on the selected device. If the build is successful, the app will run on the selected emulator or device.
 
 ## SDK Application Method
 The Android SDK is referred to as `did-client-sdk-aos` below.
-- *did-wallet-sdk-aos-2.0.1.jar*
+- *did-wallet-sdk-aos-3.0.0-0807.jar*
+- *did-sd-jwt-vc-sdk-server-2.5.0.jar*
 
 Please refer to the respective links for their own licenses for third-party libraries used by each SDK.
 <br>
@@ -68,60 +86,77 @@ Please refer to the respective links for their own licenses for third-party libr
 3. Modify the build.gradle file
 
     a. Modify the dependencies section
-   - Open the build.gradle file for the app module, and add the following code to the dependencies section to include the `did-client-sdk-aos` library in the project:
-    
+   - Open the build.gradle file for the app module. The jar files under `libs` are picked up by `fileTree`, and the remaining dependencies are referenced from the version catalog:
+
     ```groovy
     dependencies {
-        .
-        .
-        .
         implementation fileTree(dir: 'libs', include: ['*.jar'])
-        
-        implementation 'com.google.code.gson:gson:2.10.1'
-        implementation 'androidx.biometric:biometric:1.1.0'
-        implementation 'org.bitcoinj:bitcoinj-core:0.15.7'
 
-        implementation 'com.madgag.spongycastle:core:1.54.0.0'
-        implementation 'com.madgag.spongycastle:prov:1.54.0.0'
-        implementation 'com.madgag.spongycastle:pkix:1.54.0.0'
-        implementation 'com.madgag.spongycastle:pg:1.54.0.0'
-        
-        api "androidx.room:room-runtime:2.6.1"
-        annotationProcessor "androidx.room:room-compiler:2.6.1"
+        implementation libs.gson
+        implementation libs.biometric
+        implementation libs.bitcoinj.core
+
+        implementation libs.spongycastle.core
+        implementation libs.spongycastle.prov
+        implementation libs.spongycastle.prix
+        implementation libs.spongycastle.pg
+
+        api libs.room.runtime
+        annotationProcessor libs.room.compiler
+
+        implementation libs.hilt.android
+        annotationProcessor libs.hilt.compiler
+
+        implementation libs.bundles.jackson
+        implementation libs.nimbus.jose.jwt
     }
     ```
 
-    b. Check the minSdkVersion and targetSdkVersion settings
-   - In the android section of the build.gradle file, verify the minSdkVersion and targetSdkVersion settings and modify them to meet the project requirements.
+   - The actual versions are declared in `gradle/libs.versions.toml`. Add a new dependency there first, then reference it as `libs.<alias>`.
+
+    b. Check the minSdk and targetSdk settings
+   - In the android section of the build.gradle file, verify the minSdk and targetSdk settings and modify them to meet the project requirements.
 
     ```groovy
     android {
-        compileSdkVersion 34
+        namespace 'org.omnione.did.ca'
+        compileSdk {
+            version = release(36) {
+                minorApiLevel = 1
+            }
+        }
 
         defaultConfig {
             applicationId "org.omnione.did.ca"
-            minSdkVersion 26
-            targetSdkVersion 34
-            versionCode 1
-            versionName "1.0"
+            minSdk 26
+            targetSdk 36
+            versionCode 30000
+            versionName "3.0.0"
+        }
+
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_21
+            targetCompatibility JavaVersion.VERSION_21
         }
     }
     ```
 
 4. Import and Usage
 
-    a. Modify the URLs Class
-   - In the `Config.java` file of the project, update the URL information for each service provider:
-    ```java
-    public class Config {
-        public static final String TAS_URL = "http://192.168.3.130:8090";
-        public static final String VERIFIER_URL = "http://192.168.3.130:8092";
-        public static final String CAS_URL = "http://192.168.3.130:8094";
-        public static final String WALLET_URL = "http://192.168.3.130:8095";
-        public static final String API_GATEWAY_URL = "http://192.168.3.130:8093";
-        public static final String DEMO_URL = "http://192.168.3.130:8099";
+    a. Modify the service provider URLs
+   - Service provider URLs are declared as `buildConfigField` entries in `app/build.gradle`. Change the `url` value to point at your environment:
+    ```groovy
+    defaultConfig {
+        def url = "http://192.168.3.110"
+        buildConfigField "String", "TAS_URL", "\"${url}:8090\""
+        buildConfigField "String", "CAS_URL", "\"${url}:8094\""
+        buildConfigField "String", "API_GW_URL", "\"${url}:8093\""
+        buildConfigField "String", "WALLET_URL", "\"${url}:8095\""
+        buildConfigField "String", "VERIFIER_URL", "\"${url}:8092\""
+        buildConfigField "String", "DEMO_URL", "\"${url}:8099\""
     }
     ```
+   - At runtime these values are provided to the app through the `AppConfig` record (`data/config/AppConfig.java`) via Hilt injection.
 
     b. Using the did-client-sdk-aos Module
    - At the top of the Java/Kotlin file where you want to use the class or method, import as follows:
@@ -166,11 +201,32 @@ Please refer to the respective links for their own licenses for third-party libr
 6. Troubleshooting
    - If the did-client-sdk-aos library is not properly loaded or functioning, check the following:
 
-        - Correct Dependencies: Verify that the dependencies are correctly set in the `build.gradle` file.
-        - SDK Version: Ensure that the project’s minSdkVersion and targetSdkVersion are compatible with the SDK being used.
+        - Correct Dependencies: Verify that the dependencies are correctly set in the `build.gradle` file and in `gradle/libs.versions.toml`.
+        - SDK Version: Ensure that the project’s minSdk and targetSdk are compatible with the SDK being used.
         - Permissions: Check that the necessary permissions are correctly set in the AndroidManifest.xml file.
 
 <br>
+
+## Project Structure
+```
+source/did-ca-aos/
+└── app/src/main/java/org/omnione/did/ca/
+    ├── config/          Constants
+    ├── data/
+    │   ├── config/      AppConfig
+    │   ├── datasource/  Local persistence
+    │   ├── model/       Domain models
+    │   ├── network/     HTTP client and protocol operations
+    │   ├── repository/  Domain repositories
+    │   ├── sdk/         did-client-sdk-aos gateway
+    │   └── statuslist/  Token Status List handling
+    ├── di/              Hilt modules
+    ├── protocol/        OID4VCIProtocol, OID4VPProtocol
+    ├── ui/<feature>/    One package per screen (Activity + ViewModel + UiState)
+    └── util/            Utilities
+```
+
+Each screen is implemented as an Activity with its own ViewModel and UiState under `ui/<feature>/`.
 
 ## Change Log
 

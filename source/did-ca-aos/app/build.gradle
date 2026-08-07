@@ -1,96 +1,90 @@
 plugins {
-    id 'com.android.application'
-    id 'com.google.gms.google-services'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
     namespace 'org.omnione.did.ca'
-    compileSdk 34
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    def major = 3
+    def minor = 0
+    def patch = 0
 
     defaultConfig {
+        def date = new Date().format("yyyyMMdd")
         applicationId "org.omnione.did.ca"
         minSdk 26
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        targetSdk 36
+        versionCode major * 10000 + minor * 100 + patch
+        versionName "$major.$minor.$patch"
+        base.archivesName = "DID_CA_${date}_v${versionName}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        def isProd = project.hasProperty('isProdMode') && project.property('isProdMode').toBoolean()
-
-        if (isProd) {
-            // 운영(Prod) 모드 URL
-            def serverUrl = "\"http://192.168.3.130";
-            buildConfigField "String", "TAS_URL", serverUrl+":18090\""
-            buildConfigField "String", "CAS_URL", serverUrl+":18094\""
-            buildConfigField "String", "API_GW_URL", serverUrl+":18093\""
-            buildConfigField "String", "VERIFIER_URL", serverUrl+":18092\""
-            buildConfigField "String", "WALLET_URL", serverUrl+":18095\""
-            buildConfigField "String", "DEMO_URL", serverUrl+":18099\""
-            buildConfigField "boolean", "IS_PROD_MODE", "true"
-        } else {
-            // 개발(Dev) 모드 URL
-            def serverUrl = "\"http://192.168.3.110";
-            buildConfigField "String", "TAS_URL", serverUrl+":8099\""
-            buildConfigField "String", "CAS_URL", serverUrl+":8099\""
-            buildConfigField "String", "API_GW_URL", serverUrl+":8099\""
-            buildConfigField "String", "VERIFIER_URL", serverUrl+":8099\""
-            buildConfigField "String", "DATA_PORTAL_URL", serverUrl+":8099\""
-            buildConfigField "String", "WALLET_URL", serverUrl+":8099\""
-            buildConfigField "String", "DEMO_URL", serverUrl+":8099\""
-            buildConfigField "boolean", "IS_PROD_MODE", "true"
-        }
+        def url = "http://192.168.3.110"
+        buildConfigField "String", "TAS_URL", "\"${url}:8090\""
+        buildConfigField "String", "CAS_URL", "\"${url}:8094\""
+        buildConfigField "String", "API_GW_URL", "\"${url}:8093\""
+        buildConfigField "String", "WALLET_URL", "\"${url}:8095\""
+        buildConfigField "String", "VERIFIER_URL", "\"${url}:8092\""
+        buildConfigField "String", "DEMO_URL", "\"${url}:8099\""
     }
 
     buildTypes {
         release {
             minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
-    dataBinding {
-        enabled = true
-    }
-
     buildFeatures {
-        viewBinding true
-        dataBinding true
         buildConfig true
+        dataBinding true
+        viewBinding true
     }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-//    implementation project(':did-wallet-sdk-aos')
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.navigation:navigation-fragment:2.7.7'
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.core.splashscreen
+    implementation libs.lifecycle.extensions
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
+    implementation libs.navigation.fragment.ktx
+    implementation libs.navigation.ui.ktx
+    implementation libs.viewpager2
+    implementation libs.gridlayout
+    implementation libs.activity
+    implementation libs.constraintlayout
 
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation libs.gson
+    implementation libs.zxing.android.embedded
+    implementation libs.bitcoinj.core
+    implementation libs.biometric
 
-    implementation 'com.google.firebase:firebase-messaging:20.0.0'
-    implementation 'com.google.android.gms:play-services-vision:20.1.3'
+    annotationProcessor libs.room.compiler
+    api libs.room.runtime
 
-    implementation "androidx.navigation:navigation-fragment-ktx:2.7.7"
-    implementation "androidx.navigation:navigation-ui-ktx:2.7.7"
+    implementation libs.spongycastle.core
+    implementation libs.spongycastle.prov
+    implementation libs.spongycastle.prix
+    implementation libs.spongycastle.pg
 
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'androidx.biometric:biometric:1.1.0'
-    implementation 'org.bitcoinj:bitcoinj-core:0.15.7'
+    implementation libs.hilt.android
+    annotationProcessor libs.hilt.compiler
 
-    implementation 'com.madgag.spongycastle:core:1.54.0.0'
-    implementation 'com.madgag.spongycastle:prov:1.54.0.0'
-    implementation 'com.madgag.spongycastle:pkix:1.54.0.0'
-    implementation 'com.madgag.spongycastle:pg:1.54.0.0'
+    implementation libs.bundles.jackson
 
-    api "androidx.room:room-runtime:2.6.1"
-    annotationProcessor "androidx.room:room-compiler:2.6.1"
+    implementation libs.nimbus.jose.jwt
 }
-apply plugin: 'com.google.gms.google-services'

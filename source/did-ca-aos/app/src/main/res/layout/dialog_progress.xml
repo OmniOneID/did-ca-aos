@@ -1,21 +1,30 @@
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#80000000">
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="#00F0EFEF">
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical">
 
-        <ProgressBar
-            android:id="@+id/my_progress_bar"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_centerInParent="true"
-            style="?android:attr/progressBarStyleLarge"
-            android:indeterminateTint="#FFA500"
-            android:indeterminate="true"
-            android:visibility="visible"/>
+        <org.omnione.did.ca.ui.common.DotSpinnerView
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
 
-    </RelativeLayout>
-</layout>
+        <TextView
+            android:id="@+id/progressMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="@font/pretendard_regular"
+            android:gravity="center"
+            android:textColor="#D9FFFFFF"
+            android:textSize="13sp"
+            tools:text="Please wait a moment" />
+    </LinearLayout>
+</FrameLayout>

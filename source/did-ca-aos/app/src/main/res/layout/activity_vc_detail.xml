@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_surface"
+    android:orientation="vertical"
+    tools:context=".ui.vc.VcDetailActivity">
+
+    <FrameLayout
+        android:id="@+id/heroAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/brand_primary">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:id="@+id/backButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical|start"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/common_back"
+                android:padding="7dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_back"
+                app:tint="@color/white" />
+
+            <ImageView
+                android:id="@+id/deleteButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical|end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/vc_detail_delete_cd"
+                android:padding="7dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/white" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <ScrollView
+        android:id="@+id/bodyScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/heroTitleSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/brand_primary"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="96dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/pretendard_semibold"
+                    android:letterSpacing="0.083"
+                    android:text="@string/vc_detail_certificate_label"
+                    android:textColor="#D9FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/heroName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="@font/pretendard_bold"
+                    android:letterSpacing="-0.014"
+                    android:lineSpacingMultiplier="1.25"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    tools:text="National ID Card" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/overviewCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="-72dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_credential_card"
+                android:elevation="4dp"
+                android:orientation="vertical"
+                android:outlineSpotShadowColor="@color/brand_card_shadow"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <FrameLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_credential_icon_56">
+
+                        <ImageView
+                            android:id="@+id/credentialIcon"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_id"
+                            app:tint="@color/brand_primary" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/pretendard_medium"
+                            android:letterSpacing="0.016"
+                            android:text="@string/vc_detail_issued_by"
+                            android:textColor="@color/brand_text_secondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/credentialIssuer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:lineSpacingMultiplier="1.3"
+                            android:textColor="@color/brand_text_primary"
+                            android:textSize="14sp"
+                            tools:text="Government Identity Service" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/badgeRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:id="@+id/statusBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_status_active"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="10dp"
+                        android:paddingBottom="4dp">
+
+                        <View
+                            android:id="@+id/statusDot"
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:background="@drawable/bg_status_dot_active" />
+
+                        <TextView
+                            android:id="@+id/statusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:fontFamily="@font/pretendard_semibold"
+                            android:letterSpacing="0.025"
+                            android:textColor="@color/status_active_fg"
+                            android:textSize="11sp"
+                            tools:text="Active" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/formatBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_badge_vc"
+                        android:fontFamily="@font/pretendard_semibold"
+                        android:letterSpacing="0.025"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@color/badge_vc_fg"
+                        android:textSize="11sp"
+                        tools:text="VC" />
+
+                    <TextView
+                        android:id="@+id/zkpBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_badge_zkp"
+                        android:fontFamily="@font/pretendard_semibold"
+                        android:letterSpacing="0.025"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:text="@string/badge_zkp"
+                        android:textColor="@color/badge_zkp_fg"
+                        android:textSize="11sp"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/divider_dashed_horizontal"
+                    android:layerType="software" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/pretendard_semibold"
+                            android:letterSpacing="0.04"
+                            android:text="@string/docs_issued_label"
+                            android:textColor="@color/brand_text_secondary"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:id="@+id/credentialIssued"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:fontFamily="@font/pretendard_semibold"
+                            android:textColor="@color/brand_text_primary"
+                            android:textSize="13sp"
+                            tools:text="20 Dec 2024" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/pretendard_semibold"
+                            android:letterSpacing="0.04"
+                            android:text="@string/docs_valid_label"
+                            android:textColor="@color/brand_text_secondary"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:id="@+id/credentialValid"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:fontFamily="@font/pretendard_semibold"
+                            android:textColor="@color/brand_text_primary"
+                            android:textSize="13sp"
+                            tools:text="20 Dec 2029" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/sectionsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

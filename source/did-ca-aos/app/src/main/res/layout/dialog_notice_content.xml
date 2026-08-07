@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/dialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/pretendard_bold"
+        android:textColor="@color/brand_text_primary"
+        android:textSize="18sp"
+        tools:text="Warning" />
+
+    <TextView
+        android:id="@+id/dialogMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:fontFamily="@font/pretendard_regular"
+        android:lineSpacingMultiplier="1.5"
+        android:textColor="@color/brand_text_secondary"
+        android:textSize="14sp"
+        tools:text="Not sharing certain data may cause the requested credential issuance to fail." />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/dialogButton"
+        style="@style/Widget.DidCa.Button.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="14dp"
+        tools:text="Got it" />
+</merge>

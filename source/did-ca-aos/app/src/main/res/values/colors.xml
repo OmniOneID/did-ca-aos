@@ -1,15 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="primary_btn_default_color">#FF8400</color>
-    <color name="primary_btn_disabled_color">#BFBFBF</color>
-    <color name="primary_btn_pressed_color">#FFCE99</color>
+    <color name="brand_primary">#FFEF8B34</color>
+    <color name="brand_primary_light">#FFF6AC6E</color>
+    <color name="brand_primary_dark">#FFC56C1F</color>
+    <color name="brand_primary_pale">#FFFDF1E5</color>
+    <color name="brand_primary_pale_border">#FFFFE0B2</color>
+    <color name="brand_primary_disabled">#FFF8D7B8</color>
 
-    <color name="primary_btn_line_color">#FF8400</color>
-    <color name="primary_btn_line_text_color">#FF8400</color>
-    <color name="primary_btn_line_disabled_color">#BFBFBF</color>
-    <color name="primary_btn_line_pressed_color">#FFB566</color>
+    <color name="brand_surface">#FFFAFAFA</color>
+    <color name="brand_text_primary">#FF000000</color>
+    <color name="brand_text_secondary">#FF676666</color>
+    <color name="brand_divider">#FFEEEEEE</color>
 
+    <color name="brand_error">#FFB83C3C</color>
+
+    <color name="brand_card_shadow">#FFE65100</color>
+
+    <color name="brand_gray300">#FFE0E0E0</color>
+    <color name="brand_gray500">#FF9E9E9E</color>
+
+    <color name="pin_dot_error_bg">#FFFFF5F5</color>
+
+    <color name="brand_orange_pale_end">#FFFFE0B2</color>
+
+    <color name="badge_sdjwt_fg">#FF3F5C8D</color>
+    <color name="badge_sdjwt_bg">#FFE8EDF6</color>
+    <color name="badge_sdjwt_stroke">#333F5C8D</color>
+    <color name="badge_mdoc_fg">#FF1F7A6F</color>
+    <color name="badge_mdoc_bg">#FFE4F2F0</color>
+    <color name="badge_mdoc_stroke">#331F7A6F</color>
+    <color name="badge_vc_fg">#FFC56C1F</color>
+    <color name="badge_vc_bg">#FFFDF1E5</color>
+    <color name="badge_vc_stroke">#33C56C1F</color>
+    <color name="badge_zkp_fg">#FF6E4C8E</color>
+    <color name="badge_zkp_bg">#FFEFE9F4</color>
+    <color name="badge_zkp_stroke">#336E4C8E</color>
+
+    <color name="status_active_bg">#FFE6F2EA</color>
+    <color name="status_active_fg">#FF3F8B5A</color>
+    <color name="status_inactive_bg">#FFF2F2F2</color>
+    <color name="status_inactive_fg">#FF676666</color>
+    <color name="status_revoked_bg">#FFF8E6E6</color>
+    <color name="status_revoked_fg">#FFB83C3C</color>
+
+    <color name="issuer_card_border">#FFECECEC</color>
+
+    <color name="qr_scan_bg">#FF1A1A1A</color>
+    <color name="qr_scan_bracket">#FFFFFFFF</color>
 </resources>

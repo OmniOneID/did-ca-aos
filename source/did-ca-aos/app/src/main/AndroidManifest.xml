@@ -1,74 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- 지문 사용 권한 추가 -->
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
-        android:allowBackup="false"
+        android:name=".CaApplication"
+        android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_app"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/ic_app"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CaTest"
-        tools:targetApi="31">
+        android:theme="@style/Theme.DidCa"
+        android:usesCleartextTraffic="true">
+
         <activity
-            android:name="org.omnione.did.ca.ui.SplashActivity"
-            android:screenOrientation="portrait"
-            android:exported="true">
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.DidCa">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="org.omnione.did.ca.ui.ScanQrActivity"
-            android:screenOrientation="portrait"
-            android:exported="false" />
-        <activity
-            android:name="org.omnione.did.ca.ui.PinActivity"
-            android:screenOrientation="portrait"
-            android:exported="false" />
-        <activity
-            android:name="org.omnione.did.ca.ui.MainActivity"
-            android:screenOrientation="portrait"
-            android:launchMode="singleTask"
-            android:exported="false" />
-        <activity
-            android:name="org.omnione.did.ca.ui.SettingsActivity"
-            android:screenOrientation="portrait"
-            android:exported="false" />
-        <activity
-            android:name="org.omnione.did.ca.ui.SettingsExpandableActivity"
-            android:screenOrientation="portrait"
-            android:exported="false" />
 
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
 
-        <activity android:name="org.omnione.did.ca.zkp.ReferentListActivity"/>
+        <activity
+            android:name=".ui.pin.PinActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
 
-        <service
-            android:name=".push.PushMessagingService"
-            android:exported="false">
+        <activity
+            android:name=".ui.biometric.BiometricSetupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
+
+        <activity
+            android:name=".ui.biometric.AuthMethodActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
+
+        <activity
+            android:name=".ui.docs.DocsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.issue.ProtocolSelectActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.issue.IssuerListActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.issue.IssueSuccessActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
+
+        <activity
+            android:name=".ui.issue.IssueByQrActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.vc.VcDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.proximity.ProximityActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.qr.QrScanActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.vp.VpRequestActivity"
+            android:exported="true"
+            android:theme="@style/Theme.DidCa.Docs">
             <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="openid4vp" />
             </intent-filter>
-        </service>
+        </activity>
 
+        <activity
+            android:name=".ui.referent.ReferentListActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
 
+        <activity
+            android:name=".ui.txcode.TxCodeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa" />
+
+        <activity
+            android:name=".ui.issuebyoid4vci.IssueByOid4vciActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.web.ClaimWebActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
+
+        <activity
+            android:name=".ui.web.Oid4vciUserInitWebActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DidCa.Docs" />
     </application>
 
 </manifest>

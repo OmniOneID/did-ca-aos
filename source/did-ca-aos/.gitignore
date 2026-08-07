@@ -1,15 +1,70 @@
+# Android / Gradle
 *.iml
 .gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
 /build
+**/build/
+.kotlin/
 /captures
+/lint-results*.xml
 .externalNativeBuild
 .cxx
 local.properties
+*.hprof
+hs_err_pid*.log
+
+# 테스트/커버리지
+/coverage/
+**/jacoco.exec
+**/test-results/
+**/reports/
+
+# Maestro (E2E)
+.maestro/
+maestro-debug-output/
+
+# Android release artifacts
+*.apk
+*.aab
+release/
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+
+# OS
+.DS_Store
+
+# IDE
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.example
+
+# 내부 개발 도구 (local-only)
+.claude/
+.serena/
+.taskmaster/
+.mcp.json
+CLAUDE.md
+
+# 내부 문서 · 산출물 (local-only)
+.docs/

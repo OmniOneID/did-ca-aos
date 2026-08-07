@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="8dp">
+
+        <View
+            android:id="@+id/sectionMarker"
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:background="@drawable/bg_section_marker_pale" />
+
+        <TextView
+            android:id="@+id/sectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/pretendard_bold"
+            android:letterSpacing="-0.008"
+            android:textColor="@color/brand_text_primary"
+            android:textSize="13sp"
+            tools:text="Certificate Details" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/sectionCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_settings_info_card"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp" />
+</LinearLayout>

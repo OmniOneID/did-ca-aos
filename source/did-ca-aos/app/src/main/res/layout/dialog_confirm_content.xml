@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/dialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/pretendard_bold"
+        android:textColor="@color/brand_text_primary"
+        android:textSize="18sp"
+        tools:text="Delete certificate?" />
+
+    <TextView
+        android:id="@+id/dialogMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:fontFamily="@font/pretendard_regular"
+        android:lineSpacingMultiplier="1.5"
+        android:textColor="@color/brand_text_secondary"
+        android:textSize="14sp"
+        tools:text="This certificate will be permanently deleted from your wallet and may affect your access to services." />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dialogCancelButton"
+            style="@style/Widget.DidCa.Button.Outline"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            tools:text="Cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dialogConfirmButton"
+            style="@style/Widget.DidCa.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            tools:text="Delete" />
+    </LinearLayout>
+</merge>
