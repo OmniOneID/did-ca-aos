@@ -20,17 +20,18 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 public class ScanDimOverlayView extends View {
 
-    private static final int DIM_COLOR = 0x80000000;
-
     private static final float HOLE_SIZE_DP = 220f;
+    private static final float HOLE_RADIUS_DP = 8f;
     private static final float BRACKET_LENGTH_DP = 44f;
     private static final float BRACKET_STROKE_DP = 2f;
     private static final float BRACKET_RADIUS_DP = 6f;
@@ -39,8 +40,10 @@ public class ScanDimOverlayView extends View {
     private final Paint bracketPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path dimPath = new Path();
     private final Path bracketPath = new Path();
+    private final RectF holeRect = new RectF();
 
     private final float holeSizePx;
+    private final float holeRadiusPx;
     private final float bracketLengthPx;
     private final float bracketRadiusPx;
 
@@ -53,11 +56,12 @@ public class ScanDimOverlayView extends View {
 
         float density = context.getResources().getDisplayMetrics().density;
         holeSizePx = HOLE_SIZE_DP * density;
+        holeRadiusPx = HOLE_RADIUS_DP * density;
         bracketLengthPx = BRACKET_LENGTH_DP * density;
         bracketRadiusPx = BRACKET_RADIUS_DP * density;
         float bracketStrokePx = BRACKET_STROKE_DP * density;
 
-        dimPaint.setColor(DIM_COLOR);
+        dimPaint.setColor(ContextCompat.getColor(context, org.omnione.did.ca.R.color.scrim_scan));
         dimPaint.setStyle(Paint.Style.FILL);
 
         bracketPaint.setColor(
@@ -83,10 +87,11 @@ public class ScanDimOverlayView extends View {
         float r = cx + half;
         float b = cy + half;
 
+        holeRect.set(l, t, r, b);
         dimPath.rewind();
         dimPath.setFillType(Path.FillType.EVEN_ODD);
         dimPath.addRect(0f, 0f, w, h, Path.Direction.CW);
-        dimPath.addRect(l, t, r, b, Path.Direction.CW);
+        dimPath.addRoundRect(holeRect, holeRadiusPx, holeRadiusPx, Path.Direction.CW);
         canvas.drawPath(dimPath, dimPaint);
 
         drawBracket(canvas, l, t, +1f, +1f);

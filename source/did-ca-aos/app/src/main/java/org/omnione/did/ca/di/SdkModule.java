@@ -18,8 +18,6 @@ package org.omnione.did.ca.di;
 
 import android.content.Context;
 
-import org.omnione.did.ca.BuildConfig;
-import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
 
@@ -34,13 +32,6 @@ import dagger.hilt.components.SingletonComponent;
 @Module
 @InstallIn(SingletonComponent.class)
 public final class SdkModule {
-
-    @Provides
-    @Singleton
-    static AppConfig provideAppConfig() {
-        return new AppConfig(BuildConfig.WALLET_URL, BuildConfig.TAS_URL, BuildConfig.CAS_URL,
-                BuildConfig.API_GW_URL, BuildConfig.VERIFIER_URL);
-    }
 
     @Provides
     @Singleton

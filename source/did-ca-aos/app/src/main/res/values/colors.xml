@@ -8,6 +8,7 @@
     <color name="brand_primary_pale">#FFFDF1E5</color>
     <color name="brand_primary_pale_border">#FFFFE0B2</color>
     <color name="brand_primary_disabled">#FFF8D7B8</color>
+    <color name="brand_primary_ripple">#14EF8B34</color>
 
     <color name="brand_surface">#FFFAFAFA</color>
     <color name="brand_text_primary">#FF000000</color>
@@ -49,4 +50,5 @@
 
     <color name="qr_scan_bg">#FF1A1A1A</color>
     <color name="qr_scan_bracket">#FFFFFFFF</color>
+    <color name="scrim_scan">#B3000000</color>
 </resources>

@@ -18,10 +18,14 @@ package org.omnione.did.ca.ui.vp;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -29,6 +33,8 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.lifecycle.ViewModelProvider;
@@ -36,6 +42,7 @@ import androidx.lifecycle.ViewModelProvider;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.data.model.ReferentOption;
 import org.omnione.did.ca.data.model.VpPlainAttribute;
+import org.omnione.did.ca.data.model.VpClaimKeys;
 import org.omnione.did.ca.data.model.VpRequestMode;
 import org.omnione.did.ca.data.model.VpDocEntry;
 import org.omnione.did.ca.data.model.VpRequestedClaim;
@@ -54,10 +61,13 @@ import org.omnione.did.ca.ui.common.NoticeDialogFragment;
 import org.omnione.did.ca.ui.common.ProgressDialogFragment;
 import org.omnione.did.ca.ui.pin.PinActivity;
 import org.omnione.did.ca.ui.referent.ReferentListActivity;
+import org.omnione.did.ca.util.ClaimImages;
 import org.omnione.did.ca.util.IntentRouter;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 @dagger.hilt.android.AndroidEntryPoint
 public class VpRequestActivity extends BaseActivity {
@@ -67,9 +77,23 @@ public class VpRequestActivity extends BaseActivity {
     private static final int BOTTOM_BAR_BASE_PADDING_BOTTOM_DP = 16;
 
     private static final int DOC_CARD_GAP_DP = 12;
+    private static final int CARD_PADDING_H_DP = 16;
+    private static final int SECTION_HEAD_TOP_FIRST_DP = 8;
+    private static final int SECTION_HEAD_TOP_DP = 14;
+
+    private static final int CLAIM_IMAGE_INSET_DP = 110;
+
+    private static final int CLAIM_IMAGE_INSET_MULTI_DP = 126;
+
+    private static final int RADIO_TOUCH_INSET_START_DP = 14;
+    private static final int RADIO_TOUCH_INSET_END_DP = 12;
+    private static final int RADIO_TOUCH_INSET_V_DP = 14;
 
     private ActivityVpRequestBinding binding;
     private VpRequestViewModel viewModel;
+    private boolean proximityMode;
+
+    private final Map<VpRequestedClaim, Bitmap> claimImages = new IdentityHashMap<>();
 
     private final ActivityResultLauncher<Intent> pinAuthLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
@@ -134,6 +158,12 @@ public class VpRequestActivity extends BaseActivity {
                                 return;
                             }
                         }
+                        for (ZkpAttributeReferent pred : s.scenario.zkpRequest.predicates) {
+                            if (pred.referentKey.equals(referentKey)) {
+                                viewModel.setPredicateSelection(referentKey, credentialId);
+                                return;
+                            }
+                        }
                     });
 
     @Override
@@ -146,9 +176,12 @@ public class VpRequestActivity extends BaseActivity {
         applySystemBarInsets();
 
         viewModel = new ViewModelProvider(this).get(VpRequestViewModel.class);
+        proximityMode = IntentRouter.MODE_PROXIMITY.equals(
+                getIntent().getStringExtra(IntentRouter.EXTRA_MODE));
 
-        binding.backButton.setOnClickListener(v -> finish());
-        binding.submitButton.setOnClickListener(v -> viewModel.onSubmitClicked());
+        binding.backButton.setOnClickListener(v -> finishConsent(false));
+        binding.rejectButton.setOnClickListener(v -> finishConsent(false));
+        binding.acceptButton.setOnClickListener(v -> viewModel.onSubmitClicked());
 
         viewModel.getState().observe(this, this::render);
         viewModel.getEvent().observe(this, this::onEvent);
@@ -156,15 +189,19 @@ public class VpRequestActivity extends BaseActivity {
         if (savedInstanceState == null && viewModel.getState().getValue() != null
                 && viewModel.getState().getValue().scenario == null
                 && viewModel.getState().getValue().loading) {
-            String payload = getIntent().getStringExtra(EXTRA_PAYLOAD);
-            if (payload == null && getIntent().getData() != null) {
-                payload = getIntent().getDataString();
+            if (proximityMode) {
+                viewModel.startProximity();
+            } else {
+                String payload = getIntent().getStringExtra(EXTRA_PAYLOAD);
+                if (payload == null && getIntent().getData() != null) {
+                    payload = getIntent().getDataString();
+                }
+                if (payload == null) {
+                    showInvalidPayload();
+                    return;
+                }
+                viewModel.start(payload);
             }
-            if (payload == null) {
-                showInvalidPayload();
-                return;
-            }
-            viewModel.start(payload);
         }
     }
 
@@ -187,13 +224,17 @@ public class VpRequestActivity extends BaseActivity {
         if (scenario == null) {
             binding.verifierName.setText("");
             binding.detailsContainer.removeAllViews();
-            binding.submitButton.setEnabled(false);
+            binding.acceptButton.setEnabled(false);
             return;
         }
 
-        binding.verifierName.setText(scenario.verifier.name);
+        if (scenario.mode == VpRequestMode.PROXIMITY) {
+            binding.verifierName.setText(R.string.vp_request_proximity_verifier);
+        } else {
+            binding.verifierName.setText(scenario.verifier.name);
+        }
         renderDetails(state, scenario);
-        binding.submitButton.setEnabled(!state.inFlight && state.canSubmit());
+        binding.acceptButton.setEnabled(!state.inFlight && state.canSubmit());
     }
 
     private void onEvent(@NonNull Event<VpRequestEvent> evt) {
@@ -206,14 +247,20 @@ public class VpRequestActivity extends BaseActivity {
             launchBio();
         } else if (value instanceof VpRequestEvent.LaunchAuthMethodChooser) {
             authMethodLauncher.launch(IntentRouter.authMethodChooserIntent(this));
-        } else if (value instanceof VpRequestEvent.ShowWarn) {
-            showWarnDialog();
         } else if (value instanceof VpRequestEvent.ShowSuccess) {
             showSuccessDialog();
         } else if (value instanceof VpRequestEvent.ShowError) {
             VpRequestEvent.ShowError e = (VpRequestEvent.ShowError) value;
-            showErrorNotice(e.titleRes, e.messageRes, e.detailMessage, this::finish);
+            showErrorNotice(e.titleRes, e.messageRes, e.detailMessage,
+                    () -> finishConsent(false), false);
         }
+    }
+
+    private void finishConsent(boolean success) {
+        if (proximityMode) {
+            setResult(success ? Activity.RESULT_OK : Activity.RESULT_CANCELED);
+        }
+        finish();
     }
 
     private void launchBio() {
@@ -228,10 +275,15 @@ public class VpRequestActivity extends BaseActivity {
 
     private void renderDetails(@NonNull VpRequestUiState state, @NonNull VpScenario scenario) {
         binding.detailsContainer.removeAllViews();
-        if (scenario.mode == VpRequestMode.OPENDID_VC || scenario.mode == VpRequestMode.OID4VP) {
-            List<VpRequestedDoc> docs = scenario.openDidVcDocs;
-            for (int i = 0; i < docs.size(); i++) {
-                View card = buildSdDocCard(docs.get(i), state);
+        if (scenario.mode == VpRequestMode.OPENDID_VC || scenario.mode == VpRequestMode.OID4VP
+                || scenario.mode == VpRequestMode.PROXIMITY) {
+            List<VpRequestedDoc> candidates = scenario.candidates;
+            boolean multi = scenario.isMultiCandidate();
+            for (int i = 0; i < candidates.size(); i++) {
+                VpRequestedDoc doc = candidates.get(i);
+                View card = multi
+                        ? buildOptionCard(doc, i, candidates.size(), state)
+                        : buildSingleCard(doc, state);
                 attachCard(card, i > 0);
             }
         } else if (scenario.zkpRequest != null) {
@@ -249,70 +301,166 @@ public class VpRequestActivity extends BaseActivity {
         binding.detailsContainer.addView(card);
     }
 
-    private View buildSdDocCard(@NonNull VpRequestedDoc doc, @NonNull VpRequestUiState state) {
-        View card = LayoutInflater.from(this)
-                .inflate(R.layout.item_vp_doc_section, binding.detailsContainer, false);
-
-        TextView title = card.findViewById(R.id.docTitle);
-        ImageView chev = card.findViewById(R.id.sectionChevron);
-        View header = card.findViewById(R.id.headerRow);
-        LinearLayout body = card.findViewById(R.id.bodyContainer);
-
-        title.setText(doc.docTitle);
-        boolean expanded = !state.collapsedSections.contains(doc.docId);
-        chev.setImageResource(expanded ? R.drawable.ic_chev_u : R.drawable.ic_chev_d);
-        body.setVisibility(expanded ? View.VISIBLE : View.GONE);
-        header.setOnClickListener(v -> viewModel.toggleSection(doc.docId));
-
-        if (expanded) {
-            int total = doc.entries.size();
-            for (int idx = 0; idx < total; idx++) {
-                VpDocEntry entry = doc.entries.get(idx);
-                View row;
-                if (entry.isGroup()) {
-                    row = buildSdGroup(body, doc.docId, entry.group, state);
-                } else {
-                    VpRequestedClaim claim = entry.claim;
-                    row = buildSdClaimRow(body, doc.docId, claim.label, claim.value,
-                            doc.docId + ":" + claim.code, claim.locked, state,  false);
-                }
-                appendWithDivider(body, row, idx < total - 1);
-            }
-        }
+    private View buildSingleCard(@NonNull VpRequestedDoc doc, @NonNull VpRequestUiState state) {
+        View card = buildDocSection(binding.detailsContainer, doc, state,
+                true, CLAIM_IMAGE_INSET_DP);
+        card.setBackgroundResource(R.drawable.bg_vp_section_card);
+        card.setPadding(dp(CARD_PADDING_H_DP), 0, dp(CARD_PADDING_H_DP), 0);
         return card;
     }
 
+    private View buildOptionCard(@NonNull VpRequestedDoc doc, int index, int total,
+                                 @NonNull VpRequestUiState state) {
+        View card = LayoutInflater.from(this)
+                .inflate(R.layout.item_vp_option_card, binding.detailsContainer, false);
+
+        boolean selected = doc.docId.equals(state.selectedOptionId);
+        View header = card.findViewById(R.id.optionHeader);
+        View radio = card.findViewById(R.id.optionRadio);
+        TextView title = card.findViewById(R.id.optionTitle);
+        FrameLayout bodySlot = card.findViewById(R.id.optionBodySlot);
+
+        card.setBackgroundResource(selected
+                ? R.drawable.bg_vp_option_card_selected
+                : R.drawable.bg_vp_option_card);
+        header.setBackgroundResource(selected
+                ? R.drawable.bg_vp_option_header_selected
+                : R.drawable.bg_vp_option_header);
+        radio.setBackgroundResource(selected
+                ? R.drawable.bg_vp_radio_on
+                : R.drawable.bg_vp_radio_off);
+        title.setText(getString(R.string.vp_request_option_title, index + 1, total));
+        radio.setOnClickListener(v -> viewModel.selectOption(doc.docId));
+        expandRadioTouchArea(header, radio);
+
+        bodySlot.addView(buildDocSection(bodySlot, doc, state,
+                selected, CLAIM_IMAGE_INSET_MULTI_DP));
+        return card;
+    }
+
+    private void expandRadioTouchArea(@NonNull View header, @NonNull View radio) {
+        header.post(() -> {
+            Rect hit = new Rect();
+            radio.getHitRect(hit);
+            hit.left -= dp(RADIO_TOUCH_INSET_START_DP);
+            hit.right += dp(RADIO_TOUCH_INSET_END_DP);
+            hit.top -= dp(RADIO_TOUCH_INSET_V_DP);
+            hit.bottom += dp(RADIO_TOUCH_INSET_V_DP);
+            header.setTouchDelegate(new TouchDelegate(hit, radio));
+        });
+    }
+
+    private View buildDocSection(@NonNull ViewGroup parent, @NonNull VpRequestedDoc doc,
+                                 @NonNull VpRequestUiState state, boolean selectable,
+                                 int imageInsetDp) {
+        View section = LayoutInflater.from(this)
+                .inflate(R.layout.item_vp_doc_section, parent, false);
+
+        TextView title = section.findViewById(R.id.docTitle);
+        ImageView chev = section.findViewById(R.id.sectionChevron);
+        View header = section.findViewById(R.id.headerRow);
+        LinearLayout body = section.findViewById(R.id.bodyContainer);
+
+        title.setText(doc.docTitle);
+        boolean expanded = state.isOptionExpanded(doc.docId);
+        chev.setImageResource(expanded ? R.drawable.ic_chev_u : R.drawable.ic_chev_d);
+        body.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        header.setOnClickListener(v -> viewModel.toggleOption(doc.docId));
+
+        if (expanded) {
+            appendClaimSections(body, doc, state, selectable, imageInsetDp);
+        }
+        return section;
+    }
+
+    private void appendClaimSections(@NonNull LinearLayout body, @NonNull VpRequestedDoc doc,
+                                     @NonNull VpRequestUiState state, boolean selectable,
+                                     int imageInsetDp) {
+        List<VpDocEntry> required = VpRequestUiState.requiredEntries(doc);
+        List<VpDocEntry> optional = VpRequestUiState.optionalEntries(doc);
+
+        if (!required.isEmpty()) {
+            body.addView(buildSectionHead(body, R.string.vp_request_section_required,
+                    true, null, false));
+            appendEntries(body, doc, required, state, false, imageInsetDp);
+        }
+        if (!optional.isEmpty()) {
+            Runnable onSelectAll = selectable ? () -> viewModel.toggleSelectAll(doc.docId) : null;
+            body.addView(buildSectionHead(body, R.string.vp_request_section_optional,
+                    required.isEmpty(), onSelectAll, state.allOptionalChecked(doc)));
+            appendEntries(body, doc, optional, state, selectable, imageInsetDp);
+        }
+    }
+
+    private void appendEntries(@NonNull LinearLayout body, @NonNull VpRequestedDoc doc,
+                               @NonNull List<VpDocEntry> entries, @NonNull VpRequestUiState state,
+                               boolean showControl, int imageInsetDp) {
+        for (int i = 0; i < entries.size(); i++) {
+            VpDocEntry entry = entries.get(i);
+            View row;
+            if (entry.isGroup()) {
+                row = buildSdGroup(body, doc.docId, entry.group, state, showControl, imageInsetDp);
+            } else {
+                String claimKey = VpClaimKeys.flat(doc.docId, entry.claim.code);
+                row = buildSdClaimRow(body, entry.claim, claimKey, showControl,
+                        state.isChecked(claimKey), imageInsetDp);
+            }
+            appendWithDivider(body, row, i < entries.size() - 1);
+        }
+    }
+
+    private View buildSectionHead(@NonNull ViewGroup parent, @StringRes int labelRes,
+                                  boolean isFirst, @Nullable Runnable onSelectAll, boolean allOn) {
+        View head = LayoutInflater.from(this)
+                .inflate(R.layout.item_vp_claim_section_head, parent, false);
+
+        ((TextView) head.findViewById(R.id.sectionHeadLabel)).setText(labelRes);
+        head.findViewById(R.id.sectionHeadTopDivider)
+                .setVisibility(isFirst ? View.GONE : View.VISIBLE);
+
+        View row = head.findViewById(R.id.sectionHeadRow);
+        row.setPadding(row.getPaddingLeft(),
+                dp(isFirst ? SECTION_HEAD_TOP_FIRST_DP : SECTION_HEAD_TOP_DP),
+                row.getPaddingRight(), row.getPaddingBottom());
+
+        View selectAllRow = head.findViewById(R.id.selectAllRow);
+        if (onSelectAll == null) {
+            selectAllRow.setVisibility(View.GONE);
+        } else {
+            selectAllRow.setVisibility(View.VISIBLE);
+            head.findViewById(R.id.selectAllBox).setBackgroundResource(allOn
+                    ? R.drawable.bg_vp_checkbox_small_on
+                    : R.drawable.bg_vp_checkbox_small_off);
+            head.findViewById(R.id.selectAllCheckIcon)
+                    .setVisibility(allOn ? View.VISIBLE : View.GONE);
+            selectAllRow.setOnClickListener(v -> onSelectAll.run());
+        }
+        return head;
+    }
+
     private View buildSdClaimRow(@NonNull ViewGroup parent,
-                                 @NonNull String docId,
-                                 @NonNull String label,
-                                 @NonNull String value,
+                                 @NonNull VpRequestedClaim claim,
                                  @NonNull String claimKey,
-                                 boolean locked,
-                                 @NonNull VpRequestUiState state,
-                                 boolean hideControl) {
+                                 boolean showControl,
+                                 boolean checked,
+                                 int imageInsetDp) {
         View row = LayoutInflater.from(this).inflate(R.layout.item_vp_claim_sd, parent, false);
         TextView labelView = row.findViewById(R.id.claimLabel);
-        if (label.isEmpty()) {
+        if (claim.label.isEmpty()) {
             labelView.setVisibility(View.GONE);
         } else {
-            labelView.setText(label);
+            labelView.setText(claim.label);
         }
-        ((TextView) row.findViewById(R.id.claimValue)).setText(value);
+        ((TextView) row.findViewById(R.id.claimValue)).setText(claim.value);
+        bindClaimImage(row, claim, imageInsetDp);
 
         View checkboxFrame = row.findViewById(R.id.checkboxFrame);
 
-        if (hideControl) {
+        if (!showControl) {
             checkboxFrame.setVisibility(View.GONE);
             return row;
         }
         View checkIcon = row.findViewById(R.id.checkIcon);
-
-        if (locked) {
-            checkboxFrame.setBackgroundResource(R.drawable.bg_vp_checkbox_locked);
-            checkIcon.setVisibility(View.VISIBLE);
-            return row;
-        }
-        boolean checked = !state.uncheckedClaimKeys.contains(claimKey);
         checkboxFrame.setBackgroundResource(
                 checked ? R.drawable.bg_vp_checkbox_on : R.drawable.bg_vp_checkbox_off);
         checkIcon.setVisibility(checked ? View.VISIBLE : View.GONE);
@@ -320,10 +468,33 @@ public class VpRequestActivity extends BaseActivity {
         return row;
     }
 
+    private void bindClaimImage(@NonNull View row, @NonNull VpRequestedClaim claim,
+                                int imageInsetDp) {
+        if (claim.imageBytes == null) {
+            return;
+        }
+        Bitmap bitmap = claimImages.get(claim);
+        if (bitmap == null) {
+            bitmap = ClaimImages.decode(this, claim.imageBytes);
+            if (bitmap == null) {
+                return;
+            }
+            claimImages.put(claim, bitmap);
+        }
+        ImageView image = row.findViewById(R.id.claimImage);
+        image.setImageBitmap(bitmap);
+        image.setMaxWidth(ClaimImages.maxWidthPx(this, imageInsetDp));
+        image.setContentDescription(claim.label + " image");
+        image.setVisibility(View.VISIBLE);
+        row.findViewById(R.id.claimValue).setVisibility(View.GONE);
+    }
+
     private View buildSdGroup(@NonNull ViewGroup parent,
-                              @NonNull String docId,
+                              @NonNull String optionId,
                               @NonNull VpRequestedClaimGroup group,
-                              @NonNull VpRequestUiState state) {
+                              @NonNull VpRequestUiState state,
+                              boolean showControl,
+                              int imageInsetDp) {
         View view = LayoutInflater.from(this).inflate(R.layout.item_vp_group_sd, parent, false);
         TextView title = view.findViewById(R.id.groupTitle);
         ImageView chev = view.findViewById(R.id.groupChevron);
@@ -333,26 +504,22 @@ public class VpRequestActivity extends BaseActivity {
         LinearLayout body = view.findViewById(R.id.groupBody);
 
         title.setText(group.title);
-        String groupKey = docId + ":" + group.title;
-        boolean expanded = state.expandedGroups.contains(groupKey);
+        String groupKey = optionId + ":" + group.title;
+        boolean expanded = state.isGroupExpanded(groupKey);
         chev.setImageResource(expanded ? R.drawable.ic_chev_u : R.drawable.ic_chev_d);
         body.setVisibility(expanded ? View.VISIBLE : View.GONE);
         header.setOnClickListener(v -> viewModel.toggleGroup(groupKey));
 
-        List<String> groupClaimKeys = new ArrayList<>(group.items.size());
-        for (VpRequestedClaim claim : group.items) {
-            groupClaimKeys.add(docId + ":" + group.title + ":" + claim.code);
-        }
-        if (group.locked) {
-            groupCheckbox.setBackgroundResource(R.drawable.bg_vp_checkbox_locked);
-            groupCheckIcon.setVisibility(View.VISIBLE);
+        List<String> groupClaimKeys = VpClaimKeys.groupChildren(optionId, group);
+        if (!showControl) {
+            groupCheckbox.setVisibility(View.GONE);
         } else {
-            boolean groupChecked = groupClaimKeys.isEmpty()
-                    || !state.uncheckedClaimKeys.contains(groupClaimKeys.get(0));
+            groupCheckbox.setVisibility(View.VISIBLE);
+            boolean groupChecked = !groupClaimKeys.isEmpty()
+                    && state.isChecked(groupClaimKeys.get(0));
             groupCheckbox.setBackgroundResource(
                     groupChecked ? R.drawable.bg_vp_checkbox_on : R.drawable.bg_vp_checkbox_off);
             groupCheckIcon.setVisibility(groupChecked ? View.VISIBLE : View.GONE);
-
             groupCheckbox.setOnClickListener(v -> viewModel.toggleGroupClaims(groupClaimKeys));
         }
 
@@ -360,9 +527,8 @@ public class VpRequestActivity extends BaseActivity {
             int total = group.items.size();
             int idx = 0;
             for (VpRequestedClaim claim : group.items) {
-                String claimKey = docId + ":" + group.title + ":" + claim.code;
-                View row = buildSdClaimRow(body, docId, claim.label, claim.value, claimKey,
-                         false, state,  true);
+                String claimKey = VpClaimKeys.groupChild(optionId, group.title, claim.code);
+                View row = buildSdClaimRow(body, claim, claimKey, false, false, imageInsetDp);
                 appendWithDivider(body, row, idx < total - 1);
                 idx++;
             }
@@ -379,14 +545,14 @@ public class VpRequestActivity extends BaseActivity {
         boolean hasPredicates = !req.predicates.isEmpty();
         boolean hasSelfAttrs = !req.selfAttributes.isEmpty();
         if (hasAttrs) {
-            addZkpAttributeGroup(body, "Attributes", req.attributes, state,
+            addZkpAttributeGroup(body, getString(R.string.vp_request_zkp_attributes), req.attributes, state,
                     hasPredicates || hasSelfAttrs);
         }
         if (hasPredicates) {
-            addZkpPlainGroup(body, "Predicates", req.predicates, hasSelfAttrs);
+            addZkpPredicateGroup(body, req.predicates, state, hasSelfAttrs);
         }
         if (hasSelfAttrs) {
-            addZkpPlainGroup(body, "Self-Attributes", req.selfAttributes, false);
+            addZkpPlainGroup(body, getString(R.string.vp_request_zkp_self_attributes), req.selfAttributes, false);
         }
         return card;
     }
@@ -405,6 +571,46 @@ public class VpRequestActivity extends BaseActivity {
         }
         parent.addView(rows);
         if (appendDivider) parent.addView(buildGroupDivider(parent));
+    }
+
+    private void addZkpPredicateGroup(@NonNull LinearLayout parent,
+                                      @NonNull List<ZkpAttributeReferent> items,
+                                      @NonNull VpRequestUiState state,
+                                      boolean appendDivider) {
+        parent.addView(buildZkpGroupHeader(parent, getString(R.string.vp_request_zkp_predicates)));
+        LinearLayout rows = buildZkpRowContainer();
+        for (int i = 0; i < items.size(); i++) {
+            View row = buildZkpPredicateRow(rows, items.get(i), state);
+            appendWithDivider(rows, row, i < items.size() - 1);
+        }
+        parent.addView(rows);
+        if (appendDivider) parent.addView(buildGroupDivider(parent));
+    }
+
+    private View buildZkpPredicateRow(@NonNull ViewGroup parent,
+                                      @NonNull ZkpAttributeReferent pred,
+                                      @NonNull VpRequestUiState state) {
+        String selectedCredId = state.selectedPredicateCredIds.get(pred.referentKey);
+        String selectedValue = null;
+        for (ReferentOption opt : pred.options) {
+            if (opt.credentialId.equals(selectedCredId)) {
+                selectedValue = opt.value;
+                break;
+            }
+        }
+        View row = LayoutInflater.from(this).inflate(R.layout.item_vp_attribute_zkp, parent, false);
+        ((TextView) row.findViewById(R.id.attrLabel)).setText(pred.label);
+        row.findViewById(R.id.eyeIcon).setVisibility(View.GONE);
+        TextView value = row.findViewById(R.id.attrValue);
+        if (selectedValue == null) {
+            value.setText(R.string.vp_request_referent_placeholder);
+            value.setTextColor(getResources().getColor(R.color.brand_primary, null));
+        } else {
+            value.setText(selectedValue);
+        }
+        String initialValue = selectedValue;
+        value.setOnClickListener(v -> launchReferentList(pred, initialValue));
+        return row;
     }
 
     private void addZkpPlainGroup(@NonNull LinearLayout parent,
@@ -499,7 +705,10 @@ public class VpRequestActivity extends BaseActivity {
         if (s == null || s.scenario == null || s.scenario.zkpRequest == null) return;
         ZkpAttributeReferent referent = s.scenario.zkpRequest.referentsByLabel.get(attrLabel);
         if (referent == null) return;
+        launchReferentList(referent, initialValue);
+    }
 
+    private void launchReferentList(@NonNull ZkpAttributeReferent referent, String initialValue) {
         ArrayList<String> labels = new ArrayList<>(referent.options.size());
         ArrayList<String> values = new ArrayList<>(referent.options.size());
         ArrayList<String> credIds = new ArrayList<>(referent.options.size());
@@ -533,30 +742,24 @@ public class VpRequestActivity extends BaseActivity {
         return buildRowDivider(parent);
     }
 
-    private void showWarnDialog() {
-        NoticeDialogFragment.newInstance(this,
-                        R.string.vp_request_warn_title,
-                        R.string.vp_request_warn_message,
-                        R.string.vp_request_warn_button)
-                .show(getSupportFragmentManager());
-    }
-
     private void showSuccessDialog() {
-        NoticeDialogFragment.newInstance(this,
+        NoticeDialogFragment dialog = NoticeDialogFragment.newInstance(this,
                         R.string.vp_request_success_title,
                         R.string.vp_request_success_message,
                         R.string.vp_request_success_button)
-                .setOnConfirmed(this::finish)
-                .show(getSupportFragmentManager());
+                .setOnConfirmed(() -> finishConsent(true));
+        dialog.setCancelable(false);
+        dialog.show(getSupportFragmentManager());
     }
 
     private void showInvalidPayload() {
-        NoticeDialogFragment.newInstance(this,
+        NoticeDialogFragment dialog = NoticeDialogFragment.newInstance(this,
                         R.string.notice_vp_invalid_title,
                         R.string.notice_vp_invalid_message,
                         R.string.common_ok)
-                .setOnConfirmed(this::finish)
-                .show(getSupportFragmentManager());
+                .setOnConfirmed(this::finish);
+        dialog.setCancelable(false);
+        dialog.show(getSupportFragmentManager());
     }
 
 }

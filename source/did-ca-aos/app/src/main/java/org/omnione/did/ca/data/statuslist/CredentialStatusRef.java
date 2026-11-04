@@ -49,4 +49,11 @@ public final class CredentialStatusRef {
                                             @Nullable Long expEpochSec) {
         return new CredentialStatusRef(vcId, CredentialBadge.SD_JWT, listRef, expEpochSec);
     }
+
+    @NonNull
+    public static CredentialStatusRef mdoc(@NonNull String vcId,
+                                           @Nullable StatusListReference listRef,
+                                           @Nullable Long validUntilEpochSec) {
+        return new CredentialStatusRef(vcId, CredentialBadge.MDOC, listRef, validUntilEpochSec);
+    }
 }

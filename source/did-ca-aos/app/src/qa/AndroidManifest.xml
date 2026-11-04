@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    QA-only manifest overlay for Maestro E2E automation.
+
+    IssueByQrActivity / IssueByOid4vciActivity are normally reached only in-process, after
+    QrScanActivity decodes a QR with the camera. Camera scanning cannot be automated, so the
+    qa flavor exports both activities and the test runner injects the scanned payload directly
+    via "adb shell am start" with an extra_payload string extra.
+
+    ProximityActivity is exported for the same reason: the BLE transport mode is normally the
+    fixed PERIPHERAL_SERVER default, and E2E runs select CENTRAL_CLIENT by passing a
+    proximity_mode string extra of "central_client" to "adb shell am start".
+
+    This overlay applies to the qa flavor only. prod builds keep exported="false".
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+
+        <activity
+            android:name=".ui.issue.IssueByQrActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+
+        <activity
+            android:name=".ui.issuebyoid4vci.IssueByOid4vciActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+
+        <activity
+            android:name=".ui.proximity.ProximityActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+
+</manifest>

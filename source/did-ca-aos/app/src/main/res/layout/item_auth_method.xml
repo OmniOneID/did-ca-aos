@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -40,6 +41,7 @@
             android:fontFamily="@font/pretendard_semibold"
             android:textColor="@color/brand_text_primary"
             android:textSize="16sp"
+            app:lineHeight="20.8sp"
             tools:text="PIN" />
 
         <TextView
@@ -50,6 +52,7 @@
             android:fontFamily="@font/pretendard_regular"
             android:textColor="@color/brand_text_secondary"
             android:textSize="13sp"
+            app:lineHeight="18.2sp"
             tools:text="Sign in with your 6-digit PIN." />
     </LinearLayout>
 

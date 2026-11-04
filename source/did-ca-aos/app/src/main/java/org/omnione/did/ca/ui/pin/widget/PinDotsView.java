@@ -23,8 +23,11 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import org.omnione.did.ca.R;
 
@@ -38,13 +41,17 @@ public class PinDotsView extends LinearLayout {
     private static final int DOT_HEIGHT_DP = 52;
     private static final int DOT_GAP_DP = 10;
     private static final int FILL_SIZE_DP = 12;
+    private static final float CHAR_TEXT_SIZE_SP = 20f;
 
     private final List<FrameLayout> containers = new ArrayList<>();
     private final List<View> fills = new ArrayList<>();
+    private final List<TextView> chars = new ArrayList<>();
 
     private int length = DEFAULT_LENGTH;
     private int filled = 0;
     private boolean error = false;
+    private boolean masked = true;
+    private String text = "";
 
     public PinDotsView(Context context) {
         this(context, null);
@@ -76,6 +83,7 @@ public class PinDotsView extends LinearLayout {
         removeAllViews();
         containers.clear();
         fills.clear();
+        chars.clear();
 
         int gap = dp(DOT_GAP_DP);
         int width = dp(DOT_WIDTH_DP);
@@ -94,12 +102,39 @@ public class PinDotsView extends LinearLayout {
             fill.setLayoutParams(flp);
             fill.setVisibility(View.INVISIBLE);
 
+            TextView ch = new TextView(getContext());
+            FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT);
+            clp.gravity = Gravity.CENTER;
+            ch.setLayoutParams(clp);
+            ch.setTextSize(TypedValue.COMPLEX_UNIT_SP, CHAR_TEXT_SIZE_SP);
+            ch.setTypeface(ResourcesCompat.getFont(getContext(), R.font.pretendard_semibold));
+            ch.setVisibility(View.GONE);
+
             box.addView(fill);
+            box.addView(ch);
             addView(box);
             containers.add(box);
             fills.add(fill);
+            chars.add(ch);
         }
         if (filled > length) filled = length;
+        applyState();
+    }
+
+    public void setMasked(boolean masked) {
+        if (this.masked == masked) return;
+        this.masked = masked;
+        applyState();
+    }
+
+    public void setText(@Nullable String value) {
+        String next = value == null ? "" : value;
+        int nextFilled = Math.min(next.length(), length);
+        if (text.equals(next) && filled == nextFilled) return;
+        this.text = next;
+        this.filled = nextFilled;
         applyState();
     }
 
@@ -138,10 +173,22 @@ public class PinDotsView extends LinearLayout {
             box.setBackgroundResource(containerBg);
 
             boolean show = i < filled;
-            fill.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-            fill.setBackgroundResource(error
-                    ? R.drawable.bg_pin_dot_filled_error
-                    : R.drawable.bg_pin_dot_filled);
+            TextView ch = chars.get(i);
+            if (masked) {
+                ch.setVisibility(View.GONE);
+                fill.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+                fill.setBackgroundResource(error
+                        ? R.drawable.bg_pin_dot_filled_error
+                        : R.drawable.bg_pin_dot_filled);
+            } else {
+                fill.setVisibility(View.INVISIBLE);
+                ch.setText(show && i < text.length()
+                        ? String.valueOf(text.charAt(i))
+                        : "");
+                ch.setTextColor(ContextCompat.getColor(getContext(),
+                        error ? R.color.brand_error : R.color.brand_text_primary));
+                ch.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+            }
         }
     }
 

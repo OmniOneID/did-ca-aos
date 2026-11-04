@@ -195,7 +195,8 @@ public final class ZkpSubmissionRepository {
 
                 if (subs == null || subs.isEmpty()) continue;
 
-                String schemaName = lookupSchemaName(referentKey, reqAttrInfo,
+                AttributeInfo info = reqAttrInfo != null ? reqAttrInfo.get(referentKey) : null;
+                String schemaName = lookupSchemaName(info != null ? info.getRestrictions() : null,
                         credDefById, schemaById);
 
                 List<ReferentOption> options = new ArrayList<>();
@@ -209,15 +210,25 @@ public final class ZkpSubmissionRepository {
             }
         }
 
-        List<VpPlainAttribute> predicates = new ArrayList<>();
+        List<ZkpAttributeReferent> predicates = new ArrayList<>();
         Map<String, PredicateReferent> predMap = available.getPredicateReferent();
         if (predMap != null) {
             for (String referentKey : orderedKeys(reqPredInfo, predMap)) {
                 PredicateReferent pr = predMap.get(referentKey);
                 List<SubReferent> subs = pr.getPredicateSubReferent();
-                String value = (subs != null && !subs.isEmpty()) ? safe(subs.get(0).getRaw()) : "";
-                predicates.add(new VpPlainAttribute(
-                        displayLabel(safe(pr.getName()), captionByKey), value));
+                if (subs == null || subs.isEmpty()) continue;
+
+                PredicateInfo info = reqPredInfo != null ? reqPredInfo.get(referentKey) : null;
+                String schemaName = lookupSchemaName(info != null ? info.getRestrictions() : null,
+                        credDefById, schemaById);
+
+                List<ReferentOption> options = new ArrayList<>();
+                for (SubReferent sub : subs) {
+                    options.add(new ReferentOption(
+                            schemaName, safe(sub.getRaw()), safe(sub.getCredentialId())));
+                }
+                predicates.add(new ZkpAttributeReferent(referentKey,
+                        displayLabel(safe(pr.getName()), captionByKey), options));
             }
         }
 
@@ -239,19 +250,22 @@ public final class ZkpSubmissionRepository {
         public CompletableFuture<Void> signZkpWithPin(@NonNull String pin,
                                                   @NonNull Map<String, String> referents,
                                                   @NonNull Map<String, String> credentialIds,
+                                                  @NonNull Map<String, String> predicateCredentialIds,
                                                   @NonNull Set<String> revealed) {
 
-        return doSign(referents, credentialIds, revealed);
+        return doSign(referents, credentialIds, predicateCredentialIds, revealed);
     }
 
         public CompletableFuture<Void> signZkpWithBio(@NonNull Map<String, String> referents,
                                                   @NonNull Map<String, String> credentialIds,
+                                                  @NonNull Map<String, String> predicateCredentialIds,
                                                   @NonNull Set<String> revealed) {
-        return doSign(referents, credentialIds, revealed);
+        return doSign(referents, credentialIds, predicateCredentialIds, revealed);
     }
 
     private CompletableFuture<Void> doSign(@NonNull Map<String, String> selectedReferents,
                                            @NonNull Map<String, String> selectedCredentialIds,
+                                           @NonNull Map<String, String> selectedPredicateCredentialIds,
                                            @NonNull Set<String> revealedLabels) {
         SdkSession s = session;
         if (s == null) return failedSession();
@@ -260,7 +274,7 @@ public final class ZkpSubmissionRepository {
 
                 List<UserReferent> userReferents = buildUserReferents(
                         s.availableReferent, selectedReferents, selectedCredentialIds,
-                        revealedLabels, s.captionByKey);
+                        selectedPredicateCredentialIds, revealedLabels, s.captionByKey);
                 if (userReferents.isEmpty()) {
                     throw new IllegalStateException("No matching credential for ZKP request");
                 }
@@ -314,6 +328,7 @@ public final class ZkpSubmissionRepository {
     private static List<UserReferent> buildUserReferents(AvailableReferent available,
                                                          Map<String, String> selected,
                                                          Map<String, String> selectedCredentialIds,
+                                                         Map<String, String> selectedPredicateCredentialIds,
                                                          Set<String> revealed,
                                                          Map<String, String> captionByKey) {
         List<UserReferent> result = new ArrayList<>();
@@ -374,7 +389,17 @@ public final class ZkpSubmissionRepository {
                 PredicateReferent pr = e.getValue();
                 List<SubReferent> subs = pr.getPredicateSubReferent();
                 if (subs == null || subs.isEmpty()) continue;
-                SubReferent chosen = subs.get(0);
+                String selectedCredId = selectedPredicateCredentialIds.get(e.getKey());
+                SubReferent chosen = null;
+                for (SubReferent sr : subs) {
+                    if (safe(sr.getCredentialId()).equals(selectedCredId)) {
+                        chosen = sr;
+                        break;
+                    }
+                }
+                if (chosen == null) {
+                    throw new IllegalStateException("No credential selected for predicate " + e.getKey());
+                }
                 result.add(new UserReferent.Builder()
                         .setReferentKey(e.getKey())
                         .setReferentName(pr.getName())
@@ -458,15 +483,11 @@ public final class ZkpSubmissionRepository {
         return caption != null ? caption : rawKey;
     }
 
-    private static String lookupSchemaName(String referentKey,
-                                           Map<String, AttributeInfo> reqAttrInfo,
+    private static String lookupSchemaName(List<Map<String, String>> restrictions,
                                            Map<String, CredentialDefinition> credDefById,
                                            Map<String, CredentialSchema> schemaById) {
-        if (referentKey == null || reqAttrInfo == null) return "";
-        AttributeInfo info = reqAttrInfo.get(referentKey);
-        if (info == null || info.getRestrictions() == null
-                || info.getRestrictions().isEmpty()) return "";
-        for (Map<String, String> r : info.getRestrictions()) {
+        if (restrictions == null) return "";
+        for (Map<String, String> r : restrictions) {
             String credDefId = r.get("credDefId");
             if (credDefId == null || credDefId.isEmpty()) continue;
             CredentialDefinition def = credDefById.get(credDefId);

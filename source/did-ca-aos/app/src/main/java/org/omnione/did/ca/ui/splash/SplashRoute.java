@@ -17,10 +17,12 @@
 package org.omnione.did.ca.ui.splash;
 
 public enum SplashRoute {
+    SERVER_SETUP,
     ONBOARDING,
 
     ONBOARDING_RESUME,
     PIN_AUTH,
     DOCS,
-    ERROR
+    ERROR,
+    ERROR_UNREACHABLE
 }

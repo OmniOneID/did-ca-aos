@@ -25,12 +25,14 @@ import org.omnione.did.ca.R;
 import org.omnione.did.ca.data.model.Credential;
 import org.omnione.did.ca.data.repository.CredentialRepository;
 import org.omnione.did.ca.data.repository.CredentialStatusRepository;
+import org.omnione.did.ca.ui.Event;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,8 +49,10 @@ public class DocsViewModel extends ViewModel {
     private final CredentialRepository repository;
     private final CredentialStatusRepository statusRepo;
     private final MutableLiveData<DocsUiState> state = new MutableLiveData<>(DocsUiState.empty());
+    private final MutableLiveData<Event<Integer>> statusWarning = new MutableLiveData<>();
     private final Executor callbackExecutor = Executors.newSingleThreadExecutor();
     private final AtomicBoolean fetching = new AtomicBoolean(false);
+    private CompletableFuture<CredentialRepository.WalletLoad> observedFetch;
 
     @Inject
     public DocsViewModel(@NonNull CredentialRepository repository,
@@ -59,6 +63,10 @@ public class DocsViewModel extends ViewModel {
 
     public LiveData<DocsUiState> getState() {
         return state;
+    }
+
+    public LiveData<Event<Integer>> getStatusWarning() {
+        return statusWarning;
     }
 
     public void loadWallet() {
@@ -100,13 +108,20 @@ public class DocsViewModel extends ViewModel {
 
     private void fetchWallet() {
         fetching.set(true);
-        repository.fetchWallet().whenCompleteAsync((list, err) -> {
+        CompletableFuture<CredentialRepository.WalletLoad> f = repository.fetchWallet();
+        if (f == observedFetch) return;
+        observedFetch = f;
+        f.whenCompleteAsync((load, err) -> {
             fetching.set(false);
             if (err != null) {
                 AppLog.e(TAG, "fetchWallet failed", err);
                 state.postValue(DocsUiState.error(R.string.notice_vc_load_failed_message));
             } else {
-                state.postValue(DocsUiState.data(list));
+                state.postValue(DocsUiState.data(load.credentials));
+                if (load.statusCheckFailed) {
+                    AppLog.d(TAG, "status check failed in wallet load, showing toast");
+                    statusWarning.postValue(new Event<>(R.string.status_check_fetch_failed));
+                }
             }
         }, callbackExecutor);
     }

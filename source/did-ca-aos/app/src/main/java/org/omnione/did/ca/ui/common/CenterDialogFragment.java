@@ -63,7 +63,7 @@ public abstract class CenterDialogFragment extends DialogFragment {
         super.onViewCreated(view, savedInstanceState);
         View scrim = view.findViewById(R.id.dialogScrim);
         scrim.setOnClickListener(v -> {
-            if (isCancelable()) dismissAllowingStateLoss();
+            if (isCancelable()) requireDialog().cancel();
         });
         onContentInflated(view.findViewById(R.id.dialogCard));
     }

@@ -27,12 +27,21 @@ public final class StatusListResult {
     @NonNull public final VcStatus status;
     public final boolean checkFailed;
     @Nullable @StringRes public final Integer failMessageRes;
+    public final boolean explicitRevoked;
 
     public StatusListResult(@NonNull VcStatus status,
                             boolean checkFailed,
                             @Nullable Integer failMessageRes) {
+        this(status, checkFailed, failMessageRes, false);
+    }
+
+    public StatusListResult(@NonNull VcStatus status,
+                            boolean checkFailed,
+                            @Nullable Integer failMessageRes,
+                            boolean explicitRevoked) {
         this.status = status;
         this.checkFailed = checkFailed;
         this.failMessageRes = failMessageRes;
+        this.explicitRevoked = explicitRevoked;
     }
 }

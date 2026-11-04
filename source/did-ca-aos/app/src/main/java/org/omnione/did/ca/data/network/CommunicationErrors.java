@@ -18,7 +18,11 @@ package org.omnione.did.ca.data.network;
 
 import androidx.annotation.Nullable;
 
+import org.omnione.did.sdk.communication.exception.CommunicationErrorCode;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 public final class CommunicationErrors {
 
@@ -32,6 +36,40 @@ public final class CommunicationErrors {
             cause = cause.getCause();
         }
         return null;
+    }
+
+    @Nullable
+    public static String findSdkMessage(@Nullable Throwable err) {
+        String deepest = null;
+        Throwable cause = err;
+        while (cause != null) {
+            if (isSdkException(cause)) {
+                String message = cause.getMessage();
+                if (message != null && !message.isEmpty()) deepest = message;
+            }
+            cause = cause.getCause();
+        }
+        return deepest;
+    }
+
+    private static boolean isSdkException(Throwable t) {
+        return t instanceof CommunicationException
+                || t instanceof WalletException
+                || t instanceof WalletCoreException
+                || t instanceof UtilityException;
+    }
+
+    public static boolean isUnreachable(@Nullable Throwable err) {
+        Throwable cause = err;
+        while (cause != null) {
+            if (cause instanceof CommunicationException) {
+                return ((CommunicationException) cause).getErrorCode()
+                        == CommunicationErrorCode
+                                .ERR_CODE_COMMUNICATION_INCORRECT_URL_CONNECTION.getCode();
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private CommunicationErrors() {}

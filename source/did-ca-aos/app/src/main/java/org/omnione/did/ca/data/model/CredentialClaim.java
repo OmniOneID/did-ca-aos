@@ -25,7 +25,7 @@ import java.util.List;
 public final class CredentialClaim {
 
     public enum Kind {
-        FLAT, GROUP
+        FLAT, GROUP, IMAGE
     }
 
     @NonNull
@@ -36,24 +36,35 @@ public final class CredentialClaim {
     public final String value;
     @NonNull
     public final List<CredentialClaim> items;
+    @Nullable
+    public final byte[] imageBytes;
 
     private CredentialClaim(@NonNull Kind kind,
                             @NonNull String label,
                             @Nullable String value,
-                            @NonNull List<CredentialClaim> items) {
+                            @NonNull List<CredentialClaim> items,
+                            @Nullable byte[] imageBytes) {
         this.kind = kind;
         this.label = label;
         this.value = value;
         this.items = items;
+        this.imageBytes = imageBytes;
     }
 
     @NonNull
     public static CredentialClaim flat(@NonNull String label, @NonNull String value) {
-        return new CredentialClaim(Kind.FLAT, label, value, Collections.emptyList());
+        return new CredentialClaim(Kind.FLAT, label, value, Collections.emptyList(), null);
     }
 
     @NonNull
     public static CredentialClaim group(@NonNull String label, @NonNull List<CredentialClaim> items) {
-        return new CredentialClaim(Kind.GROUP, label, null, items);
+        return new CredentialClaim(Kind.GROUP, label, null, items, null);
+    }
+
+    @NonNull
+    public static CredentialClaim image(@NonNull String label,
+                                        @NonNull byte[] imageBytes,
+                                        @NonNull String fallbackValue) {
+        return new CredentialClaim(Kind.IMAGE, label, fallbackValue, Collections.emptyList(), imageBytes);
     }
 }

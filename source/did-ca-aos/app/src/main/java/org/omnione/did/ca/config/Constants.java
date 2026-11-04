@@ -19,6 +19,4 @@ package org.omnione.did.ca.config;
 public final class Constants {
 
     private Constants() {}
-
-    public static final boolean OID4VCI_MDOC_ENABLED = false;
 }

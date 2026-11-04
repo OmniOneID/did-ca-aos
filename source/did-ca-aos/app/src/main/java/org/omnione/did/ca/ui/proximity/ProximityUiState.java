@@ -19,13 +19,24 @@ package org.omnione.did.ca.ui.proximity;
 import android.graphics.Bitmap;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public final class ProximityUiState {
 
-    @NonNull
-    public final Bitmap qrBitmap;
+    public enum Phase { PERMISSION, ADVERTISING, CONNECTED, REQUEST_RECEIVED, ERROR }
 
-    public ProximityUiState(@NonNull Bitmap qrBitmap) {
+    @NonNull
+    public final Phase phase;
+    @Nullable
+    public final Bitmap qrBitmap;
+    @Nullable
+    public final String message;
+
+    public ProximityUiState(@NonNull Phase phase,
+                            @Nullable Bitmap qrBitmap,
+                            @Nullable String message) {
+        this.phase = phase;
         this.qrBitmap = qrBitmap;
+        this.message = message;
     }
 }

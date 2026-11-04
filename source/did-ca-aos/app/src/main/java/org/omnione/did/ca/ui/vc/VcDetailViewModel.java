@@ -37,7 +37,9 @@ import org.omnione.did.ca.ui.Event;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.sdk.core.oid4vc.model.IssuerMetadataResponse;
 import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
+import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 
 import java.util.concurrent.Executor;
 
@@ -65,6 +67,9 @@ public class VcDetailViewModel extends ViewModel {
     @Nullable private String pendingVcId;
     @Nullable private VerifyAuthType.VERIFY_AUTH_TYPE pendingAuthType;
     @Nullable private String pendingPinForBio;
+    @Nullable private IssuerMetadataResponse pendingOid4vcMetadata;
+    private boolean explicitRevoked;
+    private boolean hasStatusList;
 
     @Inject
     public VcDetailViewModel(@NonNull CredentialRepository repository,
@@ -104,12 +109,15 @@ public class VcDetailViewModel extends ViewModel {
     }
 
     public void loadDetail(@NonNull String vcId) {
+        explicitRevoked = false;
+        hasStatusList = false;
         state.postValue(VcDetailUiState.loading());
         repository.fetchDetail(vcId).whenCompleteAsync((result, err) -> {
             if (err != null) {
                 AppLog.e(TAG, "fetchDetail failed: vcId=" + vcId, err);
                 state.postValue(VcDetailUiState.error(R.string.notice_vc_load_failed_message));
             } else {
+                hasStatusList = result.statusRef != null && result.statusRef.listRef != null;
                 state.postValue(VcDetailUiState.data(result.credential, result.claims, result.zkpClaims));
                 if (result.statusRef != null) {
                     checkStatus(result.statusRef);
@@ -125,6 +133,7 @@ public class VcDetailViewModel extends ViewModel {
                         AppLog.e(TAG, "status check failed", err);
                         return;
                     }
+                    explicitRevoked = !sr.checkFailed && sr.explicitRevoked;
                     VcDetailUiState cur = state.getValue();
                     if (cur == null || cur.credential == null) return;
                     if (cur.deleting) return;
@@ -145,15 +154,49 @@ public class VcDetailViewModel extends ViewModel {
         if (current != null) state.postValue(current.withDeleting(true));
 
         if (current != null && current.credential != null
-                && current.credential.badge == CredentialBadge.SD_JWT) {
-            repository.delete(vcId).whenCompleteAsync((unused, err) -> {
+                && (current.credential.badge == CredentialBadge.SD_JWT
+                || current.credential.badge == CredentialBadge.MDOC)) {
+            if (explicitRevoked) {
+                AppLog.d(TAG, "revoke-or-local vcId=" + vcId + " explicitRevoked=true");
+                repository.deleteOid4vc(vcId).whenCompleteAsync((unused, err) -> {
+                    if (err != null) {
+                        AppLog.e(TAG, "delete (local oid4vc) failed: vcId=" + vcId, err);
+                        resetDeletingState();
+                        deleteError.postValue(new Event<>(R.string.notice_revoke_failed_message));
+                        return;
+                    }
+                    deleteCompleted.postValue(new Event<>(Boolean.TRUE));
+                }, mainExecutor);
+                return;
+            }
+            if (!hasStatusList) {
+                AppLog.e(TAG, "revoke-or-local vcId=" + vcId + " explicitRevoked=false statusList=null");
+                resetDeletingState();
+                deleteError.postValue(new Event<>(R.string.notice_revoke_failed_message));
+                return;
+            }
+            repository.prepareOid4vcRevoke(vcId).whenCompleteAsync((target, err) -> {
                 if (err != null) {
-                    AppLog.e(TAG, "delete (local sd-jwt) failed: vcId=" + vcId, err);
+                    AppLog.e(TAG, "prepareOid4vcRevoke failed: vcId=" + vcId, err);
                     resetDeletingState();
                     deleteError.postValue(new Event<>(R.string.notice_revoke_failed_message));
                     return;
                 }
-                deleteCompleted.postValue(new Event<>(Boolean.TRUE));
+                VerifyAuthType.VERIFY_AUTH_TYPE authType;
+                if (Constants.KEY_ID_PIN.equals(target.kid)) {
+                    authType = VerifyAuthType.VERIFY_AUTH_TYPE.PIN;
+                } else if (Constants.KEY_ID_BIO.equals(target.kid)) {
+                    authType = VerifyAuthType.VERIFY_AUTH_TYPE.BIO;
+                } else {
+                    AppLog.e(TAG, "unsupported kid for revoke: vcId=" + vcId + " kid=" + target.kid);
+                    resetDeletingState();
+                    deleteError.postValue(new Event<>(R.string.notice_revoke_failed_message));
+                    return;
+                }
+                pendingVcId = vcId;
+                pendingAuthType = authType;
+                pendingOid4vcMetadata = target.metadata;
+                routeAuth(authType, vcId);
             }, mainExecutor);
             return;
         }
@@ -216,6 +259,7 @@ public class VcDetailViewModel extends ViewModel {
         pendingVcId = null;
         pendingAuthType = null;
         pendingPinForBio = null;
+        pendingOid4vcMetadata = null;
         revokeRepository.cancelRevoke();
         resetDeletingState();
         deleteError.postValue(new Event<>(R.string.notice_revoke_auth_failed_message));
@@ -224,6 +268,27 @@ public class VcDetailViewModel extends ViewModel {
     public void onAuthDone(@Nullable String pin) {
         if (pendingVcId == null) {
             revokeRepository.cancelRevoke();
+            return;
+        }
+
+        IssuerMetadataResponse oid4vcMetadata = pendingOid4vcMetadata;
+        if (oid4vcMetadata != null) {
+            String vcId = pendingVcId;
+            pendingVcId = null;
+            pendingAuthType = null;
+            pendingOid4vcMetadata = null;
+            repository.revokeOid4vcAndDelete(vcId, oid4vcMetadata, pin).whenCompleteAsync((unused, err) -> {
+                if (err != null) {
+                    AppLog.e(TAG, "revokeOid4vcAndDelete failed: vcId=" + vcId, err);
+                    resetDeletingState();
+                    int msgRes = CaUtil.isAuthError(err)
+                            ? R.string.notice_revoke_auth_failed_message
+                            : R.string.notice_revoke_failed_message;
+                    deleteError.postValue(new Event<>(msgRes));
+                    return;
+                }
+                deleteCompleted.postValue(new Event<>(Boolean.TRUE));
+            }, mainExecutor);
             return;
         }
 
@@ -270,6 +335,7 @@ public class VcDetailViewModel extends ViewModel {
         pendingVcId = null;
         pendingAuthType = null;
         pendingPinForBio = null;
+        pendingOid4vcMetadata = null;
         revokeRepository.cancelRevoke();
         resetDeletingState();
         deleteError.postValue(new Event<>(R.string.notice_revoke_auth_failed_message));
@@ -279,6 +345,7 @@ public class VcDetailViewModel extends ViewModel {
         pendingVcId = null;
         pendingAuthType = null;
         pendingPinForBio = null;
+        pendingOid4vcMetadata = null;
         revokeRepository.cancelRevoke();
         resetDeletingState();
     }

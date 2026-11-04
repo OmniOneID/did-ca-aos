@@ -13,9 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.omnione.did.ca.data.config;
 
-public record AppConfig(String walletUrl, String tasUrl, String casUrl, String apiGwUrl,
-                        String verifierUrl) {
+import androidx.annotation.NonNull;
+
+import org.omnione.did.ca.data.repository.ServerUrlRepository;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
+public class AppConfig {
+
+    private final ServerUrlRepository serverUrlRepository;
+
+    @Inject
+    public AppConfig(@NonNull ServerUrlRepository serverUrlRepository) {
+        this.serverUrlRepository = serverUrlRepository;
+    }
+
+    public String walletUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_WALLET_URL);
+    }
+
+    public String tasUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_TAS_URL);
+    }
+
+    public String casUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_CAS_URL);
+    }
+
+    public String apiGwUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_API_GW_URL);
+    }
+
+    public String verifierUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_VERIFIER_URL);
+    }
+
+    public String demoUrl() {
+        return serverUrlRepository.url(ServerUrlRepository.KEY_DEMO_URL);
+    }
 }

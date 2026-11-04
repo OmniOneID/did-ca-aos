@@ -20,13 +20,16 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.view.WindowCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.data.model.BleTransferMode;
 import org.omnione.did.ca.databinding.ActivitySettingsBinding;
+import org.omnione.did.ca.ui.dialog.BleModeBottomSheetDialogFragment;
 import org.omnione.did.ca.ui.common.BaseActivity;
 import org.omnione.did.ca.ui.common.ConfirmDialogFragment;
 import org.omnione.did.ca.ui.common.NoticeDialogFragment;
@@ -54,7 +57,15 @@ public class SettingsActivity extends BaseActivity {
 
         viewModel.getState().observe(this, state -> {
             if (state == null) return;
+            binding.userNameRow.setVisibility(state.userName.isEmpty() ? View.GONE : View.VISIBLE);
+            binding.userNameText.setText(state.userName);
             binding.didText.setText(state.did);
+        });
+
+        viewModel.getBleTransferMode().observe(this, mode -> {
+            if (mode == null) return;
+            binding.bleTransferModeValue.setText(
+                    BleModeBottomSheetDialogFragment.labelRes(mode));
         });
 
         viewModel.getResetCompleteEvent().observe(this, ev -> {
@@ -86,7 +97,16 @@ public class SettingsActivity extends BaseActivity {
         });
 
         binding.backButton.setOnClickListener(v -> finish());
-        binding.copyDidButton.setOnClickListener(v -> copyDid());
+        binding.copyDidButton.setOnClickListener(v -> {
+            SettingsUiState state = viewModel.getState().getValue();
+            copy(state == null ? "" : state.did, R.string.settings_did_label, R.string.settings_did_copied);
+        });
+        binding.copyUserNameButton.setOnClickListener(v -> {
+            SettingsUiState state = viewModel.getState().getValue();
+            copy(state == null ? "" : state.userName, R.string.settings_user_name_label, R.string.settings_user_name_copied);
+        });
+
+        binding.serverUrlRow.setOnClickListener(v -> IntentRouter.startServerUrl(this));
 
         binding.changePinRow.setOnClickListener(v ->
                 startActivity(IntentRouter.pinChangeIntent(this)));
@@ -100,6 +120,7 @@ public class SettingsActivity extends BaseActivity {
                 startActivity(IntentRouter.biometricSetupIntent(this, 0, true)));
 
         binding.resetAppRow.setOnClickListener(v -> showResetDialog());
+        binding.bleTransferModeRow.setOnClickListener(v -> showBleModeSheet());
     }
 
     private void applySystemBarInsets() {
@@ -110,14 +131,20 @@ public class SettingsActivity extends BaseActivity {
         });
     }
 
-    private void copyDid() {
-        SettingsUiState state = viewModel.getState().getValue();
-        String did = state == null ? "" : state.did;
-        if (did.isEmpty()) return;
+    private void copy(String value, int labelRes, int toastRes) {
+        if (value.isEmpty()) return;
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null) return;
-        cm.setPrimaryClip(ClipData.newPlainText("DID", did));
-        Toast.makeText(this, R.string.settings_did_copied, Toast.LENGTH_SHORT).show();
+        cm.setPrimaryClip(ClipData.newPlainText(getString(labelRes), value));
+        Toast.makeText(this, toastRes, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showBleModeSheet() {
+        BleTransferMode current = viewModel.getBleTransferMode().getValue();
+        if (current == null) return;
+        BleModeBottomSheetDialogFragment.newInstance(current)
+                .setOnModeSelected(viewModel::setBleTransferMode)
+                .show(getSupportFragmentManager());
     }
 
     private void showResetDialog() {

@@ -21,6 +21,7 @@ import android.app.Application;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.exception.WalletCoreException;
+import org.omnione.did.proximity.sdk.core.logger.ProximityLogger;
 import org.omnione.did.sdk.wallet.walletservice.logger.WalletLogger;
 
 import dagger.hilt.android.HiltAndroidApp;
@@ -36,6 +37,7 @@ public class CaApplication extends Application {
         try {
             WalletLogger walletLogger = WalletLogger.getInstance();
             walletLogger.enable();
+            ProximityLogger.getInstance().enable();
             WalletApi.getInstance(this);
         } catch (WalletCoreException e) {
             AppLog.e(TAG, "WalletApi initialization failed", e);

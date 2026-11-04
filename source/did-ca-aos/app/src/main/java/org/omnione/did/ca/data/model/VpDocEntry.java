@@ -45,4 +45,8 @@ public final class VpDocEntry {
     public boolean isGroup() {
         return group != null;
     }
+
+    public boolean isRequired() {
+        return group != null ? group.required : claim.required;
+    }
 }

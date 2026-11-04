@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
@@ -12,7 +13,7 @@
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/brand_surface">
+        android:background="@color/brand_primary">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -28,7 +29,17 @@
                 android:contentDescription="@string/common_back"
                 android:padding="8dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_back" />
+                android:src="@drawable/ic_back"
+                app:tint="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/pretendard_semibold"
+                android:text="@string/proximity_title"
+                android:textColor="@color/white"
+                android:textSize="17sp" />
         </FrameLayout>
     </FrameLayout>
 
@@ -37,23 +48,14 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
-        android:paddingTop="8dp"
+        android:paddingTop="16dp"
         android:paddingBottom="16dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/pretendard_bold"
-            android:text="@string/proximity_title"
-            android:textColor="@color/brand_text_primary"
-            android:textSize="22sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
             android:fontFamily="@font/pretendard_regular"
-            android:lineSpacingMultiplier="1.5"
+            app:lineHeight="19.5sp"
             android:text="@string/proximity_description"
             android:textColor="@color/brand_text_secondary"
             android:textSize="13sp" />
@@ -64,16 +66,28 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/qrImage"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
+        <FrameLayout
+            android:id="@+id/qrCard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:contentDescription="@string/proximity_qr_image_cd"
-            android:scaleType="fitCenter"
-            tools:src="@drawable/ic_qr" />
+            android:background="@drawable/bg_proximity_qr_card"
+            android:elevation="3dp"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/qrImage"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/proximity_qr_image_cd"
+                android:scaleType="fitCenter"
+                tools:src="@drawable/ic_qr" />
+        </FrameLayout>
     </FrameLayout>
 
     <LinearLayout
@@ -123,12 +137,11 @@
             </FrameLayout>
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:fontFamily="@font/pretendard_regular"
                 android:gravity="center"
-                android:maxWidth="240dp"
                 android:text="@string/proximity_nfc_hint"
                 android:textColor="@color/brand_text_secondary"
                 android:textSize="12sp" />

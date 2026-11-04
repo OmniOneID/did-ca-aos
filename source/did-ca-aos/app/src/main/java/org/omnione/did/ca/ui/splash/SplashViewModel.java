@@ -20,7 +20,9 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import org.omnione.did.ca.data.network.CommunicationErrors;
 import org.omnione.did.ca.data.repository.UserIdentityRepository;
+import org.omnione.did.ca.data.repository.UserRegistrationRepository;
 import org.omnione.did.ca.data.repository.WalletStateRepository;
 import org.omnione.did.ca.ui.Event;
 import org.omnione.did.ca.util.AppLog;
@@ -37,13 +39,20 @@ public class SplashViewModel extends ViewModel {
 
     private final WalletStateRepository walletStateRepository;
     private final UserIdentityRepository userIdentityRepository;
+    private final UserRegistrationRepository userRegistrationRepository;
     private final MutableLiveData<Event<SplashRoute>> routeEvent = new MutableLiveData<>();
+
+    private volatile boolean serverPromptDone;
+    private volatile int routeGeneration;
+    private volatile String lastErrorDetail;
 
     @Inject
     public SplashViewModel(WalletStateRepository walletStateRepository,
-                           UserIdentityRepository userIdentityRepository) {
+                           UserIdentityRepository userIdentityRepository,
+                           UserRegistrationRepository userRegistrationRepository) {
         this.walletStateRepository = walletStateRepository;
         this.userIdentityRepository = userIdentityRepository;
+        this.userRegistrationRepository = userRegistrationRepository;
     }
 
     public LiveData<Event<SplashRoute>> getRouteEvent() {
@@ -51,25 +60,70 @@ public class SplashViewModel extends ViewModel {
     }
 
     public void bootstrap(Executor mainExecutor) {
+        if (serverPromptDone) {
+            route(mainExecutor);
+            return;
+        }
+        walletStateRepository.isWalletCreated()
+                .thenApply(exists -> !exists || !userIdentityRepository.isInitialized())
+                .whenCompleteAsync((needsPrompt, err) -> {
+                    if (serverPromptDone) return;
+                    if (err == null && Boolean.TRUE.equals(needsPrompt)) {
+                        routeEvent.postValue(new Event<>(SplashRoute.SERVER_SETUP));
+                        return;
+                    }
+                    serverPromptDone = true;
+                    route(mainExecutor);
+                }, mainExecutor);
+    }
+
+    public void onServerPromptSettled(Executor mainExecutor) {
+        serverPromptDone = true;
+        route(mainExecutor);
+    }
+
+    public void onServerChanged(Executor mainExecutor) {
+        userRegistrationRepository.resetForServerChange();
+        onServerPromptSettled(mainExecutor);
+    }
+
+    public String getLastErrorDetail() {
+        return lastErrorDetail;
+    }
+
+    private void route(Executor mainExecutor) {
+        final int generation = ++routeGeneration;
         walletStateRepository.ensureWalletCreated()
                 .thenCompose(created -> {
                     if (created) {
                         return CompletableFuture.completedFuture(SplashRoute.ONBOARDING);
                     }
                     if (!userIdentityRepository.isInitialized()) {
-
-                        return CompletableFuture.completedFuture(SplashRoute.ONBOARDING_RESUME);
+                        return CompletableFuture.completedFuture(
+                                userIdentityRepository.getUserId() == null
+                                        ? SplashRoute.ONBOARDING
+                                        : SplashRoute.ONBOARDING_RESUME);
                     }
                     return walletStateRepository.isLocked()
                             .thenApply(locked -> locked ? SplashRoute.PIN_AUTH : SplashRoute.DOCS);
                 })
                 .whenCompleteAsync((next, err) -> {
+                    if (generation != routeGeneration) return;
                     if (err != null) {
                         AppLog.e("SplashRoute", "bootstrap error", err);
-                        routeEvent.postValue(new Event<>(SplashRoute.ERROR));
+                        lastErrorDetail = detailOf(err);
+                        routeEvent.postValue(new Event<>(CommunicationErrors.isUnreachable(err)
+                                ? SplashRoute.ERROR_UNREACHABLE
+                                : SplashRoute.ERROR));
                         return;
                     }
+                    lastErrorDetail = null;
                     routeEvent.postValue(new Event<>(next));
                 }, mainExecutor);
+    }
+
+    private static String detailOf(Throwable err) {
+        String detail = CommunicationErrors.findDetailMessage(err);
+        return detail != null ? detail : CommunicationErrors.findSdkMessage(err);
     }
 }

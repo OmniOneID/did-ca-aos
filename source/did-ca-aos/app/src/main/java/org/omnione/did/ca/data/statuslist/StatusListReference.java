@@ -43,7 +43,7 @@ public final class StatusListReference {
             long idx = sl.get("idx").getAsLong();
             if (uri == null || uri.isEmpty() || idx < 0) return null;
             return new StatusListReference(uri, idx);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return null;
         }
     }

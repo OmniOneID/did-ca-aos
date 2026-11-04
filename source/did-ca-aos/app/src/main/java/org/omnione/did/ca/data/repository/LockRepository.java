@@ -18,15 +18,18 @@ package org.omnione.did.ca.data.repository;
 
 import android.content.Context;
 
+import java.util.concurrent.ExecutionException;
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.ca.data.network.NetworkManager;
 import org.omnione.did.ca.data.network.protocol.RequestWalletTokenDataOp;
-import org.omnione.did.ca.data.network.protocol.SignupOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.token.WalletTokenSeed;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 
 import java.util.Arrays;
@@ -39,6 +42,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import dagger.hilt.android.qualifiers.ApplicationContext;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 @Singleton
 public class LockRepository {
@@ -70,16 +74,9 @@ public class LockRepository {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String tas = config.tasUrl();
                 String cas = config.casUrl();
 
                 String userId = identity.getUserId();
-                String caAppId = identity.getOrCreateCaAppId();
-                if (userId == null || userId.isEmpty()) {
-                    userId = java.util.UUID.randomUUID().toString();
-                    SignupOp.call(net, cas, userId, caAppId);
-                    identity.setUserId(userId);
-                }
 
                 WalletTokenSeed seed = gateway.createWalletTokenSeed(
                         WalletTokenPurpose.WALLET_TOKEN_PURPOSE.PERSONALIZE_AND_CONFIGLOCK,
@@ -94,7 +91,7 @@ public class LockRepository {
 
                 session.markPersonalizeDone();
                 return null;
-            } catch (Throwable t) {
+            } catch (CommunicationException | ExecutionException | InterruptedException | UtilityException | WalletCoreException | WalletException | RuntimeException t) {
                 throw new CompletionException(t);
             }
         }, executor);

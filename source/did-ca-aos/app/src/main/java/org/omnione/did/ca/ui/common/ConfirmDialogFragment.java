@@ -16,6 +16,7 @@
 
 package org.omnione.did.ca.ui.common;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -86,6 +87,12 @@ public class ConfirmDialogFragment extends CenterDialogFragment {
 
     public void show(@NonNull FragmentManager fm) {
         show(fm, "ConfirmDialogFragment");
+    }
+
+    @Override
+    public void onCancel(@NonNull DialogInterface dialog) {
+        super.onCancel(dialog);
+        if (onCancelled != null) onCancelled.onCancelled();
     }
 
     @Override

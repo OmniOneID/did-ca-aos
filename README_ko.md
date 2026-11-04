@@ -3,7 +3,7 @@
 ## 개요
 본 문서는 OpenDID 인증 클라이언트(Certified App)를 사용하기 위한 가이드이며, 사용자에게 OpenDID에 필요한 WalletToken, Lock/Unlock, Key, DID Document(DID 문서), Verifiable Credential(이하 VC) 정보를 생성, 저장, 관리하는 기능을 제공합니다.
 
-3.0 베이스 앱으로, 기존 OpenDID 자체 프로토콜과 함께 **OID4VC**(OID4VCI / OID4VP) 기반 발급·제시와 **DID 기반 SD-JWT(`sd-jwt-did`)** 크리덴셜 포맷을 지원합니다.
+v3.0.0 앱으로, 기존 OpenDID 자체 프로토콜과 함께 **DID 기반 OID4VC(SD-JWT VC, mdoc)**(OID4VCI / OID4VP) 발급·제시와 mdoc 근접 제시를 지원합니다.
 
 ### 주요 기능
 | 기능 | 내용 |
@@ -12,9 +12,10 @@
 | 인증 | PIN 및 생체(지문 / 얼굴) 인증 |
 | 발급 | OpenDID 자체 프로토콜, OID4VCI (pre-authorized code, 웹뷰 기반 User-Init) |
 | 제시 | OpenDID 자체 프로토콜, OID4VP, ZKP 기반 제시 |
-| 크리덴셜 포맷 | OpenDID VC, DID 기반 SD-JWT(`sd-jwt-did`) |
+| 근접 제시 | QR 또는 NFC device engagement 후 BLE / Wi-Fi Aware 로 mdoc 제시 |
+| 크리덴셜 포맷 | OpenDID VC, DID 기반 SD-JWT VC(`dc+sd-jwt-did`), DID 기반 mdoc(`mso_mdoc-did`) |
 | 선택적 제출 | 제시 시 claim 단위 선택 |
-| 크리덴셜 상태 확인 | Token Status List 기반 상태 검증 |
+| 크리덴셜 상태 확인 | Token Status List 기반 상태 검증 (SD-JWT VC, mdoc) |
 | 크리덴셜 관리 | 목록 / 상세 조회, 삭제 및 폐기 |
 
 
@@ -58,59 +59,78 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
 
 ## SDK 적용 방법
 아래 Android SDK를 did-client-sdk-aos로 지칭합니다.
-- *did-wallet-sdk-aos-3.0.0-0807.jar*
-- *did-sd-jwt-vc-sdk-server-2.5.0.jar*
+- *did-wallet-sdk-aos-3.0.0.jar*
+- *proximity-holder-1.0.0.aar* (`did-proximity-sdk-android` 빌드 산출물)
 
 각 SDK가 사용하는 타사 라이브러리에 대한 자체 라이선스는 해당 링크를 참고해주세요. <br>
 [Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)
+<br>
+[Proximity SDK License-dependencies](https://github.com/OmniOneID/did-proximity-sdk-android/blob/main/dependencies-license.md)
 
 <br>
 
 Android Studio에서 did-client-sdk-aos 라이브러리를 DIDCA 프로젝트에 적용하는 방법
 1. did-client-sdk-aos 라이브러리 준비
 
-- 만약 위의 라이브러리 파일이 없는 경우, 각 SDK의 레포지토리에서 빌드하여 jar 파일들을 생성해야 합니다.
+- 만약 위의 라이브러리 파일이 없는 경우, 각 SDK의 레포지토리에서 빌드하여 jar · aar 파일들을 생성해야 합니다.
 [Client SDK로 이동](https://github.com/OmniOneID/did-client-sdk-aos)
+<br>
+[Proximity SDK로 이동](https://github.com/OmniOneID/did-proximity-sdk-android)
 
 2. did-client-sdk-aos 라이브러리 추가
 
-    a. 프로젝트에 jar 파일 추가하기
+    a. 프로젝트에 jar · aar 파일 추가하기
    - Android Studio에서 프로젝트를 엽니다.
    - Project 창의 app 디렉토리에서 libs 폴더를 생성합니다. (libs 폴더가 이미 존재하는 경우 이 단계는 생략합니다.)
-   - 위에서 준비한 jar 파일들을 libs 폴더에 복사합니다.
+   - 위에서 준비한 jar · aar 파일들을 libs 폴더에 복사합니다.
 
     b. jar 파일을 프로젝트에 추가하기
      - libs 폴더에 jar 파일들을 복사한 후, Project 창에서 각 jar 파일을 우클릭하고 Add as Library...를 선택합니다.
      - Android Studio가 jar 파일들을 자동으로 프로젝트의 종속성(dependencies)으로 추가합니다.
+     - aar 파일은 이 방법으로 추가하지 않고, build.gradle 에서 `files(...)`로 선언합니다 (3단계 참고).
 
 3. build.gradle 파일 수정
 
     a. dependencies 섹션 수정
-   - app 모듈의 build.gradle 파일을 엽니다. `libs` 폴더의 jar 파일은 `fileTree`로 포함되며, 나머지 의존성은 버전 카탈로그에서 참조합니다:
+   - app 모듈의 build.gradle 파일을 엽니다. `libs` 폴더의 jar 파일은 `fileTree`로 포함되고, 근접 aar 은 `files(...)`로 직접 참조하며, 나머지 의존성은 버전 카탈로그에서 참조합니다:
     ```groovy
     dependencies {
         implementation fileTree(dir: 'libs', include: ['*.jar'])
 
+        implementation libs.appcompat
+        implementation libs.material
+        implementation libs.core.splashscreen
+        implementation libs.lifecycle.viewmodel
+        implementation libs.lifecycle.livedata
+        implementation libs.viewpager2
+        implementation libs.gridlayout
+        implementation libs.activity
+        implementation libs.fragment
+        implementation libs.recyclerview
+        implementation libs.constraintlayout
+
         implementation libs.gson
-        implementation libs.biometric
+        implementation libs.zxing.android.embedded
         implementation libs.bitcoinj.core
+        implementation libs.biometric
+
+        api libs.room.runtime
 
         implementation libs.spongycastle.core
         implementation libs.spongycastle.prov
-        implementation libs.spongycastle.prix
-        implementation libs.spongycastle.pg
-
-        api libs.room.runtime
-        annotationProcessor libs.room.compiler
 
         implementation libs.hilt.android
         annotationProcessor libs.hilt.compiler
 
-        implementation libs.bundles.jackson
         implementation libs.nimbus.jose.jwt
+
+        implementation libs.upokecenter.cbor
+
+        implementation files('libs/proximity-holder-1.0.0.aar')
     }
     ```
 
+   - aar 에는 POM 이 없으므로, aar 이 의존하는 `spongycastle` core/prov 와 `upokecenter.cbor` 는 위와 같이 앱이 직접 선언합니다.
    - 실제 버전은 `gradle/libs.versions.toml`에 정의되어 있습니다. 새 의존성은 먼저 이 파일에 추가한 뒤 `libs.<alias>`로 참조합니다.
 
     b. minSdk 및 targetSdk 설정 확인
@@ -125,12 +145,16 @@ Android Studio에서 did-client-sdk-aos 라이브러리를 DIDCA 프로젝트에
             }
         }
 
+        def major = 3
+        def minor = 0
+        def patch = 0
+
         defaultConfig {
             applicationId "org.omnione.did.ca"
             minSdk 26
             targetSdk 36
-            versionCode 30000
-            versionName "3.0.0"
+            versionCode major * 10000 + minor * 100 + patch
+            versionName "$major.$minor.$patch"
         }
 
         compileOptions {
@@ -160,30 +184,34 @@ Android Studio에서 did-client-sdk-aos 라이브러리를 DIDCA 프로젝트에
     b. did-client-sdk-aos 모듈 사용
    - 사용할 클래스나 메서드가 있는 Java/Kotlin 파일의 최상단에 다음과 같이 임포트합니다:
     ```java
-    import  org.omnione.did.sdk.core;
-    import  org.omnione.did.sdk.utility;
-    import  org.omnione.did.sdk.datamodel;
-    import  org.omnione.did.sdk.wallet;
-    import  org.omnione.did.sdk.communication;
+    import org.omnione.did.sdk.core.api.WalletApi;
+    import org.omnione.did.sdk.core.exception.WalletCoreException;
+    import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
+    import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
+    import org.omnione.did.sdk.utility.Errors.UtilityException;
+    import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
     ```
 
    - 이제 did-client-sdk-aos 모듈에서 제공하는 기능을 소스 코드에서 사용할 수 있습니다:
     ```java
     try {
-        String hWalletToken = WalletAPI.createWalletToken(WWALLET_TOKEN_PURPOSE.LIST_VC);
+        WalletApi walletApi = WalletApi.getInstance(context);
 
-        List<Credential> credentials = WalletAPI.getAllCredentials(hWalletToken);
+        String hWalletToken = walletApi.createLocalWalletToken(
+                WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, context.getPackageName());
+
+        List<VerifiableCredential> credentials = walletApi.getAllCredentials(hWalletToken);
 
         if (credentials != null) {
-            for (Credential vc : credentials) {
+            for (VerifiableCredential vc : credentials) {
                 Log.d("VC", vc.toJson());
             }
         }
 
     } catch (WalletException e) {
         Log.e("WalletException", "Message: " + e.getMessage());
-    } catch (CommunicationException e) {
-        Log.e("CommunicationException", "Message: " + e.getMessage());
+    } catch (WalletCoreException e) {
+        Log.e("WalletCoreException", "Message: " + e.getMessage());
     } catch (UtilityException e) {
         Log.e("UtilityException", "Message: " + e.getMessage());
     }

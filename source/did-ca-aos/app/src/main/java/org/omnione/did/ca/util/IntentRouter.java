@@ -29,12 +29,14 @@ import org.omnione.did.ca.ui.issue.IssuerListActivity;
 import org.omnione.did.ca.ui.issue.ProtocolSelectActivity;
 import org.omnione.did.ca.ui.issuebyoid4vci.IssueByOid4vciActivity;
 import org.omnione.did.ca.ui.onboarding.OnboardingActivity;
+import org.omnione.did.ca.ui.onboarding.UserInfoWebActivity;
 import org.omnione.did.ca.ui.pin.PinActivity;
 import org.omnione.did.ca.ui.pin.PinMode;
 import org.omnione.did.ca.ui.proximity.ProximityActivity;
 import org.omnione.did.ca.ui.qr.QrScanActivity;
 import org.omnione.did.ca.ui.qr.QrScanMode;
 import org.omnione.did.ca.ui.referent.ReferentListActivity;
+import org.omnione.did.ca.ui.settings.ServerUrlActivity;
 import org.omnione.did.ca.ui.settings.SettingsActivity;
 import org.omnione.did.ca.ui.splash.SplashActivity;
 import org.omnione.did.ca.ui.txcode.TxCodeActivity;
@@ -50,6 +52,10 @@ public final class IntentRouter {
     public static final String EXTRA_DISPLAY_NAME = "extra_display_name";
 
     public static final String EXTRA_DISPLAY_ONLY = "extra_display_only";
+
+    public static final String EXTRA_MODE = "extra_mode";
+
+    public static final String MODE_PROXIMITY = "proximity";
 
     private IntentRouter() {}
 
@@ -90,6 +96,11 @@ public final class IntentRouter {
         Intent intent = new Intent(context, IssuerListActivity.class);
         intent.putExtra(IssuerListActivity.EXTRA_PROTOCOL, protocol.name());
         return intent;
+    }
+
+    public static Intent userInfoWebIntent(Context context, String url) {
+        return new Intent(context, UserInfoWebActivity.class)
+                .putExtra(UserInfoWebActivity.EXTRA_URL, url);
     }
 
     public static Intent claimWebIntent(Context context, String url, String afterAuthTag) {
@@ -241,8 +252,24 @@ public final class IntentRouter {
         context.startActivity(intent);
     }
 
+    public static Intent vpRequestProximityIntent(Context context) {
+        Intent intent = new Intent(context, VpRequestActivity.class);
+        intent.putExtra(EXTRA_MODE, MODE_PROXIMITY);
+        return intent;
+    }
+
     public static void startSettings(Context context) {
         context.startActivity(new Intent(context, SettingsActivity.class));
+    }
+
+    public static Intent serverUrlIntent(Context context, boolean fromSplash) {
+        Intent intent = new Intent(context, ServerUrlActivity.class);
+        intent.putExtra(ServerUrlActivity.EXTRA_FROM_SPLASH, fromSplash);
+        return intent;
+    }
+
+    public static void startServerUrl(Context context) {
+        context.startActivity(serverUrlIntent(context, false));
     }
 
     public static Intent referentListIntent(Context context,

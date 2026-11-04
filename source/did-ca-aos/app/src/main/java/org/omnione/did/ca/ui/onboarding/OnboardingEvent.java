@@ -17,8 +17,10 @@
 package org.omnione.did.ca.ui.onboarding;
 
 public enum OnboardingEvent {
+    OPEN_USER_INFO_WEB,
     SHOW_LOCK_DIALOG,
     GO_PIN_REGISTER,
 
-    GO_PIN_REGISTER_SIGN
+    GO_PIN_REGISTER_SIGN,
+    SHOW_SERVER_ERROR
 }

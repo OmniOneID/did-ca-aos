@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
+import org.omnione.did.ca.data.model.VpClaimKeys;
 import org.omnione.did.ca.data.model.VpDocEntry;
 import org.omnione.did.ca.data.model.VpRequestedClaim;
 import org.omnione.did.ca.data.model.VpRequestedDoc;
@@ -32,6 +33,8 @@ import org.omnione.did.ca.data.network.protocol.GetWalletTokenOp;
 import org.omnione.did.ca.data.network.protocol.RequestVerifyProfileOp;
 import org.omnione.did.ca.data.network.protocol.RequestVerifyVpOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
+import org.omnione.did.ca.data.statuslist.CredentialStatusRef;
+import org.omnione.did.ca.data.statuslist.CredentialStatusRefs;
 import org.omnione.did.ca.util.VcSchemaTitle;
 import org.omnione.did.sdk.core.vcmanager.datamodel.ClaimInfo;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
@@ -40,12 +43,15 @@ import org.omnione.did.sdk.datamodel.profile.VerifyProfile;
 import org.omnione.did.sdk.datamodel.vc.Claim;
 import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
 import org.omnione.did.sdk.datamodel.vc.issue.ReturnEncVP;
+import org.omnione.did.sdk.datamodel.vc.issue.VcStatus;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -65,6 +71,7 @@ public final class VpSubmissionRepository {
     private final AppConfig config;
     private final WalletGateway walletGateway;
     private final UserIdentityRepository identity;
+    private final CredentialStatusRepository statusRepo;
     private final Executor backgroundExecutor = Executors.newSingleThreadExecutor();
 
     private volatile SdkSession session;
@@ -74,15 +81,24 @@ public final class VpSubmissionRepository {
         String txId;
         String hWalletToken;
         VerifyProfile profile;
-        String vcId;
-
-        List<String> displayCodes = Collections.emptyList();
-
-        Set<String> requiredCodes = Collections.emptySet();
         ReturnEncVP returnEncVP;
+
+        final LinkedHashMap<String, Candidate> candidatesById = new LinkedHashMap<>();
 
         SdkSession(String offerId) {
             this.offerId = offerId;
+        }
+    }
+
+    private static final class Candidate {
+        final String vcId;
+        final List<String> displayCodes;
+        final Set<String> requiredCodes;
+
+        Candidate(String vcId, List<String> displayCodes, Set<String> requiredCodes) {
+            this.vcId = vcId;
+            this.displayCodes = displayCodes;
+            this.requiredCodes = requiredCodes;
         }
     }
 
@@ -91,12 +107,14 @@ public final class VpSubmissionRepository {
                                          NetworkManager net,
                                          AppConfig config,
                                          WalletGateway walletGateway,
-                                         UserIdentityRepository identity) {
+                                         UserIdentityRepository identity,
+                                         CredentialStatusRepository statusRepo) {
         this.appContext = appContext;
         this.net = net;
         this.config = config;
         this.walletGateway = walletGateway;
         this.identity = identity;
+        this.statusRepo = statusRepo;
     }
 
         public CompletableFuture<VpScenario> prepareVpPresentation(@NonNull String offerId,
@@ -125,25 +143,27 @@ public final class VpSubmissionRepository {
                         s.profile.getProfile().getFilter().getCredentialSchemas().get(0);
                 String filterSchemaId = filterSchema.getId();
 
-                VerifiableCredential matched = null;
+                List<VerifiableCredential> matches = new ArrayList<>();
                 for (VerifiableCredential vc : vcList) {
                     if (vc.getCredentialSchema() != null
                             && filterSchemaId.equals(vc.getCredentialSchema().getId())) {
-                        matched = vc;
-                        break;
+                        matches.add(vc);
                     }
                 }
-                if (matched == null) {
-                    throw new IllegalStateException("No matching credential for filter: "
-                            + filterSchemaId);
+
+                List<VerifiableCredential> active = filterActive(matches);
+                if (active.isEmpty()) {
+                    throw new NoActiveCredentialException(
+                            "No ACTIVE credential for filter: " + filterSchemaId);
                 }
 
-                Policy policy = resolvePolicy(filterSchema, matched);
-                s.vcId = matched.getId();
-                s.displayCodes = policy.displayCodes;
-                s.requiredCodes = policy.requiredCodes;
+                for (VerifiableCredential vc : active) {
+                    Policy policy = resolvePolicy(filterSchema, vc);
+                    s.candidatesById.put(vc.getId(),
+                            new Candidate(vc.getId(), policy.displayCodes, policy.requiredCodes));
+                }
 
-                return buildScenario(s, s.profile, matched);
+                return buildScenario(s, s.profile, active);
             } catch (Throwable t) {
                 session = null;
                 throw new CompletionException(t);
@@ -151,14 +171,51 @@ public final class VpSubmissionRepository {
         }, backgroundExecutor);
     }
 
+    private List<VerifiableCredential> filterActive(List<VerifiableCredential> matches)
+            throws Exception {
+        if (matches.isEmpty()) return matches;
+        List<CredentialStatusRef> refs = new ArrayList<>(matches.size());
+        for (VerifiableCredential vc : matches) {
+            refs.add(CredentialStatusRefs.fromOpenDidVc(vc));
+        }
+        Map<String, VcStatus> statuses = statusRepo.refreshSubset(refs).get();
+        List<VerifiableCredential> active = new ArrayList<>(matches.size());
+        for (VerifiableCredential vc : matches) {
+            VcStatus status = statuses.get(vc.getId());
+            if (status == null || status == VcStatus.ACTIVE) {
+                active.add(vc);
+            }
+        }
+        return active;
+    }
+
     private VpScenario buildScenario(SdkSession s,
                                      VerifyProfile profile,
-                                     VerifiableCredential vc) {
+                                     List<VerifiableCredential> candidates) {
         ProviderDetail verifierDetail = profile.getProfile().getVerifier();
         VpVerifier verifier = new VpVerifier(
                 safe(verifierDetail.getDID()),
                 safe(verifierDetail.getName()));
 
+        List<VpRequestedDoc> docs = new ArrayList<>(candidates.size());
+        for (VerifiableCredential vc : candidates) {
+            docs.add(buildDoc(s.candidatesById.get(vc.getId()), vc));
+        }
+
+        VerifyAuthType.VERIFY_AUTH_TYPE authType;
+        try {
+            authType = profile.getProfile().getProcess().getAuthType();
+        } catch (RuntimeException e) {
+            authType = null;
+        }
+        if (authType == null) {
+            authType = VerifyAuthType.VERIFY_AUTH_TYPE.PIN;
+        }
+
+        return VpScenario.openDidVc(s.offerId, verifier, docs, authType);
+    }
+
+    private static VpRequestedDoc buildDoc(Candidate candidate, VerifiableCredential vc) {
         String schemaId = (vc.getCredentialSchema() != null)
                 ? safe(vc.getCredentialSchema().getId()) : "";
         String docTitle = VcSchemaTitle.resolve(schemaId);
@@ -166,33 +223,20 @@ public final class VpSubmissionRepository {
         List<VpDocEntry> entries = new ArrayList<>();
         if (vc.getCredentialSubject() != null
                 && vc.getCredentialSubject().getClaims() != null) {
-            for (String code : s.displayCodes) {
+            for (String code : candidate.displayCodes) {
                 for (Claim c : vc.getCredentialSubject().getClaims()) {
                     if (code.equals(c.getCode())) {
                         String label = safe(c.getCaption());
                         if (label.isEmpty()) label = code;
                         String value = c.getValue() != null ? c.getValue() : "";
                         entries.add(VpDocEntry.of(new VpRequestedClaim(
-                                label, value, code, s.requiredCodes.contains(code))));
+                                label, value, code, candidate.requiredCodes.contains(code))));
                         break;
                     }
                 }
             }
         }
-
-        VpRequestedDoc doc = new VpRequestedDoc(s.vcId, docTitle, entries);
-
-        VerifyAuthType.VERIFY_AUTH_TYPE authType;
-        try {
-            authType = profile.getProfile().getProcess().getAuthType();
-        } catch (Exception e) {
-            authType = null;
-        }
-        if (authType == null) {
-            authType = VerifyAuthType.VERIFY_AUTH_TYPE.PIN;
-        }
-
-        return VpScenario.openDidVc(s.offerId, verifier, Collections.singletonList(doc), authType);
+        return new VpRequestedDoc(candidate.vcId, docTitle, entries);
     }
 
     private static final class Policy {
@@ -218,17 +262,22 @@ public final class VpSubmissionRepository {
             return new Policy(candidates, new LinkedHashSet<>(candidates));
         }
 
-        List<String> displayClaims = filterSchema.getDisplayClaims();
-        List<String> display = (displayClaims != null && !displayClaims.isEmpty())
-                ? intersectOrdered(displayClaims, candidateSet)
-                : candidates;
-
-        Set<String> required = new HashSet<>();
+        Set<String> required = new LinkedHashSet<>();
         List<String> requiredClaims = filterSchema.getRequiredClaims();
         if (requiredClaims != null) {
             for (String code : requiredClaims) {
                 if (candidateSet.contains(code)) required.add(code);
             }
+        }
+
+        List<String> displayClaims = filterSchema.getDisplayClaims();
+        if (displayClaims == null || displayClaims.isEmpty()) {
+            return new Policy(candidates, required);
+        }
+
+        List<String> display = new ArrayList<>(required);
+        for (String code : intersectOrdered(displayClaims, candidateSet)) {
+            if (!display.contains(code)) display.add(code);
         }
         return new Policy(display, required);
     }
@@ -246,31 +295,38 @@ public final class VpSubmissionRepository {
     }
 
         public CompletableFuture<Void> signVpWithPin(@NonNull String pin,
-                                                 @NonNull Set<String> uncheckedClaimKeys) {
+                                                 @NonNull String selectedOptionId,
+                                                 @NonNull Set<String> includedClaimKeys) {
         SdkSession s = session;
         if (s == null) return failedSession();
-        return doSign(s, pin, uncheckedClaimKeys);
+        return doSign(s, pin, selectedOptionId, includedClaimKeys);
     }
 
-        public CompletableFuture<Void> signVpWithBio(@NonNull Set<String> uncheckedClaimKeys) {
+        public CompletableFuture<Void> signVpWithBio(@NonNull String selectedOptionId,
+                                                 @NonNull Set<String> includedClaimKeys) {
         SdkSession s = session;
         if (s == null) return failedSession();
 
-        return doSign(s, "", uncheckedClaimKeys);
+        return doSign(s, "", selectedOptionId, includedClaimKeys);
     }
 
     private CompletableFuture<Void> doSign(SdkSession s, String passcode,
-                                           Set<String> uncheckedClaimKeys) {
+                                           String selectedOptionId,
+                                           Set<String> includedClaimKeys) {
+        Candidate candidate = s.candidatesById.get(selectedOptionId);
+        if (candidate == null) {
+            return failedSession();
+        }
 
-        Set<String> submit = new LinkedHashSet<>(s.requiredCodes);
-        for (String code : s.displayCodes) {
-            if (!uncheckedClaimKeys.contains(s.vcId + ":" + code)) {
+        Set<String> submit = new LinkedHashSet<>(candidate.requiredCodes);
+        for (String code : candidate.displayCodes) {
+            if (includedClaimKeys.contains(VpClaimKeys.flat(candidate.vcId, code))) {
                 submit.add(code);
             }
         }
 
         List<ClaimInfo> claimInfos = Collections.singletonList(
-                new ClaimInfo(s.vcId, new ArrayList<>(submit)));
+                new ClaimInfo(candidate.vcId, new ArrayList<>(submit)));
         return walletGateway.createEncVp(s.hWalletToken, claimInfos, s.profile,
                         config.apiGwUrl(), passcode)
                 .thenAccept(result -> s.returnEncVP = result);

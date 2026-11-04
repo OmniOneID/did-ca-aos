@@ -34,6 +34,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.biometric.BiometricManager;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
@@ -55,6 +56,7 @@ public class BiometricSetupActivity extends BaseActivity {
 
     private static final long BIO_SLIDE_DURATION_MS = 5000L;
     private static final int PANEL_WIDTH_DP = 200;
+    private static final String SUCCESS_TAG = "bio_success";
 
     private ActivityBiometricSetupBinding binding;
     private BiometricSetupViewModel viewModel;
@@ -68,6 +70,9 @@ public class BiometricSetupActivity extends BaseActivity {
         setContentView(binding.getRoot());
 
         viewModel = new ViewModelProvider(this).get(BiometricSetupViewModel.class);
+
+        Fragment restored = getSupportFragmentManager().findFragmentByTag(SUCCESS_TAG);
+        if (restored instanceof NoticeDialogFragment) bindSuccess((NoticeDialogFragment) restored);
 
         pinAuthLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -105,7 +110,11 @@ public class BiometricSetupActivity extends BaseActivity {
             switch (result.status) {
                 case SUCCESS:
                     if (viewModel.isFromSettings()) {
-                        finishWithRouting();
+                        bindSuccess(NoticeDialogFragment.newInstance(this,
+                                        R.string.biometric_success_title,
+                                        R.string.biometric_success_message,
+                                        R.string.common_ok))
+                                .show(getSupportFragmentManager(), SUCCESS_TAG);
                     } else {
 
                         IntentRouter.startOnboarding(this, 3, true);
@@ -113,10 +122,15 @@ public class BiometricSetupActivity extends BaseActivity {
                     }
                     break;
                 case CANCEL:
+                    showErrorNotice(R.string.common_error, R.string.biometric_not_completed,
+                            null, null);
                     break;
                 case ERROR:
-                case FAIL:
-                    Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
+                    showErrorNotice(R.string.common_error,
+                            "onAuthenticationError".equals(result.message)
+                            ? R.string.biometric_locked
+                            : R.string.biometric_not_completed,
+                            null, null);
                     break;
             }
         });
@@ -130,10 +144,12 @@ public class BiometricSetupActivity extends BaseActivity {
                     showBiometricNotice(R.string.biometric_already_registered);
                     break;
                 case NONE_ENROLLED:
-                    showBiometricNotice(R.string.biometric_none_enrolled);
+                    showErrorNotice(R.string.common_error, R.string.biometric_none_enrolled,
+                            null, null);
                     break;
                 case HW_UNAVAILABLE:
-                    showBiometricNotice(R.string.biometric_hw_unavailable);
+                    showErrorNotice(R.string.common_error, R.string.biometric_hw_unavailable,
+                            null, null);
                     break;
                 case READY:
                     pinAuthLauncher.launch(IntentRouter.pinAuthIntent(this, null));
@@ -144,15 +160,8 @@ public class BiometricSetupActivity extends BaseActivity {
         binding.enableButton.setOnClickListener(v -> {
             BiometricManager manager = BiometricManager.from(this);
             int canAuth = manager.canAuthenticate(BIOMETRIC_AUTHENTICATORS);
-            if (viewModel.isFromSettings()) {
+            if (viewModel.isFromSettings() || canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
                 viewModel.checkBioStateForSettings(canAuth);
-                return;
-            }
-            if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
-                Toast.makeText(this, R.string.biometric_unavailable, Toast.LENGTH_SHORT).show();
-
-                IntentRouter.startOnboarding(this, 3, false);
-                finish();
                 return;
             }
             viewModel.onEnableClicked(this);
@@ -220,6 +229,10 @@ public class BiometricSetupActivity extends BaseActivity {
                         messageRes,
                         R.string.common_ok)
                 .show(getSupportFragmentManager(), "bio_notice");
+    }
+
+    private NoticeDialogFragment bindSuccess(NoticeDialogFragment dialog) {
+        return dialog.setOnConfirmed(this::finishWithRouting).setOnCancelled(this::finishWithRouting);
     }
 
     private void finishWithRouting() {

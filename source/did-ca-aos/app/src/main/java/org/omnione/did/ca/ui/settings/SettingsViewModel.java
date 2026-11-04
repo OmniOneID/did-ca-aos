@@ -21,7 +21,10 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import org.omnione.did.ca.data.model.BleTransferMode;
 import org.omnione.did.ca.data.repository.AppResetRepository;
+import org.omnione.did.ca.data.repository.BleTransferModeRepository;
+import org.omnione.did.ca.data.repository.UserIdentityRepository;
 import org.omnione.did.ca.data.repository.WalletStateRepository;
 import org.omnione.did.ca.ui.Event;
 import org.omnione.did.ca.util.AppLog;
@@ -40,8 +43,11 @@ public class SettingsViewModel extends ViewModel {
 
     private final WalletStateRepository walletStateRepository;
     private final AppResetRepository appResetRepository;
+    private final BleTransferModeRepository bleTransferModeRepository;
+    private final UserIdentityRepository userIdentityRepository;
 
     private final MutableLiveData<SettingsUiState> state = new MutableLiveData<>();
+    private final MutableLiveData<BleTransferMode> bleTransferMode = new MutableLiveData<>();
     private final MutableLiveData<Event<Boolean>> resetCompleteEvent = new MutableLiveData<>();
 
     private final MutableLiveData<Event<Boolean>> unlockPinChangeRequest = new MutableLiveData<>();
@@ -49,20 +55,37 @@ public class SettingsViewModel extends ViewModel {
 
     @Inject
     public SettingsViewModel(@NonNull WalletStateRepository walletStateRepository,
-                             @NonNull AppResetRepository appResetRepository) {
+                             @NonNull AppResetRepository appResetRepository,
+                             @NonNull BleTransferModeRepository bleTransferModeRepository,
+                             @NonNull UserIdentityRepository userIdentityRepository) {
         this.walletStateRepository = walletStateRepository;
         this.appResetRepository = appResetRepository;
+        this.bleTransferModeRepository = bleTransferModeRepository;
+        this.userIdentityRepository = userIdentityRepository;
+    }
+
+    @NonNull
+    public LiveData<BleTransferMode> getBleTransferMode() {
+        return bleTransferMode;
+    }
+
+    public void setBleTransferMode(@NonNull BleTransferMode mode) {
+        bleTransferModeRepository.set(mode);
+        bleTransferMode.setValue(mode);
     }
 
     public void init() {
+        bleTransferMode.setValue(bleTransferModeRepository.get());
         if (state.getValue() != null) return;
-        state.setValue(new SettingsUiState(""));
+        String storedName = userIdentityRepository.getUserName();
+        String userName = storedName == null ? "" : storedName;
+        state.setValue(new SettingsUiState(userName, ""));
         walletStateRepository.getHolderDid().whenCompleteAsync((did, err) -> {
             if (err != null) {
                 AppLog.e(TAG, "getHolderDid failed", err);
                 return;
             }
-            state.postValue(new SettingsUiState(did == null ? "" : did));
+            state.postValue(new SettingsUiState(userName, did == null ? "" : did));
         }, callbackExecutor);
     }
 

@@ -23,8 +23,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.omnione.did.ca.util.AppLog;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.urlconnection.HttpUrlConnectionTask;
 import org.omnione.did.sdk.core.api.WalletApi;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.core.oid4vc.crypto.JwsParts;
 import org.omnione.did.sdk.core.oid4vc.verify.Es256Verifier;
 import org.omnione.did.sdk.datamodel.oid4vc.AuthorizationRequest;
@@ -41,6 +43,8 @@ import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 @Singleton
 public final class OID4VPProtocol {
@@ -98,7 +102,7 @@ public final class OID4VPProtocol {
             try {
                 AppLog.d("OID4VPProtocol: matchCredentials clientId=" + ar.getClientId());
                 return walletApi.matchCredentials(hWalletToken, ar);
-            } catch (Exception e) {
+            } catch (UtilityException | WalletCoreException | WalletException | RuntimeException e) {
                 throw rethrow(e);
             }
         });
@@ -112,7 +116,7 @@ public final class OID4VPProtocol {
             try {
                 AppLog.d("OID4VPProtocol: createVpToken matchedCount=" + matched.size());
                 return walletApi.createVpToken(hWalletToken, ar, matched, passcode);
-            } catch (Exception e) {
+            } catch (UtilityException | WalletCoreException | WalletException | RuntimeException e) {
                 throw rethrow(e);
             }
         });
@@ -127,7 +131,7 @@ public final class OID4VPProtocol {
                 http.makeHttpRequest(ar.getResponseUri(), "POST", body, null,
                         "application/x-www-form-urlencoded");
                 return null;
-            } catch (Exception e) {
+            } catch (CommunicationException | RuntimeException e) {
                 throw rethrow(e);
             }
         });

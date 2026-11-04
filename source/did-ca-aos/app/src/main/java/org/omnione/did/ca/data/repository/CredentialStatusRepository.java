@@ -57,7 +57,7 @@ public final class CredentialStatusRepository {
     }
 
     @NonNull
-    public CompletableFuture<Map<String, VcStatus>> refreshAll(@NonNull List<CredentialStatusRef> refs) {
+    public CompletableFuture<Map<String, StatusListResult>> refreshAll(@NonNull List<CredentialStatusRef> refs) {
         if (refs.isEmpty()) {
             pending.clear();
             known.clear();
@@ -65,11 +65,12 @@ public final class CredentialStatusRepository {
         }
         statusListRepo.invalidate();
 
-        Map<String, VcStatus> resolved = new ConcurrentHashMap<>();
+        Map<String, StatusListResult> resolved = new ConcurrentHashMap<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>(refs.size());
         for (CredentialStatusRef ref : refs) {
-            futures.add(check(ref).thenAccept(
-                    result -> resolved.put(ref.vcId, record(ref, result, false))));
+            futures.add(check(ref).thenAccept(result -> resolved.put(ref.vcId, new StatusListResult(
+                    record(ref, result, false), result.checkFailed, result.failMessageRes,
+                    result.explicitRevoked))));
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(unused -> {
@@ -81,6 +82,28 @@ public final class CredentialStatusRepository {
     }
 
     @NonNull
+    public CompletableFuture<Map<String, VcStatus>> refreshSubset(
+            @NonNull List<CredentialStatusRef> refs) {
+        if (refs.isEmpty()) {
+            return CompletableFuture.completedFuture(Collections.emptyMap());
+        }
+        for (CredentialStatusRef ref : refs) {
+            if (ref.listRef != null) {
+                statusListRepo.invalidate(ref.listRef.uri);
+            }
+        }
+
+        Map<String, VcStatus> resolved = new ConcurrentHashMap<>();
+        List<CompletableFuture<Void>> futures = new ArrayList<>(refs.size());
+        for (CredentialStatusRef ref : refs) {
+            futures.add(check(ref).thenAccept(
+                    result -> resolved.put(ref.vcId, record(ref, result, false))));
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(unused -> new HashMap<>(resolved));
+    }
+
+    @NonNull
     public CompletableFuture<StatusListResult> refreshOne(@NonNull CredentialStatusRef ref) {
         if (ref.listRef != null) {
             statusListRepo.invalidate(ref.listRef.uri);
@@ -89,7 +112,8 @@ public final class CredentialStatusRepository {
             VcStatus resolved = record(ref, result, true);
             return resolved == result.status
                     ? result
-                    : new StatusListResult(resolved, result.checkFailed, result.failMessageRes);
+                    : new StatusListResult(resolved, result.checkFailed, result.failMessageRes,
+                            result.explicitRevoked);
         });
     }
 
@@ -113,7 +137,7 @@ public final class CredentialStatusRepository {
 
     @NonNull
     private CompletableFuture<StatusListResult> check(@NonNull CredentialStatusRef ref) {
-        if (ref.badge == CredentialBadge.SD_JWT) {
+        if (ref.badge == CredentialBadge.SD_JWT || ref.badge == CredentialBadge.MDOC) {
             return statusListRepo.check(ref.listRef, ref.expEpochSec);
         }
         return vcMetaRepo.check(ref.vcId, null);

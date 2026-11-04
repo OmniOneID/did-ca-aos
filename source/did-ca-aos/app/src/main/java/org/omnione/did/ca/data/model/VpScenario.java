@@ -33,7 +33,7 @@ public final class VpScenario {
     @NonNull
     public final VpRequestMode mode;
     @NonNull
-    public final List<VpRequestedDoc> openDidVcDocs;
+    public final List<VpRequestedDoc> candidates;
     @Nullable
     public final VpZkpRequest zkpRequest;
 
@@ -43,23 +43,27 @@ public final class VpScenario {
     private VpScenario(@NonNull String id,
                        @NonNull VpVerifier verifier,
                        @NonNull VpRequestMode mode,
-                       @NonNull List<VpRequestedDoc> openDidVcDocs,
+                       @NonNull List<VpRequestedDoc> candidates,
                        @Nullable VpZkpRequest zkpRequest,
                        @NonNull VerifyAuthType.VERIFY_AUTH_TYPE authType) {
         this.id = id;
         this.verifier = verifier;
         this.mode = mode;
-        this.openDidVcDocs = openDidVcDocs;
+        this.candidates = candidates;
         this.zkpRequest = zkpRequest;
         this.authType = authType;
+    }
+
+    public boolean isMultiCandidate() {
+        return candidates.size() > 1;
     }
 
     @NonNull
     public static VpScenario openDidVc(@NonNull String id,
                                 @NonNull VpVerifier verifier,
-                                @NonNull List<VpRequestedDoc> openDidVcDocs,
+                                @NonNull List<VpRequestedDoc> candidates,
                                 @NonNull VerifyAuthType.VERIFY_AUTH_TYPE authType) {
-        return new VpScenario(id, verifier, VpRequestMode.OPENDID_VC, openDidVcDocs, null, authType);
+        return new VpScenario(id, verifier, VpRequestMode.OPENDID_VC, candidates, null, authType);
     }
 
     @NonNull
@@ -76,5 +80,13 @@ public final class VpScenario {
                                     @NonNull List<VpRequestedDoc> docs,
                                     @NonNull VerifyAuthType.VERIFY_AUTH_TYPE authType) {
         return new VpScenario(id, verifier, VpRequestMode.OID4VP, docs, null, authType);
+    }
+
+    @NonNull
+    public static VpScenario proximity(@NonNull String id,
+                                       @NonNull VpVerifier verifier,
+                                       @NonNull List<VpRequestedDoc> docs,
+                                       @NonNull VerifyAuthType.VERIFY_AUTH_TYPE authType) {
+        return new VpScenario(id, verifier, VpRequestMode.PROXIMITY, docs, null, authType);
     }
 }

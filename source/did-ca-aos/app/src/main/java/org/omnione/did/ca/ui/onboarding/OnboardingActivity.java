@@ -23,6 +23,8 @@ import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.LinearLayout;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
@@ -31,6 +33,7 @@ import org.omnione.did.ca.databinding.ActivityOnboardingBinding;
 import org.omnione.did.ca.databinding.ItemOnboardingBinding;
 import org.omnione.did.ca.ui.common.BaseActivity;
 import org.omnione.did.ca.ui.common.ConfirmDialogFragment;
+import org.omnione.did.ca.ui.common.NoticeDialogFragment;
 import org.omnione.did.ca.util.IntentRouter;
 
 import java.util.Locale;
@@ -43,12 +46,38 @@ public class OnboardingActivity extends BaseActivity {
 
     private ActivityOnboardingBinding binding;
     private OnboardingViewModel viewModel;
+    private ActivityResultLauncher<android.content.Intent> serverUrlLauncher;
+    private ActivityResultLauncher<android.content.Intent> userInfoLauncher;
+    private boolean userInfoOpen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityOnboardingBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        serverUrlLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        viewModel.resetRegistrationForServerChange();
+                    } else if (viewModel.isLastErrorUnreachable()) {
+                        showServerErrorDialog();
+                    }
+                });
+        userInfoLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    userInfoOpen = false;
+                    android.content.Intent data = result.getData();
+                    if (result.getResultCode() == RESULT_OK && data != null) {
+                        viewModel.onUserRegistered(
+                                data.getStringExtra(UserInfoWebActivity.EXTRA_USER_NAME),
+                                data.getStringExtra(UserInfoWebActivity.EXTRA_USER_ID));
+                    }
+                });
+
+        NoticeDialogFragment.dismissRestored(getSupportFragmentManager());
 
         viewModel = new ViewModelProvider(this).get(OnboardingViewModel.class);
 
@@ -58,6 +87,13 @@ public class OnboardingActivity extends BaseActivity {
                 viewModel.firePreExecute();
             }
         });
+        viewModel.getInFlight().observe(this, inFlight -> {
+            if (Boolean.TRUE.equals(inFlight)) {
+                showProgress();
+            } else {
+                dismissProgress();
+            }
+        });
         viewModel.getEvents().observe(this, event -> {
             OnboardingEvent value = event == null ? null : event.getIfNotHandled();
             if (value != null) handleEvent(value);
@@ -65,10 +101,10 @@ public class OnboardingActivity extends BaseActivity {
 
         binding.nextButton.setOnClickListener(v -> viewModel.onNext());
 
-        int step = getIntent().getIntExtra(EXTRA_STEP, 1);
-        boolean viaBio = getIntent().getBooleanExtra(EXTRA_VIA_BIO, false);
-        viewModel.setViaBio(viaBio);
-        viewModel.setStep(step);
+        if (viewModel.getState().getValue() == null) {
+            viewModel.setViaBio(getIntent().getBooleanExtra(EXTRA_VIA_BIO, false));
+            viewModel.setStep(getIntent().getIntExtra(EXTRA_STEP, 1));
+        }
     }
 
     private void render(OnboardingUiState state) {
@@ -127,6 +163,12 @@ public class OnboardingActivity extends BaseActivity {
 
     private void handleEvent(OnboardingEvent event) {
         switch (event) {
+            case OPEN_USER_INFO_WEB:
+                if (userInfoOpen) break;
+                userInfoOpen = true;
+                userInfoLauncher.launch(
+                        IntentRouter.userInfoWebIntent(this, viewModel.userInfoUrl()));
+                break;
             case SHOW_LOCK_DIALOG:
                 showLockDialog();
                 break;
@@ -138,7 +180,25 @@ public class OnboardingActivity extends BaseActivity {
 
                 startActivity(IntentRouter.pinRegisterSignIntent(this, viewModel.isViaBio()));
                 break;
+            case SHOW_SERVER_ERROR:
+                showServerErrorDialog();
+                break;
         }
+    }
+
+    private void showServerErrorDialog() {
+        boolean unreachable = viewModel.isLastErrorUnreachable();
+        String detail = viewModel.getLastErrorDetail();
+        CharSequence message = (!unreachable && detail != null && !detail.isEmpty())
+                ? detail
+                : getText(R.string.splash_init_failed_message);
+        NoticeDialogFragment dialog = NoticeDialogFragment.newInstance(
+                getText(R.string.common_error), message, getText(R.string.common_ok));
+        if (unreachable) {
+            dialog.setLink(R.string.server_settings,
+                    () -> serverUrlLauncher.launch(IntentRouter.serverUrlIntent(this, false)));
+        }
+        dialog.show(getSupportFragmentManager());
     }
 
     private void showLockDialog() {
@@ -155,7 +215,7 @@ public class OnboardingActivity extends BaseActivity {
     }
 
     private void onLockDialogYes() {
-
+        viewModel.onLockAccepted();
         startActivity(IntentRouter.pinUnlockRegisterIntent(this, 2));
     }
 

@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/pretendard_semibold"
-            android:lineSpacingMultiplier="1.35"
+            app:lineHeight="18.9sp"
             android:textColor="@color/brand_text_primary"
             android:textSize="14sp"
             tools:text="National ID Card" />

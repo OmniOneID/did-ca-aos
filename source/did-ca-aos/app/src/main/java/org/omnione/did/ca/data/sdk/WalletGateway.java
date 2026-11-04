@@ -23,12 +23,16 @@ import androidx.annotation.Nullable;
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.core.bioprompthelper.BioPromptHelper;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
+import org.omnione.did.sdk.core.oid4vc.model.IssuerMetadataResponse;
 import org.omnione.did.sdk.core.vcmanager.datamodel.ClaimInfo;
 import org.omnione.did.sdk.datamodel.common.ProofContainer;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 import org.omnione.did.sdk.datamodel.did.DIDDocument;
 import org.omnione.did.sdk.datamodel.did.SignedDidDoc;
+import org.omnione.did.sdk.datamodel.oid4vc.MdocCredentialItem;
+import org.omnione.did.sdk.datamodel.oid4vc.OID4VCCredentialItem;
 import org.omnione.did.sdk.datamodel.oid4vc.SdJwtCredentialItem;
 import org.omnione.did.sdk.datamodel.profile.IssueProfile;
 import org.omnione.did.sdk.datamodel.profile.ProofRequestProfile;
@@ -56,6 +60,8 @@ import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 @Singleton
 public class WalletGateway {
@@ -89,7 +95,7 @@ public class WalletGateway {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return walletApi.isSavedKey(keyId);
-            } catch (Exception e) {
+            } catch (UtilityException | WalletCoreException | WalletException | RuntimeException e) {
                 return false;
             }
         }, executor);
@@ -156,7 +162,7 @@ public class WalletGateway {
     public void registerBioKey(Context ctx) {
         try {
             walletApi.registerBioKey(ctx);
-        } catch (Exception e) {
+        } catch (WalletException | RuntimeException e) {
             throw new RuntimeException(e);
         }
     }
@@ -164,7 +170,7 @@ public class WalletGateway {
     public void authenticateBioKey(Context ctx) {
         try {
             walletApi.authenticateBioKey(ctx);
-        } catch (Exception e) {
+        } catch (WalletCoreException | WalletException | RuntimeException e) {
             throw new RuntimeException(e);
         }
     }
@@ -172,6 +178,11 @@ public class WalletGateway {
     public CompletableFuture<WalletTokenSeed> createWalletTokenSeed(
             WalletTokenPurpose.WALLET_TOKEN_PURPOSE purpose, String pkgName, String userId) {
         return async(() -> walletApi.createWalletTokenSeed(purpose, pkgName, userId));
+    }
+
+    public CompletableFuture<String> createLocalWalletToken(
+            WalletTokenPurpose.WALLET_TOKEN_PURPOSE purpose, String pkgName) {
+        return async(() -> walletApi.createLocalWalletToken(purpose, pkgName));
     }
 
     public CompletableFuture<Boolean> bindUser(String hWalletToken) {
@@ -274,14 +285,14 @@ public class WalletGateway {
     public CompletableFuture<Boolean> isAnyZkpCredentialsSaved() {
         return CompletableFuture.supplyAsync(() -> {
             try { return walletApi.isAnyZkpCredentialsSaved(); }
-            catch (Exception e) { return false; }
+            catch (UtilityException | WalletCoreException | WalletException | RuntimeException e) { return false; }
         }, executor);
     }
 
     public CompletableFuture<Boolean> isZkpCredentialsSaved(String vcId) {
         return CompletableFuture.supplyAsync(() -> {
             try { return walletApi.isZkpCredentialsSaved(vcId); }
-            catch (Exception e) { return false; }
+            catch (UtilityException | WalletCoreException | WalletException | RuntimeException e) { return false; }
         }, executor);
     }
 
@@ -295,23 +306,57 @@ public class WalletGateway {
         });
     }
 
-    public CompletableFuture<List<SdJwtCredentialItem>> getAllOID4VCs(String walletToken) {
+    public CompletableFuture<List<OID4VCCredentialItem>> getAllOID4VCs(String walletToken) {
         return async(() -> {
-            List<SdJwtCredentialItem> result = walletApi.getAllOID4VCs(walletToken);
-            return result == null ? java.util.Collections.<SdJwtCredentialItem>emptyList() : result;
+            List<OID4VCCredentialItem> result = walletApi.getAllOID4VCs(walletToken);
+            return result == null ? java.util.Collections.<OID4VCCredentialItem>emptyList() : result;
         });
     }
 
-    public CompletableFuture<List<SdJwtCredentialItem>> getOID4VCs(String walletToken, List<String> ids) {
+    public CompletableFuture<List<OID4VCCredentialItem>> getOID4VCs(String walletToken, List<String> ids) {
         return async(() -> {
-            List<SdJwtCredentialItem> result = walletApi.getOID4VCs(walletToken, ids);
-            return result == null ? java.util.Collections.<SdJwtCredentialItem>emptyList() : result;
+            List<OID4VCCredentialItem> result = walletApi.getOID4VCs(walletToken, ids);
+            return result == null ? java.util.Collections.<OID4VCCredentialItem>emptyList() : result;
+        });
+    }
+
+    public CompletableFuture<List<SdJwtCredentialItem>> getAllSdJwtOID4VCs(String walletToken) {
+        return getAllOID4VCs(walletToken).thenApply(items -> {
+            List<SdJwtCredentialItem> sdJwtItems = new java.util.ArrayList<>();
+            for (OID4VCCredentialItem item : items) {
+                if (item instanceof SdJwtCredentialItem) {
+                    sdJwtItems.add((SdJwtCredentialItem) item);
+                }
+            }
+            return sdJwtItems;
+        });
+    }
+
+    public CompletableFuture<List<MdocCredentialItem>> getAllMdocOID4VCs(String walletToken) {
+        return getAllOID4VCs(walletToken).thenApply(items -> {
+            List<MdocCredentialItem> mdocItems = new java.util.ArrayList<>();
+            for (OID4VCCredentialItem item : items) {
+                if (item instanceof MdocCredentialItem) {
+                    mdocItems.add((MdocCredentialItem) item);
+                }
+            }
+            return mdocItems;
         });
     }
 
     public CompletableFuture<Void> deleteOID4VCs(String hWalletToken, List<String> ids) {
         return async(() -> {
             walletApi.deleteOID4VCs(hWalletToken, ids);
+            return null;
+        });
+    }
+
+    public CompletableFuture<Void> requestRevokeOID4VC(String hWalletToken,
+                                                       IssuerMetadataResponse metadata,
+                                                       String vcId,
+                                                       String passcode) {
+        return async(() -> {
+            walletApi.requestRevokeOID4VC(hWalletToken, metadata, vcId, passcode).get();
             return null;
         });
     }

@@ -39,8 +39,19 @@ public class NoticeDialogFragment extends CenterDialogFragment {
     private static final String ARG_MESSAGE = "message";
     private static final String ARG_BUTTON = "button";
 
+    private static final String TAG = "NoticeDialogFragment";
+
     @Nullable
     private OnConfirmed onConfirmed;
+
+    @Nullable
+    private Runnable onLink;
+
+    @StringRes
+    private int linkLabelRes;
+
+    @Nullable
+    private Runnable onCancelled;
 
     @NonNull
     public static NoticeDialogFragment newInstance(@NonNull CharSequence title,
@@ -68,8 +79,32 @@ public class NoticeDialogFragment extends CenterDialogFragment {
         return this;
     }
 
+    public NoticeDialogFragment setLink(@StringRes int labelRes, @NonNull Runnable onLink) {
+        this.linkLabelRes = labelRes;
+        this.onLink = onLink;
+        return this;
+    }
+
+    public NoticeDialogFragment setOnCancelled(@Nullable Runnable onCancelled) {
+        this.onCancelled = onCancelled;
+        return this;
+    }
+
+    @Override
+    public void onCancel(@NonNull android.content.DialogInterface dialog) {
+        super.onCancel(dialog);
+        if (onCancelled != null) onCancelled.run();
+    }
+
     public void show(@NonNull FragmentManager fm) {
-        show(fm, "NoticeDialogFragment");
+        show(fm, TAG);
+    }
+
+    public static void dismissRestored(@NonNull FragmentManager fm) {
+        androidx.fragment.app.Fragment restored = fm.findFragmentByTag(TAG);
+        if (restored instanceof androidx.fragment.app.DialogFragment) {
+            ((androidx.fragment.app.DialogFragment) restored).dismissAllowingStateLoss();
+        }
     }
 
     @Override
@@ -91,5 +126,18 @@ public class NoticeDialogFragment extends CenterDialogFragment {
             if (onConfirmed != null) onConfirmed.onConfirmed();
             dismissAllowingStateLoss();
         });
+
+        MaterialButton link = card.findViewById(R.id.dialogLink);
+        if (onLink == null) {
+            link.setVisibility(View.GONE);
+        } else {
+            link.setVisibility(View.VISIBLE);
+            link.setText(linkLabelRes);
+            link.setOnClickListener(v -> {
+                Runnable action = onLink;
+                dismissAllowingStateLoss();
+                action.run();
+            });
+        }
     }
 }

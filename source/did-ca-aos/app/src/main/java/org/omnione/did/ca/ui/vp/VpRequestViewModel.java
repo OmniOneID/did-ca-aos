@@ -26,10 +26,14 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import org.omnione.did.ca.R;
+import org.omnione.did.ca.data.model.VpRequestedDoc;
 import org.omnione.did.ca.data.model.VpScenario;
 import org.omnione.did.ca.data.network.CommunicationErrors;
 import org.omnione.did.ca.data.repository.BiometricRepository;
+import org.omnione.did.ca.data.repository.NoActiveCredentialException;
+import org.omnione.did.ca.data.repository.ProximitySessionEndedException;
 import org.omnione.did.ca.data.repository.Oid4vpSubmissionRepository;
+import org.omnione.did.ca.data.repository.ProximityPresentationRepository;
 import org.omnione.did.ca.data.model.VerifyOfferEnvelope;
 import org.omnione.did.sdk.datamodel.common.enums.VerifyAuthType;
 import org.omnione.did.ca.data.repository.VpOfferParser;
@@ -39,15 +43,19 @@ import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.ui.Event;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.ca.util.ProximityErrors;
 import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
@@ -62,6 +70,7 @@ public final class VpRequestViewModel extends ViewModel {
     private final VpSubmissionRepository vpRepo;
     private final ZkpSubmissionRepository zkpRepo;
     private final Oid4vpSubmissionRepository oid4vpRepo;
+    private final ProximityPresentationRepository proximityRepo;
     private final VpOfferParser parser;
     private final WalletGateway walletGateway;
     private final BiometricRepository bioRepo;
@@ -73,17 +82,17 @@ public final class VpRequestViewModel extends ViewModel {
 
     @Nullable private VerifyOfferEnvelope pendingOffer;
 
-    private enum Flow { OPENDID_VC, ZKP, OID4VP }
+    private enum Flow { OPENDID_VC, ZKP, OID4VP, PROXIMITY }
     private Flow currentFlow = Flow.OPENDID_VC;
 
-    private boolean warnedAtLeastOnce;
-
     @Nullable private String pendingPinForBio;
+    private final AtomicBoolean proximitySessionClosed = new AtomicBoolean(false);
 
     @Inject
     public VpRequestViewModel(VpSubmissionRepository vpRepo,
                               ZkpSubmissionRepository zkpRepo,
                               Oid4vpSubmissionRepository oid4vpRepo,
+                              ProximityPresentationRepository proximityRepo,
                               VpOfferParser parser,
                               WalletGateway walletGateway,
                               BiometricRepository bioRepo,
@@ -91,6 +100,7 @@ public final class VpRequestViewModel extends ViewModel {
         this.vpRepo = vpRepo;
         this.zkpRepo = zkpRepo;
         this.oid4vpRepo = oid4vpRepo;
+        this.proximityRepo = proximityRepo;
         this.parser = parser;
         this.walletGateway = walletGateway;
         this.bioRepo = bioRepo;
@@ -118,7 +128,7 @@ public final class VpRequestViewModel extends ViewModel {
                     if (err2 != null) {
                         AppLog.e(TAG, "prepareOid4vpPresentation failed", err2);
                         cancelActiveSession();
-                        emitInvalid(err2);
+                        emitPrepareFailure(err2);
                         return;
                     }
                     replaceScenario(scenario);
@@ -135,12 +145,49 @@ public final class VpRequestViewModel extends ViewModel {
                 if (err2 != null) {
                     AppLog.e(TAG, "prepare" + (env.isZkp ? "Zkp" : "Vp") + "Presentation failed", err2);
                     cancelActiveSession();
-                    emitInvalid(err2);
+                    emitPrepareFailure(err2);
                     return;
                 }
                 replaceScenario(scenario);
             }, mainExecutor);
         }, mainExecutor);
+    }
+
+    public void startProximity() {
+        currentFlow = Flow.PROXIMITY;
+        state.postValue(VpRequestUiState.initialLoading());
+        proximitySessionClosed.set(false);
+        proximityRepo.setStateListener(new ProximityPresentationRepository.StateListener() {
+            @Override
+            public void onReaderConnected() {
+            }
+
+            @Override
+            public void onTerminated() {
+                AppLog.w(TAG, "proximity onTerminated");
+                onProximitySessionClosed(
+                        new ProximitySessionEndedException("the verifier ended the session"));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                AppLog.e(TAG, "proximity onError", t);
+                onProximitySessionClosed(t);
+            }
+        });
+        proximityRepo.awaitRequest()
+                .thenCompose(proximityRepo::prepareProximityPresentation)
+                .whenCompleteAsync((scenario, error) -> {
+                    if (error != null) {
+                        AppLog.e(TAG, "prepareProximityPresentation failed", error);
+                        if (proximitySessionClosed.compareAndSet(false, true)) {
+                            cancelActiveSession();
+                            emitPrepareFailure(error);
+                        }
+                        return;
+                    }
+                    replaceScenario(scenario);
+                }, mainExecutor);
     }
 
     public void onSubmitClicked() {
@@ -158,21 +205,25 @@ public final class VpRequestViewModel extends ViewModel {
                 event.postValue(new Event<>(new VpRequestEvent.LaunchPin()));
                 break;
             case BIO:
+                setInFlight(true);
                 walletGateway.isSavedKey(Constants.KEY_ID_BIO).whenCompleteAsync((bio, err) -> {
                     if (err != null || !Boolean.TRUE.equals(bio)) {
                         emitAuthFailed();
                         return;
                     }
+                    setInFlight(false);
                     event.postValue(new Event<>(new VpRequestEvent.LaunchBio()));
                 }, mainExecutor);
                 break;
             case ANY:
             case PIN_OR_BIO:
+                setInFlight(true);
                 walletGateway.isSavedKey(Constants.KEY_ID_BIO).whenCompleteAsync((bio, err) -> {
                     if (err != null) {
                         emitAuthFailed();
                         return;
                     }
+                    setInFlight(false);
                     if (Boolean.TRUE.equals(bio)) {
                         event.postValue(new Event<>(new VpRequestEvent.LaunchAuthMethodChooser()));
                     } else {
@@ -181,12 +232,14 @@ public final class VpRequestViewModel extends ViewModel {
                 }, mainExecutor);
                 break;
             case PIN_AND_BIO:
+                setInFlight(true);
                 walletGateway.isSavedKey(Constants.KEY_ID_BIO).whenCompleteAsync((bio, err) -> {
                     if (err != null || !Boolean.TRUE.equals(bio)) {
                         emitError(R.string.notice_vp_bio_not_registered_title,
                                 R.string.notice_vp_bio_not_registered_message);
                         return;
                     }
+                    setInFlight(false);
                     event.postValue(new Event<>(new VpRequestEvent.LaunchPin()));
                 }, mainExecutor);
                 break;
@@ -200,8 +253,9 @@ public final class VpRequestViewModel extends ViewModel {
 
     public void onAuthDone(@Nullable String pin) {
 
-        if (currentFlow != Flow.OID4VP && pendingOffer == null) {
+        if (currentFlow != Flow.OID4VP && currentFlow != Flow.PROXIMITY && pendingOffer == null) {
             cancelActiveSession();
+            setInFlight(false);
             return;
         }
         VpRequestUiState cur = requireState();
@@ -211,6 +265,7 @@ public final class VpRequestViewModel extends ViewModel {
                 && pin != null
                 && pendingPinForBio == null) {
             pendingPinForBio = pin;
+            setInFlight(false);
             event.postValue(new Event<>(new VpRequestEvent.LaunchBio()));
             return;
         }
@@ -225,7 +280,7 @@ public final class VpRequestViewModel extends ViewModel {
         }
         final String pinForSign = effectivePin;
 
-        state.postValue(copyWith(true, true));
+        state.setValue(copyWith(true, true));
 
         CompletableFuture<Void> signFuture;
         CompletableFuture<Void> submitFuture;
@@ -234,45 +289,98 @@ public final class VpRequestViewModel extends ViewModel {
 
                 signFuture = (pinForSign == null)
                         ? zkpRepo.signZkpWithBio(cur.selectedReferents,
-                                cur.selectedReferentCredIds, cur.revealedAttrLabels)
+                                cur.selectedReferentCredIds, cur.selectedPredicateCredIds, cur.revealedAttrLabels)
                         : zkpRepo.signZkpWithPin(pinForSign, cur.selectedReferents,
-                                cur.selectedReferentCredIds, cur.revealedAttrLabels);
+                                cur.selectedReferentCredIds, cur.selectedPredicateCredIds, cur.revealedAttrLabels);
                 submitFuture = signFuture.thenCompose(v -> zkpRepo.submitZkpPresentation());
                 break;
-            case OID4VP:
+            case OID4VP: {
 
+                String optionId = cur.selectedOptionId != null ? cur.selectedOptionId : "";
+                Set<String> included = cur.submissionClaimKeys();
                 signFuture = (pinForSign == null)
-                        ? oid4vpRepo.signOid4vpWithBio(cur.uncheckedClaimKeys)
-                        : oid4vpRepo.signOid4vpWithPin(pinForSign, cur.uncheckedClaimKeys);
+                        ? oid4vpRepo.signOid4vpWithBio(optionId, included)
+                        : oid4vpRepo.signOid4vpWithPin(pinForSign, optionId, included);
                 submitFuture = signFuture.thenCompose(v -> oid4vpRepo.submitOid4vpPresentation());
                 break;
-            case OPENDID_VC:
-            default:
+            }
+            case PROXIMITY: {
 
+                String optionId = cur.selectedOptionId != null ? cur.selectedOptionId : "";
+                Set<String> included = cur.submissionClaimKeys();
                 signFuture = (pinForSign == null)
-                        ? vpRepo.signVpWithBio(cur.uncheckedClaimKeys)
-                        : vpRepo.signVpWithPin(pinForSign, cur.uncheckedClaimKeys);
+                        ? proximityRepo.signProximityWithBio(optionId, included)
+                        : proximityRepo.signProximityWithPin(pinForSign, optionId, included);
+                submitFuture = signFuture.thenCompose(v -> proximityRepo.submitProximityPresentation());
+                break;
+            }
+            case OPENDID_VC:
+            default: {
+
+                String optionId = cur.selectedOptionId != null ? cur.selectedOptionId : "";
+                Set<String> included = cur.submissionClaimKeys();
+                signFuture = (pinForSign == null)
+                        ? vpRepo.signVpWithBio(optionId, included)
+                        : vpRepo.signVpWithPin(pinForSign, optionId, included);
                 submitFuture = signFuture.thenCompose(v -> vpRepo.submitVpPresentation());
                 break;
+            }
         }
 
         submitFuture.whenCompleteAsync((v, err) -> {
             if (err != null) {
-                cancelActiveSession();
-                pendingOffer = null;
-                int title = CaUtil.isAuthError(err)
-                        ? R.string.notice_vp_auth_failed_title
-                        : R.string.notice_vp_failed_title;
-                int msg = CaUtil.isAuthError(err)
-                        ? R.string.notice_vp_auth_failed_message
-                        : R.string.notice_vp_failed_message;
-                emitError(title, msg, CommunicationErrors.findDetailMessage(err));
+                if (currentFlow == Flow.PROXIMITY) {
+                    AppLog.e(TAG, "proximity submitFuture failed", err);
+                    if (proximitySessionClosed.compareAndSet(false, true)) {
+                        emitSubmitFailure(err);
+                    }
+                    return;
+                }
+                emitSubmitFailure(err);
                 return;
+            }
+            if (currentFlow == Flow.PROXIMITY) {
+                if (!proximitySessionClosed.compareAndSet(false, true)) {
+                    return;
+                }
             }
             state.postValue(copyWith(false, false));
             pendingOffer = null;
             event.postValue(new Event<>(new VpRequestEvent.ShowSuccess()));
         }, mainExecutor);
+    }
+
+    private void emitSubmitFailure(@Nullable Throwable err) {
+        AppLog.e(TAG, "submit failed flow=" + currentFlow, err);
+        cancelActiveSession();
+        pendingOffer = null;
+        int title = CaUtil.isAuthError(err)
+                ? R.string.notice_vp_auth_failed_title
+                : R.string.notice_vp_failed_title;
+        int msg = CaUtil.isAuthError(err)
+                ? R.string.notice_vp_auth_failed_message
+                : R.string.notice_vp_failed_message;
+        emitError(title, msg, CommunicationErrors.findDetailMessage(err));
+    }
+
+    private void onProximitySessionClosed(@Nullable Throwable t) {
+        if (currentFlow != Flow.PROXIMITY) {
+            AppLog.w(TAG, "proximity session closed ignored, flow=" + currentFlow);
+            return;
+        }
+        if (!proximitySessionClosed.compareAndSet(false, true)) {
+            AppLog.w(TAG, "proximity session closed ignored, already closed");
+            return;
+        }
+        AppLog.e(TAG, "proximity session closed", t);
+        int messageRes = ProximityErrors.messageFor(t);
+        if (messageRes == ProximityErrors.NOT_A_SESSION_ERROR) {
+            emitSubmitFailure(t);
+            return;
+        }
+        cancelActiveSession();
+        pendingOffer = null;
+        emitError(R.string.notice_vp_failed_title, messageRes);
     }
 
     public void onBioAuthFailed() {
@@ -284,6 +392,13 @@ public final class VpRequestViewModel extends ViewModel {
     public void onAuthCancelled() {
         cancelActiveSession();
         pendingOffer = null;
+        if (currentFlow == Flow.PROXIMITY) {
+            if (proximitySessionClosed.compareAndSet(false, true)) {
+                emitSubmitFailure(new IllegalStateException("proximity session terminated"));
+            }
+            return;
+        }
+        setInFlight(false);
     }
 
     @Override
@@ -293,59 +408,83 @@ public final class VpRequestViewModel extends ViewModel {
 
     public void toggleClaim(@NonNull String claimKey) {
         VpRequestUiState cur = requireState();
-        Set<String> next = new HashSet<>(cur.uncheckedClaimKeys);
-        boolean wasChecked = !next.contains(claimKey);
-        if (wasChecked) {
+        Set<String> next = new LinkedHashSet<>(cur.checkedClaimKeys);
+        if (!next.remove(claimKey)) {
             next.add(claimKey);
-            if (!warnedAtLeastOnce) {
-                warnedAtLeastOnce = true;
-                event.postValue(new Event<>(new VpRequestEvent.ShowWarn()));
-            }
-        } else {
-            next.remove(claimKey);
         }
-        state.setValue(cur.withUncheckedClaimKeys(next));
+        state.setValue(cur.withCheckedClaimKeys(next));
     }
 
     public void toggleGroupClaims(@NonNull List<String> groupClaimKeys) {
         if (groupClaimKeys.isEmpty()) return;
         VpRequestUiState cur = requireState();
-        Set<String> next = new HashSet<>(cur.uncheckedClaimKeys);
-        boolean wasChecked = !next.contains(groupClaimKeys.get(0));
-        if (wasChecked) {
-            next.addAll(groupClaimKeys);
-            if (!warnedAtLeastOnce) {
-                warnedAtLeastOnce = true;
-                event.postValue(new Event<>(new VpRequestEvent.ShowWarn()));
-            }
-        } else {
+        Set<String> next = new LinkedHashSet<>(cur.checkedClaimKeys);
+        if (next.contains(groupClaimKeys.get(0))) {
             next.removeAll(groupClaimKeys);
+        } else {
+            next.addAll(groupClaimKeys);
         }
-        state.setValue(cur.withUncheckedClaimKeys(next));
+        state.setValue(cur.withCheckedClaimKeys(next));
+    }
+
+    public void toggleSelectAll(@NonNull String optionId) {
+        VpRequestUiState cur = requireState();
+        VpRequestedDoc doc = findCandidate(cur, optionId);
+        if (doc == null) return;
+        List<String> optionalKeys = VpRequestUiState.optionalClaimKeys(doc);
+        if (optionalKeys.isEmpty()) return;
+
+        Set<String> next = new LinkedHashSet<>(cur.checkedClaimKeys);
+        if (cur.allOptionalChecked(doc)) {
+            next.removeAll(optionalKeys);
+        } else {
+            next.addAll(optionalKeys);
+        }
+        state.setValue(cur.withCheckedClaimKeys(next));
+    }
+
+    public void selectOption(@NonNull String optionId) {
+        VpRequestUiState cur = requireState();
+        if (findCandidate(cur, optionId) == null) return;
+
+        boolean sameOption = optionId.equals(cur.selectedOptionId);
+        Set<String> checked = sameOption ? cur.checkedClaimKeys : Collections.emptySet();
+        state.setValue(new VpRequestUiState(cur.loading, cur.inFlight, cur.scenario,
+                checked, cur.revealedAttrLabels,
+                Collections.singleton(optionId), cur.collapsedGroupKeys,
+                cur.selectedReferents, cur.selectedReferentCredIds, cur.selectedPredicateCredIds, optionId));
     }
 
     public void toggleReveal(@NonNull String attrLabel) {
         VpRequestUiState cur = requireState();
-        Set<String> next = new HashSet<>(cur.revealedAttrLabels);
+        Set<String> next = new LinkedHashSet<>(cur.revealedAttrLabels);
         if (next.contains(attrLabel)) next.remove(attrLabel);
         else next.add(attrLabel);
         state.setValue(cur.withRevealedAttrLabels(next));
     }
 
-    public void toggleSection(@NonNull String sectionKey) {
+    public void toggleOption(@NonNull String optionId) {
         VpRequestUiState cur = requireState();
-        Set<String> next = new HashSet<>(cur.collapsedSections);
-        if (next.contains(sectionKey)) next.remove(sectionKey);
-        else next.add(sectionKey);
-        state.setValue(cur.withCollapsedSections(next));
+        Set<String> next = new LinkedHashSet<>(cur.expandedOptionIds);
+        if (!next.remove(optionId)) next.add(optionId);
+        state.setValue(cur.withExpandedOptionIds(next));
     }
 
     public void toggleGroup(@NonNull String groupKey) {
         VpRequestUiState cur = requireState();
-        Set<String> next = new HashSet<>(cur.expandedGroups);
-        if (next.contains(groupKey)) next.remove(groupKey);
-        else next.add(groupKey);
-        state.setValue(cur.withExpandedGroups(next));
+        Set<String> next = new LinkedHashSet<>(cur.collapsedGroupKeys);
+        if (!next.remove(groupKey)) next.add(groupKey);
+        state.setValue(cur.withCollapsedGroupKeys(next));
+    }
+
+    @Nullable
+    private static VpRequestedDoc findCandidate(@NonNull VpRequestUiState state,
+                                                @NonNull String optionId) {
+        if (state.scenario == null) return null;
+        for (VpRequestedDoc doc : state.scenario.candidates) {
+            if (doc.docId.equals(optionId)) return doc;
+        }
+        return null;
     }
 
     public void setReferentSelection(@NonNull String attrLabel,
@@ -359,11 +498,22 @@ public final class VpRequestViewModel extends ViewModel {
         state.setValue(cur.withSelectedReferents(nextValues).withSelectedReferentCredIds(nextCredIds));
     }
 
+    public void setPredicateSelection(@NonNull String referentKey, @NonNull String credentialId) {
+        VpRequestUiState cur = requireState();
+        Map<String, String> next = new HashMap<>(cur.selectedPredicateCredIds);
+        next.put(referentKey, credentialId);
+        state.setValue(cur.withSelectedPredicateCredIds(next));
+    }
+
     private void cancelActiveSession() {
         pendingPinForBio = null;
         switch (currentFlow) {
             case ZKP:    zkpRepo.cancelZkpPresentation(); break;
             case OID4VP: oid4vpRepo.cancelOid4vpPresentation(); break;
+            case PROXIMITY:
+                proximityRepo.setStateListener(null);
+                proximityRepo.cancel();
+                break;
             case OPENDID_VC:
             default:     vpRepo.cancelVpPresentation(); break;
         }
@@ -371,25 +521,51 @@ public final class VpRequestViewModel extends ViewModel {
 
     private void replaceScenario(@NonNull VpScenario scenario) {
         VpRequestUiState cur = requireState();
+        String firstId = scenario.candidates.isEmpty() ? null : scenario.candidates.get(0).docId;
+        Set<String> expanded = (firstId != null && scenario.candidates.size() == 1)
+                ? Collections.singleton(firstId)
+                : Collections.emptySet();
         state.postValue(new VpRequestUiState(
                 false, false, scenario,
-                cur.uncheckedClaimKeys, cur.revealedAttrLabels,
-                cur.collapsedSections, cur.expandedGroups,
-                cur.selectedReferents, cur.selectedReferentCredIds));
+                Collections.emptySet(), cur.revealedAttrLabels,
+                expanded, Collections.emptySet(),
+                cur.selectedReferents, cur.selectedReferentCredIds, cur.selectedPredicateCredIds, firstId));
+    }
+
+    private void setInFlight(boolean value) {
+        state.setValue(copyWith(false, value));
     }
 
     private VpRequestUiState copyWith(boolean loading, boolean inFlight) {
         VpRequestUiState cur = requireState();
         return new VpRequestUiState(loading, inFlight, cur.scenario,
-                cur.uncheckedClaimKeys, cur.revealedAttrLabels,
-                cur.collapsedSections, cur.expandedGroups,
-                cur.selectedReferents, cur.selectedReferentCredIds);
+                cur.checkedClaimKeys, cur.revealedAttrLabels,
+                cur.expandedOptionIds, cur.collapsedGroupKeys,
+                cur.selectedReferents, cur.selectedReferentCredIds, cur.selectedPredicateCredIds, cur.selectedOptionId);
     }
 
     @NonNull
     private VpRequestUiState requireState() {
         VpRequestUiState s = state.getValue();
         return s != null ? s : VpRequestUiState.initialLoading();
+    }
+
+    private void emitPrepareFailure(@Nullable Throwable err) {
+        Throwable root = err;
+        while (root instanceof CompletionException && root.getCause() != null) {
+            root = root.getCause();
+        }
+        if (root instanceof NoActiveCredentialException) {
+            emitError(R.string.notice_vp_no_candidate_title,
+                    R.string.notice_vp_no_candidate_message);
+            return;
+        }
+        int messageRes = ProximityErrors.messageFor(root);
+        if (messageRes != ProximityErrors.NOT_A_SESSION_ERROR) {
+            emitError(R.string.notice_vp_failed_title, messageRes);
+            return;
+        }
+        emitInvalid(err);
     }
 
     private void emitInvalid(@Nullable Throwable err) {

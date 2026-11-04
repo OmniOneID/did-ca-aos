@@ -21,9 +21,12 @@ import androidx.annotation.NonNull;
 public final class SettingsUiState {
 
     @NonNull
+    public final String userName;
+    @NonNull
     public final String did;
 
-    public SettingsUiState(@NonNull String did) {
+    public SettingsUiState(@NonNull String userName, @NonNull String did) {
+        this.userName = userName;
         this.did = did;
     }
 }

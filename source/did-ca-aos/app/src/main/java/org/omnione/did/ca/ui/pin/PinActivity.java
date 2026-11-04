@@ -25,7 +25,9 @@ import android.view.View;
 import android.widget.GridLayout;
 import android.widget.Toast;
 
+import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.omnione.did.ca.R;
@@ -49,6 +51,7 @@ public class PinActivity extends BaseActivity {
     public static final String RESULT_AFTER_AUTH = EXTRA_AFTER_AUTH;
 
     private static final long ADVANCE_DELAY_MS = 180L;
+    private static final String SUCCESS_TAG = "pin_success";
 
     private ActivityPinBinding binding;
     private PinViewModel viewModel;
@@ -61,6 +64,9 @@ public class PinActivity extends BaseActivity {
         setContentView(binding.getRoot());
 
         viewModel = new ViewModelProvider(this).get(PinViewModel.class);
+
+        Fragment restored = getSupportFragmentManager().findFragmentByTag(SUCCESS_TAG);
+        if (restored instanceof NoticeDialogFragment) bindSuccess((NoticeDialogFragment) restored);
 
         binding.closeButton.setOnClickListener(v -> finish());
 
@@ -102,7 +108,7 @@ public class PinActivity extends BaseActivity {
             binding.pinError.setText(state.errorMessageRes);
             binding.pinError.setVisibility(View.VISIBLE);
         } else {
-            binding.pinError.setVisibility(View.INVISIBLE);
+            binding.pinError.setVisibility(View.GONE);
         }
         binding.numPad.setEnabled(!state.inFlight);
         binding.numPad.setAlpha(state.inFlight ? 0.5f : 1.0f);
@@ -120,8 +126,7 @@ public class PinActivity extends BaseActivity {
                 handleRegisterDone(intent);
                 break;
             case CHANGE_DONE:
-                setResult(Activity.RESULT_OK);
-                finish();
+                showSuccess(R.string.pin_change_success_title, R.string.pin_change_success_message);
                 break;
             case AUTH_DONE:
                 handleAuthDone(intent, event.pin);
@@ -144,6 +149,20 @@ public class PinActivity extends BaseActivity {
                 IntentRouter.startDocs(this);
                 finish();
                 break;
+            case REGISTER_SIGN_UNREACHABLE:
+                NoticeDialogFragment.newInstance(
+                                this,
+                                R.string.common_error,
+                                R.string.splash_init_failed_message,
+                                R.string.common_ok)
+                        .setOnConfirmed(this::finish)
+                        .setOnCancelled(this::finish)
+                        .setLink(R.string.server_settings, () -> {
+                            startActivity(IntentRouter.serverUrlIntent(this, false));
+                            finish();
+                        })
+                        .show(getSupportFragmentManager());
+                break;
             case REGISTRATION_FAILED:
 
                 NoticeDialogFragment.newInstance(
@@ -161,8 +180,8 @@ public class PinActivity extends BaseActivity {
                 handleUnlockRegisterDone(intent);
                 break;
             case UNLOCK_CHANGE_DONE:
-                setResult(Activity.RESULT_OK);
-                finish();
+                showSuccess(R.string.pin_unlock_change_success_title,
+                        R.string.pin_unlock_change_success_message);
                 break;
             case UNLOCK_AUTH_DONE:
                 if (intent.getBooleanExtra(EXTRA_ONBOARDING_DONE, false)) {
@@ -175,6 +194,20 @@ public class PinActivity extends BaseActivity {
                 finish();
                 break;
         }
+    }
+
+    private void showSuccess(@StringRes int titleRes, @StringRes int messageRes) {
+        bindSuccess(NoticeDialogFragment.newInstance(this, titleRes, messageRes, R.string.common_ok))
+                .show(getSupportFragmentManager(), SUCCESS_TAG);
+    }
+
+    private NoticeDialogFragment bindSuccess(NoticeDialogFragment dialog) {
+        return dialog.setOnConfirmed(this::finishOk).setOnCancelled(this::finishOk);
+    }
+
+    private void finishOk() {
+        setResult(Activity.RESULT_OK);
+        finish();
     }
 
     private void handleUnlockRegisterDone(Intent intent) {

@@ -27,7 +27,6 @@ import org.omnione.did.ca.data.network.protocol.RequestCreateTokenOp;
 import org.omnione.did.ca.data.network.protocol.RequestEcdhOp;
 import org.omnione.did.ca.data.network.protocol.RequestWalletTokenDataOp;
 import org.omnione.did.ca.data.network.protocol.RetrieveKycOp;
-import org.omnione.did.ca.data.network.protocol.SignupOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.CaUtil;
@@ -69,6 +68,8 @@ public final class UserRegistrationRepository {
     private final RegistrationSession session;
     private final UserIdentityRepository identity;
     private final Executor executor = Executors.newCachedThreadPool();
+    private CompletableFuture<Void> preExecuteRun;
+    private int generation;
 
     @Inject
     public UserRegistrationRepository(@ApplicationContext Context ctx,
@@ -85,21 +86,44 @@ public final class UserRegistrationRepository {
         this.identity = identity;
     }
 
-        public CompletableFuture<Void> preExecute() {
-        return CompletableFuture.runAsync(() -> {
+        public boolean isPreExecuteReady() {
+        return session.getHWalletTokenIfReady() != null;
+    }
+
+        public boolean hasRegisteredUser() {
+        return identity.getUserId() != null;
+    }
+
+        public String userInfoUrl() {
+        return config.demoUrl() + "/addUserInfo";
+    }
+
+        public void saveRegisteredUser(String userName, String userId) {
+        identity.setUserName(userName);
+        identity.setUserId(userId);
+    }
+
+        public synchronized void resetForServerChange() {
+        generation++;
+        preExecuteRun = null;
+        session.clear();
+        if (identity.isInitialized()) return;
+        identity.setUserName(null);
+        identity.setUserId(null);
+    }
+
+        public synchronized CompletableFuture<Void> preExecute() {
+        if (preExecuteRun != null && !preExecuteRun.isDone()) return preExecuteRun;
+        if (isPreExecuteReady()) return CompletableFuture.completedFuture(null);
+        session.invalidate();
+        final int gen = generation;
+        preExecuteRun = CompletableFuture.runAsync(() -> {
             try {
                 String tas = config.tasUrl();
                 String cas = config.casUrl();
                 WalletApi walletApi = WalletApi.getInstance(appCtx);
 
                 String userId = identity.getUserId();
-                String caAppId = identity.getOrCreateCaAppId();
-                boolean freshUser = (userId == null || userId.isEmpty());
-                if (freshUser) {
-                    userId = java.util.UUID.randomUUID().toString();
-                    SignupOp.call(net, cas, userId, caAppId);
-                    identity.setUserId(userId);
-                }
 
                 if (!session.isPersonalizeDone()) {
                     WalletTokenSeed personalizeSeed = gateway.createWalletTokenSeed(
@@ -110,6 +134,7 @@ public final class UserRegistrationRepository {
                     String personalizeHWalletToken = TokenUtil.createHashWalletToken(
                             personalizeTokenData, appCtx, config.apiGwUrl());
                     gateway.bindUser(personalizeHWalletToken).get();
+                    if (isCurrent(gen)) session.markPersonalizeDone();
                 }
 
                 String proposeRes = ProposeRegisterUserOp.call(net, appCtx, tas);
@@ -148,18 +173,26 @@ public final class UserRegistrationRepository {
                 RetrieveKycOp.call(
                         net, appCtx, tas, txId, serverToken, identity.getUserId());
 
-                session.setPreExecuteResult(txId, hWalletToken, serverToken);
+                synchronized (this) {
+                    if (gen == generation) session.setPreExecuteResult(txId, hWalletToken, serverToken);
+                }
             } catch (Throwable t) {
                 AppLog.e(TAG, "preExecute failed", t);
-                session.failPreExecute(t);
+                if (isCurrent(gen)) session.failPreExecute(t);
                 throw new CompletionException(t);
             }
         }, executor);
+        return preExecuteRun;
+    }
+
+    private synchronized boolean isCurrent(int gen) {
+        return gen == generation;
     }
 
         public CompletableFuture<Void> registerUser(boolean viaBiometric, String pin) {
-        return session.awaitHWalletToken().thenComposeAsync(hWalletToken ->
+        return preExecute().thenCompose(v -> session.awaitHWalletToken()).thenComposeAsync(hWalletToken ->
                 CompletableFuture.supplyAsync(() -> {
+                    boolean signing = false;
                     try {
 
                         DIDDocument unsigned = gateway.createHolderDIDDoc(hWalletToken).get();
@@ -168,9 +201,11 @@ public final class UserRegistrationRepository {
                                 ? Arrays.asList(Constants.KEY_ID_PIN, Constants.KEY_ID_BIO)
                                 : Collections.singletonList(Constants.KEY_ID_PIN);
 
+                        signing = true;
                         DIDDocument ownerDoc = (DIDDocument) gateway.addProofsToDocument(
                                 unsigned, keyIds, unsigned.getId(),
                                 Constants.DID_DOC_TYPE_HOLDER, pin, false).get();
+                        signing = false;
 
                         SignedDidDoc signedDoc = gateway.createSignedDIDDoc(ownerDoc).get();
 
@@ -193,6 +228,7 @@ public final class UserRegistrationRepository {
                         return null;
                     } catch (Throwable t) {
                         AppLog.e(TAG, "registerUser failed", t);
+                        if (!signing) session.invalidate();
                         throw new CompletionException(t);
                     }
                 }, executor), executor);

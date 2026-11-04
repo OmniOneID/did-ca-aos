@@ -18,6 +18,7 @@ package org.omnione.did.ca.ui.issuebyoid4vci;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -27,8 +28,9 @@ import org.omnione.did.ca.data.repository.BiometricRepository;
 import org.omnione.did.ca.data.repository.Oid4vciIssueRepository;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.ui.Event;
+import org.omnione.did.ca.util.AppLog;
+import org.omnione.did.sdk.core.oid4vc.errors.Oid4vciException;
 import org.omnione.did.sdk.core.oid4vc.model.CredentialOfferResponse;
-import org.omnione.did.sdk.core.oid4vc.model.IssuerMetadataResponse;
 import org.omnione.did.sdk.core.oid4vc.model.TxCodeSpec;
 import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 
@@ -52,7 +54,6 @@ public final class IssueByOid4vciViewModel extends ViewModel {
     private final MutableLiveData<Event<IssueByOid4vciEvent>> event = new MutableLiveData<>();
 
     @Nullable private volatile CredentialOfferResponse offer;
-    @Nullable private volatile IssuerMetadataResponse metadata;
     @Nullable private volatile String configurationId;
 
     @Inject
@@ -89,7 +90,6 @@ public final class IssueByOid4vciViewModel extends ViewModel {
             configurationId = parsedOffer.getCredentialConfigurationIds().get(0);
             repo.fetchMetadata(parsedOffer.getCredentialIssuer()).whenComplete((meta, metaErr) -> {
                 if (metaErr != null) { emitError(metaErr); return; }
-                metadata = meta;
                 TxCodeSpec txCodeSpec = parsedOffer.getTxCodeSpec();
                 if (txCodeSpec != null) {
                     state.postValue(IssueByOid4vciUiState.awaitingTxCode());
@@ -106,7 +106,7 @@ public final class IssueByOid4vciViewModel extends ViewModel {
     }
 
     public void onTxCodeEntered(@NonNull String txCode) {
-        state.postValue(IssueByOid4vciUiState.loading());
+        state.setValue(IssueByOid4vciUiState.loading());
         proceedToToken(txCode);
     }
 
@@ -117,7 +117,16 @@ public final class IssueByOid4vciViewModel extends ViewModel {
 
     private void proceedToToken(@Nullable String txCode) {
         repo.requestToken(txCode).whenComplete((unused, tokenErr) -> {
-            if (tokenErr != null) { emitError(tokenErr); return; }
+            if (tokenErr != null) {
+                if (txCode != null && isBareInvalidGrant(tokenErr)) {
+                    AppLog.e("IssueByOid4vciViewModel", "token rejected after tx code", tokenErr);
+                    repo.cancelIssuance();
+                    emitFailure(R.string.oid4vci_tx_code_wrong, null);
+                    return;
+                }
+                emitError(tokenErr);
+                return;
+            }
             decideAuth();
         });
     }
@@ -168,10 +177,20 @@ public final class IssueByOid4vciViewModel extends ViewModel {
         emitGenericError(cause.getMessage());
     }
 
+    private static boolean isBareInvalidGrant(@NonNull Throwable raw) {
+        Throwable cause = raw instanceof CompletionException && raw.getCause() != null
+                ? raw.getCause() : raw;
+        return cause instanceof Oid4vciException && "invalid_grant".equals(cause.getMessage());
+    }
+
     private void emitGenericError(@Nullable String detail) {
+        emitFailure(R.string.oid4vci_failed, detail);
+    }
+
+    private void emitFailure(@StringRes int messageRes, @Nullable String detail) {
         state.postValue(IssueByOid4vciUiState.idle());
         event.postValue(new Event<>(new IssueByOid4vciEvent.ShowError(
-                R.string.oid4vci_failed, R.string.oid4vci_failed, detail)));
+                R.string.oid4vci_failed, messageRes, detail)));
     }
 
     private static boolean issuerMatches(@Nullable String a, @Nullable String b) {
@@ -187,7 +206,7 @@ public final class IssueByOid4vciViewModel extends ViewModel {
             String pathB = stripTrailingSlash(ub.getPath());
             return schemeA.equals(schemeB) && hostA.equals(hostB)
                     && ua.getPort() == ub.getPort() && pathA.equals(pathB);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return a.trim().equals(b.trim());
         }
     }

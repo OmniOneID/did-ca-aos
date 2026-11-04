@@ -20,8 +20,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.omnione.did.ca.util.AppLog;
+import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.urlconnection.HttpUrlConnectionTask;
 import org.omnione.did.sdk.core.api.WalletApi;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.core.oid4vc.errors.Oid4vciException;
 import org.omnione.did.sdk.core.oid4vc.model.CredentialOfferResponse;
 import org.omnione.did.sdk.core.oid4vc.model.GrantType;
@@ -36,6 +39,8 @@ import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 @Singleton
 public final class OID4VCIProtocol {
@@ -68,7 +73,7 @@ public final class OID4VCIProtocol {
                             + " (only pre-authorized_code is supported)");
                 }
                 return offer;
-            } catch (Exception e) {
+            } catch (CommunicationException | RuntimeException e) {
                 throw rethrow(e);
             }
         });
@@ -79,7 +84,7 @@ public final class OID4VCIProtocol {
             try {
                 AppLog.d("OID4VCIProtocol: getMetadata=" + issuerUrl);
                 return metadataFetcher.fetch(issuerUrl);
-            } catch (Exception e) {
+            } catch (CommunicationException | RuntimeException e) {
                 throw rethrow(e);
             }
         });
@@ -98,7 +103,7 @@ public final class OID4VCIProtocol {
                 AppLog.d("OID4VCIProtocol: requestToken tokenEndpoint=" + metadata.getTokenEndpoint());
                 return tokenRequester.request(metadata.getTokenEndpoint(), preAuthorizedCode, txCode,
                         offer.getCredentialConfigurationIds());
-            } catch (Exception e) {
+            } catch (CommunicationException | RuntimeException e) {
                 throw rethrow(e);
             }
         });
@@ -116,8 +121,8 @@ public final class OID4VCIProtocol {
             AppLog.d("OID4VCIProtocol: requestCredential configurationId=" + configurationId);
             return walletApi.requestIssueOID4VC(hWalletToken, metadata, token, passcode,
                     configurationId, credentialIdentifier, apiGatewayUrl);
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(rethrow(e));
+        } catch (ExecutionException | InterruptedException | UtilityException | WalletCoreException | WalletException | RuntimeException e) {
+            return CaUtil.failedFuture(rethrow(e));
         }
     }
 

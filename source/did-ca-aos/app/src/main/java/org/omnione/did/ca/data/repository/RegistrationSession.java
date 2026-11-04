@@ -37,9 +37,7 @@ public final class RegistrationSession {
             String txId, String hWalletToken, String serverToken) {
         this.txId = txId;
         this.serverToken = serverToken;
-        if (hWalletTokenFuture.isDone()) {
-            hWalletTokenFuture = new CompletableFuture<>();
-        }
+        invalidate();
         hWalletTokenFuture.complete(hWalletToken);
     }
 
@@ -50,7 +48,7 @@ public final class RegistrationSession {
     public synchronized String getHWalletTokenIfReady() {
         if (!hWalletTokenFuture.isDone()) return null;
         try { return hWalletTokenFuture.getNow(null); }
-        catch (Throwable t) { return null; }
+        catch (RuntimeException t) { return null; }
     }
 
     public String getTxId()                                  { return txId; }
@@ -62,6 +60,12 @@ public final class RegistrationSession {
     public synchronized void failPreExecute(Throwable t) {
         if (!hWalletTokenFuture.isDone()) {
             hWalletTokenFuture.completeExceptionally(t);
+        }
+    }
+
+    public synchronized void invalidate() {
+        if (hWalletTokenFuture.isDone()) {
+            hWalletTokenFuture = new CompletableFuture<>();
         }
     }
 

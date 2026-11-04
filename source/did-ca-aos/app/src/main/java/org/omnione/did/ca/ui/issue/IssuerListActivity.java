@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -40,6 +39,7 @@ import org.omnione.did.ca.ui.common.BaseActivity;
 import org.omnione.did.ca.ui.common.ProgressDialogFragment;
 import org.omnione.did.ca.ui.pin.PinActivity;
 import org.omnione.did.ca.ui.web.Oid4vciUserInitWebActivity;
+import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.IntentRouter;
 
 @dagger.hilt.android.AndroidEntryPoint
@@ -139,7 +139,7 @@ public class IssuerListActivity extends BaseActivity {
         String protoName = getIntent().getStringExtra(EXTRA_PROTOCOL);
         if (protoName != null) {
             try { protocol = IssueProtocol.valueOf(protoName); }
-            catch (IllegalArgumentException ignored) {  }
+            catch (IllegalArgumentException ignored) { AppLog.d("unknown issue protocol: " + protoName); }
         }
         viewModel.setProtocol(protocol);
 
@@ -234,9 +234,6 @@ public class IssuerListActivity extends BaseActivity {
             IssuerListEvent.LaunchUserInitWeb uw = (IssuerListEvent.LaunchUserInitWeb) value;
             userInitWebLauncher.launch(IntentRouter.oid4vciUserInitWebIntent(
                     this, uw.startUrl, uw.expectedIssuer));
-        } else if (value instanceof IssuerListEvent.ShowToast) {
-            IssuerListEvent.ShowToast t = (IssuerListEvent.ShowToast) value;
-            Toast.makeText(this, t.messageRes, Toast.LENGTH_SHORT).show();
         } else if (value instanceof IssuerListEvent.ShowError) {
             IssuerListEvent.ShowError e = (IssuerListEvent.ShowError) value;
             showErrorNotice(e.titleRes, e.messageRes, e.detailMessage, () -> {

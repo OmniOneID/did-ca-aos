@@ -41,6 +41,19 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    flavorDimensions += "env"
+    productFlavors {
+        prod {
+            dimension "env"
+        }
+        // E2E automation build. Same applicationId as prod so CAS registration keeps working;
+        // src/qa/AndroidManifest.xml exports the QR issuance entry points so tests can inject
+        // a scanned payload with `am start --es extra_payload`.
+        qa {
+            dimension "env"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
@@ -58,14 +71,13 @@ dependencies {
     implementation libs.appcompat
     implementation libs.material
     implementation libs.core.splashscreen
-    implementation libs.lifecycle.extensions
     implementation libs.lifecycle.viewmodel
     implementation libs.lifecycle.livedata
-    implementation libs.navigation.fragment.ktx
-    implementation libs.navigation.ui.ktx
     implementation libs.viewpager2
     implementation libs.gridlayout
     implementation libs.activity
+    implementation libs.fragment
+    implementation libs.recyclerview
     implementation libs.constraintlayout
 
     implementation libs.gson
@@ -73,18 +85,17 @@ dependencies {
     implementation libs.bitcoinj.core
     implementation libs.biometric
 
-    annotationProcessor libs.room.compiler
     api libs.room.runtime
 
     implementation libs.spongycastle.core
     implementation libs.spongycastle.prov
-    implementation libs.spongycastle.prix
-    implementation libs.spongycastle.pg
 
     implementation libs.hilt.android
     annotationProcessor libs.hilt.compiler
 
-    implementation libs.bundles.jackson
-
     implementation libs.nimbus.jose.jwt
+
+    implementation libs.upokecenter.cbor
+
+    implementation files('libs/proximity-holder-1.0.0.aar')
 }

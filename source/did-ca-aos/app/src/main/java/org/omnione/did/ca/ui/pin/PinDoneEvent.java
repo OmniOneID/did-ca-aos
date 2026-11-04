@@ -26,6 +26,8 @@ public final class PinDoneEvent {
 
         REGISTER_SIGN_NEEDS_BIO,
 
+        REGISTER_SIGN_UNREACHABLE,
+
         REGISTRATION_FAILED,
         CHANGE_DONE,
         AUTH_DONE,

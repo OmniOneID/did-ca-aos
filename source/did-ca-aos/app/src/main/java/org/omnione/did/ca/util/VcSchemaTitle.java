@@ -19,6 +19,7 @@ package org.omnione.did.ca.util;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.communication.urlconnection.HttpUrlConnectionTask;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
 import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
@@ -53,8 +54,8 @@ public final class VcSchemaTitle {
             if (schema != null && schema.getTitle() != null) {
                 return schema.getTitle();
             }
-        } catch (Exception ignored) {
-
+        } catch (CommunicationException | RuntimeException ignored) {
+            AppLog.d("schema title fetch failed: " + ignored);
         }
         return "";
     }

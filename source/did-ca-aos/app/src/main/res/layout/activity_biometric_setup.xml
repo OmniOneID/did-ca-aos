@@ -117,7 +117,7 @@
             android:layout_marginTop="12dp"
             android:fontFamily="@font/pretendard_regular"
             android:gravity="center"
-            android:lineSpacingMultiplier="1.5"
+            app:lineHeight="21sp"
             android:paddingHorizontal="16dp"
             android:text="@string/biometric_setup_desc"
             android:textColor="@color/brand_text_secondary"

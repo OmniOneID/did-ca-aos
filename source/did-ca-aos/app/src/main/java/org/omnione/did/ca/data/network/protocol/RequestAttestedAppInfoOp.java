@@ -16,8 +16,10 @@
 
 package org.omnione.did.ca.data.network.protocol;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.omnione.did.ca.data.network.NetworkManager;
+import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.sdk.communication.exception.CommunicationException;
 
 public final class RequestAttestedAppInfoOp {
@@ -29,8 +31,8 @@ public final class RequestAttestedAppInfoOp {
         JSONObject body = new JSONObject();
         try {
             body.put("appId", appId);
-        } catch (Exception ignore) {
-
+        } catch (JSONException | RuntimeException ignore) {
+            AppLog.d("request-attested-appinfo body build failed: " + ignore);
         }
         return net.send(casBaseUrl + "/cas/api/v1/request-attested-appinfo",
                 "POST", body.toString());

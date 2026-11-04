@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
     <TextView
@@ -17,7 +18,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
         android:fontFamily="@font/pretendard_regular"
-        android:lineSpacingMultiplier="1.5"
+        app:lineHeight="21sp"
         android:textColor="@color/brand_text_secondary"
         android:textSize="14sp"
         tools:text="Not sharing certain data may cause the requested credential issuance to fail." />
@@ -29,4 +30,14 @@
         android:layout_height="52dp"
         android:layout_marginTop="14dp"
         tools:text="Got it" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/dialogLink"
+        style="@style/Widget.DidCa.Button.DialogLink"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
+        android:visibility="gone"
+        tools:text="Server settings"
+        tools:visibility="visible" />
 </merge>

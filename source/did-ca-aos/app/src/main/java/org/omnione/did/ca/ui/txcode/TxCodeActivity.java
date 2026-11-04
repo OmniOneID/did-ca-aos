@@ -84,12 +84,14 @@ public final class TxCodeActivity extends BaseActivity {
             if (child.getTag() != null) child.setOnClickListener(keyListener);
         }
 
+        binding.txCodeDots.setMasked(false);
+
         viewModel.uiState().observe(this, state -> {
             if (state == null) return;
             binding.txCodeTitle.setText(state.title);
             binding.txCodeDescription.setText(state.description);
             binding.txCodeDots.setLength(state.length);
-            binding.txCodeDots.setFilled(state.code.length());
+            binding.txCodeDots.setText(state.code);
         });
 
         viewModel.onTxCodeReady().observe(this, this::handleReady);

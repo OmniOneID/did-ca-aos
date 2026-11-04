@@ -1,8 +1,11 @@
 <resources>
     <string name="app_name">DID CA</string>
 
-    <string name="splash_init_failed_title">Wallet initialization failed</string>
-    <string name="splash_init_failed_message">An error occurred while initializing the wallet. Check your network connection and relaunch the app.</string>
+    <string name="splash_init_failed_message">The network connection is unstable. Please try again later.</string>
+
+    <string name="server_settings">Server settings</string>
+    <string name="server_setup_message">Continue with the default server, or set a custom server address before connecting.</string>
+    <string name="server_setup_use_default">Use default</string>
 
     <string name="onboarding_next">NEXT</string>
     <string name="onboarding_step_label">STEP %1$d OF %2$d</string>
@@ -11,14 +14,17 @@
 
     <string name="onboarding_step1_title">User Setup</string>
     <string name="onboarding_step1_item1_title">Register Demo User</string>
-    <string name="onboarding_step1_item1_desc">Handled automatically on the backend — no input required.</string>
+    <string name="onboarding_step1_item1_desc">Enter your name on the registration page.</string>
+    <string name="user_info_web_title">Register User</string>
+    <string name="user_info_web_failed_title">Registration failed</string>
+    <string name="user_info_web_failed_message">We couldn\'t complete your registration. Please try again.</string>
     <string name="onboarding_step1_item2_title">Set Wallet Lock</string>
     <string name="onboarding_step1_item2_desc">Choose how to secure your wallet.</string>
     <string name="onboarding_step2_title">Signature Key</string>
     <string name="onboarding_step2_item1_title">Register PIN</string>
     <string name="onboarding_step2_item1_desc">Your PIN is used to generate a signature key for the wallet.</string>
     <string name="onboarding_step2_item2_title">Register DID Document</string>
-    <string name="onboarding_step2_item2_desc">A DID document is created to identify your wallet on-chain.</string>
+    <string name="onboarding_step2_item2_desc">A DID document is created to identify your wallet.</string>
     <string name="onboarding_step3_title">Authentication</string>
     <string name="onboarding_step3_item1_title">Authenticate to Sign</string>
     <string name="onboarding_step3_item1_desc">Confirm your identity to sign documents tied to your DID.</string>
@@ -41,12 +47,15 @@
     <string name="biometric_setup_desc">Register biometric authentication to sign in quickly with your fingerprint or face instead of your PIN.</string>
     <string name="biometric_enable">Enable Biometrics</string>
     <string name="biometric_skip">Skip</string>
-    <string name="biometric_unavailable">Biometric authentication is not available on this device.</string>
     <string name="biometric_auth_failed">Biometric authentication failed.</string>
     <string name="biometric_dialog_title">Biometric Authentication</string>
     <string name="biometric_already_registered">Biometric data is already registered on this device.</string>
     <string name="biometric_none_enrolled">No biometric data is registered.</string>
     <string name="biometric_hw_unavailable">Biometric authentication is not available.</string>
+    <string name="biometric_locked">Biometric authentication is locked. Please unlock your device and try again.</string>
+    <string name="biometric_not_completed">Biometric authentication was not completed and was not set up.</string>
+    <string name="biometric_success_title">Biometrics registered</string>
+    <string name="biometric_success_message">Biometric authentication has been set up successfully.</string>
 
     <string name="auth_method_title">Authentication</string>
     <string name="auth_method_pin_title">PIN</string>
@@ -62,9 +71,11 @@
     <string name="pin_desc_change_1">Type your new PIN</string>
     <string name="pin_desc_change_2">Re-enter the new PIN</string>
     <string name="pin_desc_auth_0">Type your PIN to authenticate</string>
-    <string name="pin_error_mismatch">PINs do not match</string>
-    <string name="pin_error_wrong">Wrong PIN</string>
-    <string name="pin_error_same_as_old">New PIN must be different</string>
+    <string name="pin_error_mismatch">PINs do not match.</string>
+    <string name="pin_error_wrong">Wrong PIN.</string>
+    <string name="pin_error_same_as_old">New PIN must be different.</string>
+    <string name="pin_change_success_title">PIN changed</string>
+    <string name="pin_change_success_message">Your PIN has been changed successfully.</string>
 
     <string name="pin_title_unlock_register">Set Unlock PIN</string>
     <string name="pin_title_unlock_change">Change Unlock PIN</string>
@@ -75,9 +86,11 @@
     <string name="pin_desc_unlock_change_1">Type your new Unlock PIN</string>
     <string name="pin_desc_unlock_change_2">Re-enter the new Unlock PIN</string>
     <string name="pin_desc_unlock_auth_0">Type your Unlock PIN to unlock</string>
-    <string name="pin_error_unlock_mismatch">Unlock PINs do not match</string>
-    <string name="pin_error_unlock_wrong">Wrong Unlock PIN</string>
-    <string name="pin_error_unlock_same_as_old">New Unlock PIN must be different</string>
+    <string name="pin_error_unlock_mismatch">PINs do not match.</string>
+    <string name="pin_error_unlock_wrong">Wrong unlock PIN.</string>
+    <string name="pin_error_unlock_same_as_old">New Unlock PIN must be different.</string>
+    <string name="pin_unlock_change_success_title">Unlock PIN changed</string>
+    <string name="pin_unlock_change_success_message">Your Unlock PIN has been changed successfully.</string>
 
     <string name="docs_appbar_title">DID CA</string>
     <string name="docs_empty_title">No Certificates yet</string>
@@ -98,7 +111,6 @@
     <string name="present_sheet_description">Present your issued certificate in person (proximity) or by scanning a QR code.</string>
     <string name="present_sheet_proximity">Proximity</string>
     <string name="present_sheet_scan_qr">Scan QR</string>
-    <string name="present_proximity_unavailable">This service is not yet supported.</string>
 
     <string name="protocol_select_section">Select Issuance Protocol</string>
     <string name="protocol_open_did_title">Open DID</string>
@@ -135,6 +147,8 @@
     <string name="vc_detail_delete_title">Delete certificate?</string>
     <string name="vc_detail_delete_message">This certificate will be permanently deleted from your wallet and may affect your access to services.</string>
     <string name="vc_detail_delete_confirm">Delete</string>
+    <string name="vc_detail_deleted_title">Certificate deleted</string>
+    <string name="vc_detail_deleted_message">The certificate has been deleted from your wallet.</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_section_information">Information</string>
@@ -145,20 +159,56 @@
     <string name="settings_unlock_pin_not_set">Unlock PIN not set.</string>
     <string name="settings_add_biometrics">Add Biometrics</string>
     <string name="settings_reset_app">Reset App</string>
+
+    <string name="settings_section_proximity">Proximity</string>
+    <string name="settings_ble_transfer_mode">BLE Transfer Mode</string>
+    <string name="settings_ble_transfer_mode_description">Which BLE role this wallet takes when sending data to a reader.</string>
+    <string name="settings_ble_mode_both">Both</string>
+    <string name="settings_ble_mode_central">Central client mode</string>
+    <string name="settings_ble_mode_peripheral">Peripheral server mode</string>
     <string name="settings_reset_dialog_title">Reset App</string>
-    <string name="settings_reset_dialog_message">Resetting will permanently erase all stored data (VCs, PIN, etc.) and cannot be undone. Continue?</string>
+    <string name="settings_reset_dialog_message">Resetting will permanently erase all stored data (VCs, PIN, server settings, etc.) and cannot be undone. Continue?</string>
     <string name="settings_reset_confirm">Reset</string>
     <string name="settings_reset_failed_title">Reset Failed</string>
-    <string name="settings_reset_failed_message">Could not reset the app. Please try again.</string>
+    <string name="settings_reset_failed_message">Failed to reset. Try again.</string>
+    <string name="settings_server_url">Server URL</string>
+
+    <string name="server_url_title">Server URL</string>
+    <string name="server_url_section_custom">Custom</string>
+    <string name="server_url_section_default">Default</string>
+    <string name="server_url_all_default">All Default</string>
+    <string name="server_url_all_custom">All Custom</string>
+    <string name="server_url_row_default">Default</string>
+    <string name="server_url_row_custom">Custom</string>
+    <string name="server_url_empty_custom">No custom endpoints.\nTap Custom on an endpoint below to edit it.</string>
+    <string name="server_url_empty_default">All endpoints are set to custom.</string>
+    <string name="server_url_label_tas">TAS</string>
+    <string name="server_url_label_cas">CAS</string>
+    <string name="server_url_label_api_gw">API Gateway</string>
+    <string name="server_url_label_wallet">Wallet</string>
+    <string name="server_url_label_verifier">Verifier</string>
+    <string name="server_url_label_demo">Demo</string>
+    <string name="server_url_error_format">Enter a valid URL starting with http:// or https://.</string>
+    <string name="server_url_error_port">Port must be between 1 and 65535.</string>
+    <string name="server_url_error_empty">Enter a URL.</string>
+    <string name="server_url_save">Save</string>
+    <string name="server_url_save_failed_title">Save Failed</string>
+    <string name="server_url_save_failed_message">Failed to save. Try again.</string>
+
     <string name="settings_copy_did_cd">Copy DID</string>
     <string name="settings_did_copied">DID copied to clipboard</string>
+    <string name="settings_user_name_label">User Name</string>
+    <string name="settings_did_label">DID</string>
+    <string name="settings_copy_name_cd">Copy name</string>
+    <string name="settings_user_name_copied">User name copied to clipboard</string>
 
-    <string name="proximity_title">Present certificate in person</string>
+    <string name="proximity_title">Present in Person</string>
     <string name="proximity_description">Show this QR code to the Relying Party to present your digital certificate.</string>
     <string name="proximity_nfc_label">Or share via NFC</string>
     <string name="proximity_nfc_hint">Hold your phone near the reader to scan.</string>
     <string name="proximity_nfc_icon_cd">NFC</string>
     <string name="proximity_qr_image_cd">Proximity presentation QR code</string>
+    <string name="proximity_permission_dialog_message">Turn on Bluetooth and allow access to present in person.</string>
 
     <string name="qr_scan_title">QR Scan</string>
     <string name="qr_scan_hint">Please scan the QR code inside the square.</string>
@@ -167,25 +217,34 @@
     <string name="vp_request_title">Presentation</string>
     <string name="vp_request_section_verifier">Requesting Institution</string>
     <string name="vp_request_section_details">Submission Details</string>
-    <string name="vp_request_submit">Submit</string>
-    <string name="vp_request_warn_title">Warning</string>
-    <string name="vp_request_warn_message">Not sharing certain data may cause the requested credential issuance to fail.</string>
-    <string name="vp_request_warn_button">Got it</string>
+    <string name="vp_request_reject">Reject</string>
+    <string name="vp_request_accept">Accept</string>
+    <string name="vp_request_section_required">Required</string>
+    <string name="vp_request_section_optional">Optional</string>
+    <string name="vp_request_select_all">Select all</string>
+    <string name="vp_request_option_title">Option %1$d of %2$d</string>
+    <string name="vp_request_option_select_cd">Select this credential</string>
     <string name="vp_request_success_title">Submission successful</string>
     <string name="vp_request_success_message">Your information has been shared successfully.</string>
     <string name="vp_request_success_button">Done</string>
     <string name="vp_request_referent_placeholder">Tap to select &gt;</string>
     <string name="vp_request_claim_check_cd">Toggle claim share</string>
     <string name="vp_request_reveal_cd">Toggle attribute reveal</string>
+    <string name="vp_request_proximity_verifier">Proximity Verifier</string>
+    <string name="vp_request_zkp_attributes">Attributes</string>
+    <string name="vp_request_zkp_predicates">Predicates</string>
+    <string name="vp_request_zkp_self_attributes">Self-Attributes</string>
 
     <string name="notice_issue_catalog_failed_title">Error</string>
     <string name="notice_issue_catalog_failed_message">Failed to load credentials. Try again.</string>
     <string name="notice_issue_auth_failed_title">Error</string>
     <string name="notice_issue_auth_failed_message">Authentication failed. Try again.</string>
     <string name="notice_issue_failed_title">Error</string>
+    <string name="notice_issue_no_user_name_title">Can\'t issue credential</string>
+    <string name="notice_issue_no_user_name_message">Your wallet has no registered user name, so this credential can\'t be issued.</string>
     <string name="notice_issue_failed_message">Failed to issue credential. Try again.</string>
 
-    <string name="notice_revoke_failed_message">Failed to revoke credential. Try again.</string>
+    <string name="notice_revoke_failed_message">Failed to delete. Try again.</string>
     <string name="notice_revoke_auth_failed_message">Authentication failed. Try again.</string>
 
     <string name="notice_qr_issue_invalid_title">Error</string>
@@ -193,6 +252,8 @@
     <string name="notice_qr_issue_failed_title">Error</string>
     <string name="notice_qr_issue_failed_message">Failed to issue credential. Try again.</string>
 
+    <string name="notice_vp_no_candidate_title">No available certificates</string>
+    <string name="notice_vp_no_candidate_message">You don\'t have a certificate that can be submitted for this request.</string>
     <string name="notice_vp_invalid_title">Error</string>
     <string name="notice_vp_invalid_message">Invalid verifier request.</string>
     <string name="notice_vp_failed_title">Error</string>
@@ -202,11 +263,17 @@
     <string name="notice_vp_unsupported_authtype">This authentication type is not yet supported.</string>
     <string name="notice_vp_bio_not_registered_title">Error</string>
     <string name="notice_vp_bio_not_registered_message">Biometric authentication is not registered.</string>
+    <string name="notice_proximity_engagement_timeout_message">No verifier connected in time. Try again.</string>
+    <string name="notice_proximity_verifier_ended_message">The verifier ended the session.</string>
+    <string name="notice_proximity_response_timeout_message">The session timed out. Try again.</string>
+    <string name="notice_proximity_failed_message">Failed to present. Try again.</string>
+    <string name="notice_proximity_ble_unavailable_message">Bluetooth is not available on this device.</string>
+    <string name="notice_proximity_no_transport_message">This device can\'t present in person with the current transfer settings.</string>
 
     <string name="oid4vci_enter_tx_code">Enter tx code</string>
     <string name="oid4vci_tx_code_default_description">Please enter the PIN.</string>
     <string name="oid4vci_failed">Issuance failed</string>
-    <string name="oid4vci_mdoc_not_supported">mDoc issuance is not yet supported.</string>
+    <string name="oid4vci_tx_code_wrong">Wrong code.</string>
 
     <string name="oid4vci_select_empty">No OID4VCI issuers available.</string>
     <string name="oid4vci_select_load_failed">Failed to load issuers. Try again.</string>

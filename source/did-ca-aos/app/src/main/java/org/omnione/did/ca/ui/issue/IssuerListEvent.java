@@ -64,14 +64,6 @@ public abstract class IssuerListEvent {
         }
     }
 
-    public static final class ShowToast extends IssuerListEvent {
-        @StringRes public final int messageRes;
-
-        public ShowToast(@StringRes int messageRes) {
-            this.messageRes = messageRes;
-        }
-    }
-
     public static final class ShowError extends IssuerListEvent {
         @StringRes public final int titleRes;
         @StringRes public final int messageRes;

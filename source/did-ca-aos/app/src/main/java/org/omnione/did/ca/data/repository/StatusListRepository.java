@@ -95,7 +95,7 @@ public final class StatusListRepository {
                 case 2:  mapped = VcStatus.INACTIVE; break;
                 default: mapped = VcStatus.INACTIVE; break;
             }
-            return new StatusListResult(mapped, false, null);
+            return new StatusListResult(mapped, false, null, statusInt == 1);
         } catch (IOException e) {
             AppLog.e(TAG, "status list fetch failed for " + ref.uri, e);
             return new StatusListResult(fallback(expEpochSec, nowSec), true,

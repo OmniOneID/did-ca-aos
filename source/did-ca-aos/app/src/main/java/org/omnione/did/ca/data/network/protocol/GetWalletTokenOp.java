@@ -18,15 +18,20 @@ package org.omnione.did.ca.data.network.protocol;
 
 import android.content.Context;
 
+import java.util.concurrent.ExecutionException;
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.ca.data.network.NetworkManager;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.exception.WalletCoreException;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
+import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
 
 public final class GetWalletTokenOp {
 
@@ -44,7 +49,7 @@ public final class GetWalletTokenOp {
                     try {
                         String tokenData = RequestWalletTokenDataOp.call(net, config.casUrl(), seed);
                         return TokenUtil.createHashWalletToken(tokenData, ctx, config.apiGwUrl());
-                    } catch (Exception e) {
+                    } catch (CommunicationException | ExecutionException | InterruptedException | UtilityException | WalletCoreException | WalletException | RuntimeException e) {
                         throw new CompletionException(e);
                     }
                 }));

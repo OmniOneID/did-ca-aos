@@ -70,12 +70,21 @@ public abstract class BaseActivity extends AppCompatActivity {
                                           @StringRes int messageRes,
                                           @Nullable CharSequence detail,
                                           @Nullable NoticeDialogFragment.OnConfirmed onConfirmed) {
+        showErrorNotice(titleRes, messageRes, detail, onConfirmed, true);
+    }
+
+    protected final void showErrorNotice(@StringRes int titleRes,
+                                          @StringRes int messageRes,
+                                          @Nullable CharSequence detail,
+                                          @Nullable NoticeDialogFragment.OnConfirmed onConfirmed,
+                                          boolean cancelable) {
         NoticeDialogFragment dialog = (detail != null)
                 ? NoticeDialogFragment.newInstance(
                         getText(titleRes), detail, getText(R.string.common_ok))
                 : NoticeDialogFragment.newInstance(
                         this, titleRes, messageRes, R.string.common_ok);
         if (onConfirmed != null) dialog.setOnConfirmed(onConfirmed);
+        dialog.setCancelable(cancelable);
         dialog.show(getSupportFragmentManager());
     }
 }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/optionCardRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_vp_option_card"
+    android:orientation="vertical"
+    android:padding="2dp">
+
+    <LinearLayout
+        android:id="@+id/optionHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_vp_option_header"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="14dp">
+
+        <View
+            android:id="@+id/optionRadio"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="@drawable/bg_vp_radio_off"
+            android:clickable="true"
+            android:contentDescription="@string/vp_request_option_select_cd"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/optionTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/pretendard_bold"
+            android:textColor="@color/brand_text_primary"
+            android:textSize="15sp"
+            tools:text="Option 1 of 2" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/brand_divider" />
+
+    <FrameLayout
+        android:id="@+id/optionBodySlot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="14dp"
+        android:paddingBottom="8dp" />
+</LinearLayout>

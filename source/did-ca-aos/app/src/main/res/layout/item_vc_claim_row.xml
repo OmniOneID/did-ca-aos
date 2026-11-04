@@ -25,4 +25,16 @@
         android:textColor="@color/brand_text_primary"
         android:textSize="14sp"
         tools:text="2000-01-01" />
+
+    <ImageView
+        android:id="@+id/claimImage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitStart"
+        android:visibility="gone"
+        tools:ignore="ContentDescription"
+        tools:src="@drawable/ic_id"
+        tools:visibility="visible" />
 </LinearLayout>

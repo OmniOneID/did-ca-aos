@@ -118,7 +118,7 @@ public final class ClaimWebActivity extends BaseActivity {
                 ClaimWebActivity.this.filePathCallback = filePathCallback;
                 try {
                     filePickerLauncher.launch(fileChooserParams.createIntent());
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     ClaimWebActivity.this.filePathCallback = null;
                     return false;
                 }

@@ -31,8 +31,6 @@ public abstract class VpRequestEvent {
 
     public static final class LaunchAuthMethodChooser extends VpRequestEvent {}
 
-    public static final class ShowWarn extends VpRequestEvent {}
-
     public static final class ShowSuccess extends VpRequestEvent {}
 
     public static final class ShowError extends VpRequestEvent {

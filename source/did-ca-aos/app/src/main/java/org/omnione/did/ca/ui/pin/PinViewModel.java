@@ -17,6 +17,8 @@
 package org.omnione.did.ca.ui.pin;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -25,6 +27,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 
+import org.omnione.did.ca.data.network.CommunicationErrors;
 import org.omnione.did.ca.data.repository.BiometricRepository;
 import org.omnione.did.ca.data.repository.LockRepository;
 import org.omnione.did.ca.data.repository.UserRegistrationRepository;
@@ -43,11 +46,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext;
 public final class PinViewModel extends ViewModel {
 
     static final int PIN_LENGTH = 6;
+    private static final long ERROR_HOLD_MS = 1000L;
 
     private final LockRepository lockRepo;
     private final UserRegistrationRepository registrationRepo;
     private final BiometricRepository bioRepo;
     private final Executor mainExecutor;
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private final PinMode mode;
     private final boolean viaBio;
 
@@ -62,6 +67,7 @@ public final class PinViewModel extends ViewModel {
     private String oldPinForChange = "";
     private boolean error = false;
     private boolean inFlight = false;
+    private boolean errorHold = false;
 
     @Inject
     public PinViewModel(SavedStateHandle handle,
@@ -92,7 +98,7 @@ public final class PinViewModel extends ViewModel {
     public PinMode getMode()                                { return mode; }
 
     public boolean onKey(char key) {
-        if (inFlight) return false;
+        if (inFlight || errorHold) return false;
         if (error) error = false;
         if (key == 'd') {
             if (!pin.isEmpty()) pin = pin.substring(0, pin.length() - 1);
@@ -108,7 +114,7 @@ public final class PinViewModel extends ViewModel {
     }
 
     public void advance() {
-        if (inFlight) return;
+        if (inFlight || errorHold || pin.length() != PIN_LENGTH) return;
         switch (mode) {
             case UNLOCK_AUTH:     advanceUnlockAuth();        break;
             case AUTH:            advanceAuth();              break;
@@ -131,8 +137,7 @@ public final class PinViewModel extends ViewModel {
                         doneEvent.setValue(new Event<>(
                                 new PinDoneEvent(PinDoneEvent.Type.UNLOCK_AUTH_DONE, null)));
                     } else {
-                        error = true;
-                        emit();
+                        showError();
                     }
                 }, mainExecutor);
     }
@@ -148,8 +153,7 @@ public final class PinViewModel extends ViewModel {
                         doneEvent.setValue(new Event<>(
                                 new PinDoneEvent(PinDoneEvent.Type.AUTH_DONE, entered)));
                     } else {
-                        error = true;
-                        emit();
+                        showError();
                     }
                 }, mainExecutor);
     }
@@ -170,17 +174,14 @@ public final class PinViewModel extends ViewModel {
                     step = 1;
                     emit();
                 } else {
-
-                    error = true;
-                    emit();
+                    showError();
                 }
             }, mainExecutor);
             return;
         }
         if (step == 1) {
             if (pin.equals(oldPinForChange)) {
-                error = true;
-                emit();
+                showError();
             } else {
                 firstPin = pin;
                 pin = "";
@@ -191,8 +192,7 @@ public final class PinViewModel extends ViewModel {
         }
 
         if (!pin.equals(firstPin)) {
-            error = true;
-            emit();
+            showError();
             return;
         }
         inFlight = true;
@@ -205,6 +205,7 @@ public final class PinViewModel extends ViewModel {
         op.whenCompleteAsync((v, err) -> {
             inFlight = false;
             if (err == null) {
+                emit();
                 PinDoneEvent.Type type = unlock
                         ? PinDoneEvent.Type.UNLOCK_CHANGE_DONE
                         : PinDoneEvent.Type.CHANGE_DONE;
@@ -214,8 +215,7 @@ public final class PinViewModel extends ViewModel {
                 pin = "";
                 firstPin = "";
                 oldPinForChange = "";
-                error = true;
-                emit();
+                showError();
             }
         }, mainExecutor);
     }
@@ -229,8 +229,7 @@ public final class PinViewModel extends ViewModel {
             return;
         }
         if (!pin.equals(firstPin)) {
-            error = true;
-            emit();
+            showError();
             return;
         }
         inFlight = true;
@@ -276,9 +275,7 @@ public final class PinViewModel extends ViewModel {
                         doneEvent.setValue(new Event<>(
                                 new PinDoneEvent(PinDoneEvent.Type.REGISTER_SIGN_DONE, null)));
                     } else {
-
-                        error = true;
-                        emit();
+                        onRegisterSignFailed(err);
                     }
                 }, mainExecutor);
     }
@@ -294,8 +291,7 @@ public final class PinViewModel extends ViewModel {
                         doneEvent.setValue(new Event<>(
                                 new PinDoneEvent(PinDoneEvent.Type.REGISTER_SIGN_DONE, null)));
                     } else {
-                        error = true;
-                        emit();
+                        onRegisterSignFailed(err);
                     }
                 }, mainExecutor);
     }
@@ -305,6 +301,34 @@ public final class PinViewModel extends ViewModel {
         inFlight = false;
         error = true;
         emit();
+    }
+
+    private void onRegisterSignFailed(Throwable err) {
+        if (!CommunicationErrors.isUnreachable(err)) {
+            showError();
+            return;
+        }
+        pin = "";
+        emit();
+        doneEvent.setValue(new Event<>(
+                new PinDoneEvent(PinDoneEvent.Type.REGISTER_SIGN_UNREACHABLE, null)));
+    }
+
+    private void showError() {
+        error = true;
+        errorHold = true;
+        emit();
+        handler.postDelayed(() -> {
+            errorHold = false;
+            error = false;
+            pin = "";
+            emit();
+        }, ERROR_HOLD_MS);
+    }
+
+    @Override
+    protected void onCleared() {
+        handler.removeCallbacksAndMessages(null);
     }
 
     public BiometricRepository getBioRepo() {

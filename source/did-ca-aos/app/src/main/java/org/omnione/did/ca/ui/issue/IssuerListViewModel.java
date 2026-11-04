@@ -33,7 +33,9 @@ import org.omnione.did.ca.data.repository.BiometricRepository;
 import org.omnione.did.ca.data.model.IssuableCredential;
 import org.omnione.did.ca.data.repository.IssueRepository;
 import org.omnione.did.ca.data.repository.Oid4vciDiscoveryRepository;
+import org.omnione.did.ca.data.repository.UserIdentityRepository;
 import org.omnione.did.ca.data.sdk.WalletGateway;
+import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.ca.ui.Event;
 import org.omnione.did.sdk.wallet.walletservice.config.Constants;
@@ -41,6 +43,7 @@ import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -58,6 +61,7 @@ public final class IssuerListViewModel extends ViewModel {
     private final Oid4vciDiscoveryRepository oid4vciDiscovery;
     private final WalletGateway walletGateway;
     private final BiometricRepository bioRepo;
+    private final UserIdentityRepository identity;
     private final Executor mainExecutor;
 
     private final MutableLiveData<IssuerListUiState> state = new MutableLiveData<>();
@@ -73,11 +77,13 @@ public final class IssuerListViewModel extends ViewModel {
                                Oid4vciDiscoveryRepository oid4vciDiscovery,
                                WalletGateway walletGateway,
                                BiometricRepository bioRepo,
+                               UserIdentityRepository identity,
                                @ApplicationContext android.content.Context appContext) {
         this.repository = repository;
         this.oid4vciDiscovery = oid4vciDiscovery;
         this.walletGateway = walletGateway;
         this.bioRepo = bioRepo;
+        this.identity = identity;
         this.mainExecutor = ContextCompat.getMainExecutor(appContext);
     }
 
@@ -134,21 +140,32 @@ public final class IssuerListViewModel extends ViewModel {
         if (c.sdJwtVc) return CredentialBadge.SD_JWT;
         if (c.mdoc) return CredentialBadge.MDOC;
 
-        String fmt = c.format == null ? "" : c.format.toLowerCase();
-        if (fmt.contains("sd-jwt") || (c.vct != null && !c.vct.isEmpty())) {
-            return CredentialBadge.SD_JWT;
-        }
-        if (fmt.contains("mdoc") || fmt.contains("mso") || (c.doctype != null && !c.doctype.isEmpty())) {
-            return CredentialBadge.MDOC;
-        }
+        if (isSdJwtFormat(c)) return CredentialBadge.SD_JWT;
+        if (isMdocFormat(c)) return CredentialBadge.MDOC;
         return CredentialBadge.VC;
     }
 
-    public void onCardSelected(@NonNull IssuableCredential item) {
+    private static boolean isSdJwtFormat(@NonNull Oid4vciCredentialChoice c) {
+        String fmt = lowerFormat(c.format);
+        return fmt.contains("sd-jwt") || fmt.contains("sd_jwt")
+                || (c.vct != null && !c.vct.isEmpty());
+    }
 
-        if (!org.omnione.did.ca.config.Constants.OID4VCI_MDOC_ENABLED && item.badge == CredentialBadge.MDOC) {
-            event.postValue(new Event<>(new IssuerListEvent.ShowToast(
-                    R.string.oid4vci_mdoc_not_supported)));
+    private static boolean isMdocFormat(@NonNull Oid4vciCredentialChoice c) {
+        String fmt = lowerFormat(c.format);
+        return fmt.contains("mdoc") || fmt.contains("mso")
+                || (c.doctype != null && !c.doctype.isEmpty());
+    }
+
+    private static String lowerFormat(@Nullable String format) {
+        return format == null ? "" : format.toLowerCase(Locale.ROOT);
+    }
+
+    public void onCardSelected(@NonNull IssuableCredential item) {
+        String userName = identity.getUserName();
+        if (userName == null || userName.isEmpty()) {
+            emitError(R.string.notice_issue_no_user_name_title,
+                    R.string.notice_issue_no_user_name_message, false, null);
             return;
         }
         if (item.isOid4vci()) { onOid4vciCardSelected(item); return; }
@@ -158,21 +175,27 @@ public final class IssuerListViewModel extends ViewModel {
         phase1Future = repository.prepareIssuance(item);
 
         phase1Future.whenCompleteAsync((title, err) -> {
-            if (err != null) {
-                repository.cancelIssuance();
-                pendingItem = null; phase1Future = null;
-                state.postValue(IssuerListUiState.data(currentItems()));
-                emitError(R.string.notice_issue_failed_title,
-                        R.string.notice_issue_failed_message, false, err);
-                return;
+            Throwable failure = err;
+            if (failure == null) {
+                try {
+                    String claimUrl = repository.getClaimWebUrl();
+                    if (claimUrl != null) {
+                        event.postValue(new Event<>(new IssuerListEvent.LaunchClaimWeb(
+                                claimUrl, AFTER_AUTH_TAG_PREFIX + item.vcPlanId)));
+                    } else {
+                        emitAuthLaunch(item);
+                    }
+                    return;
+                } catch (Throwable t) {
+                    failure = t;
+                }
             }
-            String claimUrl = repository.getClaimWebUrl();
-            if (claimUrl != null) {
-                event.postValue(new Event<>(new IssuerListEvent.LaunchClaimWeb(
-                        claimUrl, AFTER_AUTH_TAG_PREFIX + item.vcPlanId)));
-            } else {
-                emitAuthLaunch(item);
-            }
+            AppLog.e("IssuerList", "issuance start failed", failure);
+            repository.cancelIssuance();
+            pendingItem = null; phase1Future = null;
+            state.postValue(IssuerListUiState.data(currentItems()));
+            emitError(R.string.notice_issue_failed_title,
+                    R.string.notice_issue_failed_message, false, failure);
         }, mainExecutor);
     }
 

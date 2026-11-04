@@ -28,7 +28,7 @@ public final class VpZkpRequest {
     @NonNull
     public final List<VpRevealAttribute> attributes;
     @NonNull
-    public final List<VpPlainAttribute> predicates;
+    public final List<ZkpAttributeReferent> predicates;
     @NonNull
     public final List<VpPlainAttribute> selfAttributes;
 
@@ -36,7 +36,7 @@ public final class VpZkpRequest {
     public final Map<String, ZkpAttributeReferent> referentsByLabel;
 
     public VpZkpRequest(@NonNull List<VpRevealAttribute> attributes,
-                        @NonNull List<VpPlainAttribute> predicates,
+                        @NonNull List<ZkpAttributeReferent> predicates,
                         @NonNull List<VpPlainAttribute> selfAttributes,
                         @Nullable Map<String, ZkpAttributeReferent> referentsByLabel) {
         this.attributes = attributes;

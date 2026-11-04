@@ -79,7 +79,7 @@
             android:textColor="@color/brand_error"
             android:textSize="13sp"
             android:fontFamily="@font/pretendard_medium"
-            android:visibility="invisible"
+            android:visibility="gone"
             tools:text="Pins do not match"
             tools:visibility="visible" />
     </LinearLayout>

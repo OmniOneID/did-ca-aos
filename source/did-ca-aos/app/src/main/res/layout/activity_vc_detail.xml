@@ -87,7 +87,7 @@
                     android:layout_marginTop="4dp"
                     android:fontFamily="@font/pretendard_bold"
                     android:letterSpacing="-0.014"
-                    android:lineSpacingMultiplier="1.25"
+                    app:lineHeight="27.5sp"
                     android:textColor="@color/white"
                     android:textSize="22sp"
                     tools:text="National ID Card" />
@@ -151,7 +151,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:fontFamily="@font/pretendard_bold"
-                            android:lineSpacingMultiplier="1.3"
+                            app:lineHeight="18.2sp"
                             android:textColor="@color/brand_text_primary"
                             android:textSize="14sp"
                             tools:text="Government Identity Service" />

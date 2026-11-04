@@ -25,6 +25,7 @@ import org.omnione.did.sdk.utility.Errors.UtilityException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 
 public final class CaUtil {
 
@@ -63,5 +64,11 @@ public final class CaUtil {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    public static <T> CompletableFuture<T> failedFuture(Throwable e) {
+        CompletableFuture<T> f = new CompletableFuture<>();
+        f.completeExceptionally(e);
+        return f;
     }
 }

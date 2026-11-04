@@ -3,7 +3,7 @@
 ## Overview
 This document is a guide for using the OpenDID authentication client (Certified App), providing users with the functionality to create, store, and manage WalletToken, Lock/Unlock, Key, DID Document, and Verifiable Credential (VC) information required for OpenDID.
 
-This is the 3.0 base application. In addition to the native OpenDID protocol, it supports credential issuance and presentation over **OID4VC** (OID4VCI / OID4VP) and handles the **DID-based SD-JWT (`sd-jwt-did`)** credential format.
+This is the v3.0.0 application. In addition to the native OpenDID protocol, it supports credential issuance and presentation over **DID-based OID4VC (SD-JWT VC, mdoc)** (OID4VCI / OID4VP), and mdoc proximity presentation.
 
 ### Key Features
 | Feature | Details |
@@ -12,9 +12,10 @@ This is the 3.0 base application. In addition to the native OpenDID protocol, it
 | Authentication | PIN and biometric (fingerprint / face) authentication |
 | Issuance | Native OpenDID protocol, OID4VCI (pre-authorized code, user-initiated via WebView) |
 | Presentation | Native OpenDID protocol, OID4VP, ZKP-based presentation |
-| Credential format | OpenDID VC, DID-based SD-JWT (`sd-jwt-did`) |
+| Proximity presentation | mdoc presentation over BLE / Wi-Fi Aware with QR or NFC device engagement |
+| Credential format | OpenDID VC, DID-based SD-JWT VC (`dc+sd-jwt-did`), DID-based mdoc (`mso_mdoc-did`) |
 | Selective disclosure | Claim-level selection when submitting a presentation |
-| Credential status | Credential status verification via Token Status List |
+| Credential status | Credential status verification via Token Status List (SD-JWT VC, mdoc) |
 | Credential management | Credential list / detail view, deletion and revocation |
 
 
@@ -57,61 +58,80 @@ git clone https://github.com/OmniOneID/did-ca-aos.git
 
 ## SDK Application Method
 The Android SDK is referred to as `did-client-sdk-aos` below.
-- *did-wallet-sdk-aos-3.0.0-0807.jar*
-- *did-sd-jwt-vc-sdk-server-2.5.0.jar*
+- *did-wallet-sdk-aos-3.0.0.jar*
+- *proximity-holder-1.0.0.aar* (built from `did-proximity-sdk-android`)
 
 Please refer to the respective links for their own licenses for third-party libraries used by each SDK.
 <br>
 [Client SDK License-dependencies](https://github.com/OmniOneID/did-client-sdk-aos/blob/main/dependencies-license.md)
+<br>
+[Proximity SDK License-dependencies](https://github.com/OmniOneID/did-proximity-sdk-android/blob/main/dependencies-license.md)
 
 <br>
 
 ### How to apply the did-client-sdk-aos library to the DIDCA project in Android Studio:
 1. Prepare the did-client-sdk-aos library
 
-- If you do not have the above library files, you need to build them from the SDK repository to generate the jar files.
+- If you do not have the above library files, you need to build them from the SDK repository to generate the jar and aar files.
 [Move to Client SDK](https://github.com/OmniOneID/did-client-sdk-aos)
+<br>
+[Move to Proximity SDK](https://github.com/OmniOneID/did-proximity-sdk-android)
 
 2. Add the did-client-sdk-aos library
 
-    a. Add jar files to the project
+    a. Add jar and aar files to the project
    - Open the project in Android Studio.
    - Create a `libs` folder under the `app` directory in the Project window. (Skip this step if the folder already exists.)
-   - Copy the prepared jar files into the `libs` folder.
+   - Copy the prepared jar and aar files into the `libs` folder.
 
     b. Add jar files to the project dependencies
      - After copying the jar files to the `libs` folder, right-click each jar file in the Project window and select "Add as Library..."
      - Android Studio will automatically add the jar files as project dependencies.
+     - The aar file is not added this way; it is declared with `files(...)` in build.gradle (see step 3).
 
 3. Modify the build.gradle file
 
     a. Modify the dependencies section
-   - Open the build.gradle file for the app module. The jar files under `libs` are picked up by `fileTree`, and the remaining dependencies are referenced from the version catalog:
+   - Open the build.gradle file for the app module. The jar files under `libs` are picked up by `fileTree`, the proximity aar is referenced directly with `files(...)`, and the remaining dependencies are referenced from the version catalog:
 
     ```groovy
     dependencies {
         implementation fileTree(dir: 'libs', include: ['*.jar'])
 
+        implementation libs.appcompat
+        implementation libs.material
+        implementation libs.core.splashscreen
+        implementation libs.lifecycle.viewmodel
+        implementation libs.lifecycle.livedata
+        implementation libs.viewpager2
+        implementation libs.gridlayout
+        implementation libs.activity
+        implementation libs.fragment
+        implementation libs.recyclerview
+        implementation libs.constraintlayout
+
         implementation libs.gson
-        implementation libs.biometric
+        implementation libs.zxing.android.embedded
         implementation libs.bitcoinj.core
+        implementation libs.biometric
+
+        api libs.room.runtime
 
         implementation libs.spongycastle.core
         implementation libs.spongycastle.prov
-        implementation libs.spongycastle.prix
-        implementation libs.spongycastle.pg
-
-        api libs.room.runtime
-        annotationProcessor libs.room.compiler
 
         implementation libs.hilt.android
         annotationProcessor libs.hilt.compiler
 
-        implementation libs.bundles.jackson
         implementation libs.nimbus.jose.jwt
+
+        implementation libs.upokecenter.cbor
+
+        implementation files('libs/proximity-holder-1.0.0.aar')
     }
     ```
 
+   - The aar has no POM, so its dependencies (`spongycastle` core/prov and `upokecenter.cbor`) are declared directly by the app, as shown above.
    - The actual versions are declared in `gradle/libs.versions.toml`. Add a new dependency there first, then reference it as `libs.<alias>`.
 
     b. Check the minSdk and targetSdk settings
@@ -126,12 +146,16 @@ Please refer to the respective links for their own licenses for third-party libr
             }
         }
 
+        def major = 3
+        def minor = 0
+        def patch = 0
+
         defaultConfig {
             applicationId "org.omnione.did.ca"
             minSdk 26
             targetSdk 36
-            versionCode 30000
-            versionName "3.0.0"
+            versionCode major * 10000 + minor * 100 + patch
+            versionName "$major.$minor.$patch"
         }
 
         compileOptions {
@@ -161,30 +185,34 @@ Please refer to the respective links for their own licenses for third-party libr
     b. Using the did-client-sdk-aos Module
    - At the top of the Java/Kotlin file where you want to use the class or method, import as follows:
     ```java
-    import  org.omnione.did.sdk.core;
-    import  org.omnione.did.sdk.utility;
-    import  org.omnione.did.sdk.datamodel;
-    import  org.omnione.did.sdk.wallet;
-    import  org.omnione.did.sdk.communication;
+    import org.omnione.did.sdk.core.api.WalletApi;
+    import org.omnione.did.sdk.core.exception.WalletCoreException;
+    import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
+    import org.omnione.did.sdk.datamodel.vc.VerifiableCredential;
+    import org.omnione.did.sdk.utility.Errors.UtilityException;
+    import org.omnione.did.sdk.wallet.walletservice.exception.WalletException;
     ```
 
    - You can now use the features provided by the did-client-sdk-aos module in your source code:
     ```java
     try {
-        String hWalletToken = WalletAPI.createWalletToken(WWALLET_TOKEN_PURPOSE.LIST_VC);
+        WalletApi walletApi = WalletApi.getInstance(context);
 
-        List<Credential> credentials = WalletAPI.getAllCredentials(hWalletToken);
+        String hWalletToken = walletApi.createLocalWalletToken(
+                WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, context.getPackageName());
+
+        List<VerifiableCredential> credentials = walletApi.getAllCredentials(hWalletToken);
 
         if (credentials != null) {
-            for (Credential vc : credentials) {
+            for (VerifiableCredential vc : credentials) {
                 Log.d("VC", vc.toJson());
             }
         }
 
     } catch (WalletException e) {
         Log.e("WalletException", "Message: " + e.getMessage());
-    } catch (CommunicationException e) {
-        Log.e("CommunicationException", "Message: " + e.getMessage());
+    } catch (WalletCoreException e) {
+        Log.e("WalletCoreException", "Message: " + e.getMessage());
     } catch (UtilityException e) {
         Log.e("UtilityException", "Message: " + e.getMessage());
     }

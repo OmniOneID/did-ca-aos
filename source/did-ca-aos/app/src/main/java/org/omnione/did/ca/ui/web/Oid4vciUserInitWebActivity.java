@@ -32,7 +32,6 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.core.view.WindowCompat;
 
-import org.json.JSONObject;
 import org.omnione.did.ca.BuildConfig;
 import org.omnione.did.ca.R;
 import org.omnione.did.ca.databinding.ActivityClaimWebBinding;
@@ -105,7 +104,6 @@ public final class Oid4vciUserInitWebActivity extends BaseActivity {
             public void onPageFinished(WebView view, String loadedUrl) {
                 super.onPageFinished(view, loadedUrl);
                 dismissProgress();
-                if (BuildConfig.DEBUG) prefillMockClaims(view);
             }
 
             @Override
@@ -129,7 +127,7 @@ public final class Oid4vciUserInitWebActivity extends BaseActivity {
 
         WebSettings settings = webView.getSettings();
 
-        settings.setJavaScriptEnabled(BuildConfig.DEBUG);
+        settings.setJavaScriptEnabled(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setDomStorageEnabled(false);
@@ -198,32 +196,5 @@ public final class Oid4vciUserInitWebActivity extends BaseActivity {
                         R.string.oid4vci_web_invalid_completion,
                         R.string.common_ok)
                 .show(getSupportFragmentManager());
-    }
-
-    private void prefillMockClaims(WebView view) {
-        JSONObject values = new JSONObject();
-        try {
-
-            values.put("claim-family_name", "Hong");
-            values.put("claim-given_name", "Gildong");
-            values.put("claim-birthdate", "1990-01-01");
-            values.put("claim-place_of_birth", "[\"Seoul\", \"Seoul\", \"Seoul\"]");
-            values.put("claim-nationalities", "[\"KR\"]");
-            values.put("claim-date_of_issuance", "2024-01-01");
-            values.put("claim-date_of_expiry", "2034-01-01");
-            values.put("claim-issuing_authority", "KR Government");
-            values.put("claim-issuing_country", "KR");
-        } catch (Exception e) {
-            AppLog.w("Oid4vciUserInitWeb", "prefill build failed: " + e.getMessage());
-            return;
-        }
-
-        String js = "(function(){var m=" + values + ";"
-                + "for(var k in m){var e=document.getElementById(k);"
-                + "if(e){e.value=m[k];"
-                + "e.dispatchEvent(new Event('input',{bubbles:true}));"
-                + "e.dispatchEvent(new Event('change',{bubbles:true}));}}})();";
-        view.evaluateJavascript(js, null);
-        AppLog.d("Oid4vciUserInitWeb", "prefilled mock claims (debug)");
     }
 }

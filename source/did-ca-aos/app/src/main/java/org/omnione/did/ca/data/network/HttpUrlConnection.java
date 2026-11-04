@@ -110,7 +110,7 @@ public final class HttpUrlConnection {
         if (body == null || body.isEmpty()) return null;
         try {
             return new Gson().fromJson(body, ServerErrorWire.class);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return null;
         }
     }

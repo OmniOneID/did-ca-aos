@@ -26,6 +26,7 @@ import org.omnione.did.ca.data.network.NetworkManager;
 import org.omnione.did.ca.data.network.protocol.GetWalletTokenOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.protocol.OID4VCIProtocol;
+import org.omnione.did.ca.util.CaUtil;
 import org.omnione.did.sdk.core.oid4vc.errors.Oid4vciException;
 import org.omnione.did.sdk.core.oid4vc.model.CredentialOfferResponse;
 import org.omnione.did.sdk.core.oid4vc.model.IssuerMetadataResponse;
@@ -48,6 +49,7 @@ public final class Oid4vciIssueRepository {
     private final AppConfig config;
     private final UserIdentityRepository identity;
     private final Context appContext;
+    private final Oid4vcIssuerRepository issuers;
     private volatile SdkSession session;
 
     private static final class SdkSession {
@@ -62,13 +64,15 @@ public final class Oid4vciIssueRepository {
                                          NetworkManager net,
                                          AppConfig config,
                                          UserIdentityRepository identity,
-                                         @ApplicationContext Context appContext) {
+                                         @ApplicationContext Context appContext,
+                                         Oid4vcIssuerRepository issuers) {
         this.protocol = protocol;
         this.walletGateway = walletGateway;
         this.net = net;
         this.config = config;
         this.identity = identity;
         this.appContext = appContext;
+        this.issuers = issuers;
     }
 
         public CompletableFuture<CredentialOfferResponse> parseOffer(@NonNull String rawPayload) {
@@ -82,7 +86,7 @@ public final class Oid4vciIssueRepository {
 
         public CompletableFuture<IssuerMetadataResponse> fetchMetadata(@NonNull String issuerUrl) {
         SdkSession s = session;
-        if (s == null) return CompletableFuture.failedFuture(new Oid4vciException("No active session"));
+        if (s == null) return CaUtil.failedFuture(new Oid4vciException("No active session"));
         return protocol.getMetadata(issuerUrl).thenApply(metadata -> {
             s.metadata = metadata;
             return metadata;
@@ -92,7 +96,7 @@ public final class Oid4vciIssueRepository {
         public CompletableFuture<Void> requestToken(@Nullable String txCode) {
         SdkSession s = session;
         if (s == null || s.offer == null || s.metadata == null) {
-            return CompletableFuture.failedFuture(new Oid4vciException("Offer/metadata not loaded"));
+            return CaUtil.failedFuture(new Oid4vciException("Offer/metadata not loaded"));
         }
         return protocol.requestTokenByPreAuthorizedCode(s.metadata, s.offer, txCode)
                 .thenApply(token -> {
@@ -104,11 +108,12 @@ public final class Oid4vciIssueRepository {
         public CompletableFuture<String> requestAndStoreCredential(@NonNull String configurationId,
                                                                @Nullable String passcode) {
         SdkSession s = session;
-        if (s == null || s.metadata == null || s.token == null) {
-            return CompletableFuture.failedFuture(new Oid4vciException("Token not obtained"));
+        if (s == null || s.offer == null || s.metadata == null || s.token == null) {
+            return CaUtil.failedFuture(new Oid4vciException("Token not obtained"));
         }
         IssuerMetadataResponse metadata = s.metadata;
         TokenResponse token = s.token;
+        String issuer = s.offer.getCredentialIssuer();
 
         return GetWalletTokenOp.call(walletGateway, net, config, appContext, identity.getUserId(),
                         WalletTokenPurpose.WALLET_TOKEN_PURPOSE.ISSUE_VC)
@@ -116,6 +121,7 @@ public final class Oid4vciIssueRepository {
                         hWalletToken, metadata, token, passcode, configurationId,
                          null, config.apiGwUrl()))
                 .thenApply(vcId -> {
+                    issuers.put(vcId, issuer);
                     session = null;
                     return vcId;
                 });

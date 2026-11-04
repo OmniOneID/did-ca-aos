@@ -27,12 +27,12 @@ public final class VpRequestedClaimGroup {
     @NonNull
     public final List<VpRequestedClaim> items;
 
-    public final boolean locked;
+    public final boolean required;
 
     public VpRequestedClaimGroup(@NonNull String title, @NonNull List<VpRequestedClaim> items,
-                                 boolean locked) {
+                                 boolean required) {
         this.title = title;
         this.items = items;
-        this.locked = locked;
+        this.required = required;
     }
 }

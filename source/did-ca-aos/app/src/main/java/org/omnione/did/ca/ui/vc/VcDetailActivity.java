@@ -18,6 +18,7 @@ package org.omnione.did.ca.ui.vc;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -46,6 +47,8 @@ import org.omnione.did.ca.ui.common.CredentialBadgeBinder;
 import org.omnione.did.ca.ui.common.CredentialStatusBinder;
 import org.omnione.did.ca.ui.common.NoticeDialogFragment;
 import org.omnione.did.ca.ui.pin.PinActivity;
+import org.omnione.did.ca.util.AppLog;
+import org.omnione.did.ca.util.ClaimImages;
 import org.omnione.did.ca.util.IntentRouter;
 
 import java.util.List;
@@ -55,7 +58,9 @@ public class VcDetailActivity extends BaseActivity {
 
     public static final String EXTRA_CREDENTIAL_ID = "extra_credential_id";
 
+    private static final String TAG = "VcDetail";
     private static final String AFTER_AUTH_REVOKE_PREFIX = "revoke:";
+    private static final int CLAIM_IMAGE_INSET_DP = 64;
 
     private ActivityVcDetailBinding binding;
     private VcDetailViewModel viewModel;
@@ -122,9 +127,15 @@ public class VcDetailActivity extends BaseActivity {
         viewModel.getState().observe(this, this::render);
         viewModel.getDeleteCompleted().observe(this, event -> {
             if (event != null && Boolean.TRUE.equals(event.getIfNotHandled())) {
-
                 setResult(RESULT_OK);
-                finish();
+                dismissProgress();
+                NoticeDialogFragment.newInstance(this,
+                                R.string.vc_detail_deleted_title,
+                                R.string.vc_detail_deleted_message,
+                                R.string.common_ok)
+                        .setOnConfirmed(this::finish)
+                        .setOnCancelled(this::finish)
+                        .show(getSupportFragmentManager());
             }
         });
         viewModel.getDeleteError().observe(this, event -> {
@@ -250,10 +261,10 @@ public class VcDetailActivity extends BaseActivity {
             CredentialClaim row = rows.get(i);
             boolean isLast = i == rows.size() - 1;
             View child;
-            if (row.kind == CredentialClaim.Kind.FLAT) {
-                child = buildFlatRow(inflater, card, row);
-            } else {
+            if (row.kind == CredentialClaim.Kind.GROUP) {
                 child = buildGroupRow(inflater, card, row);
+            } else {
+                child = buildFlatRow(inflater, card, row);
             }
             card.addView(child);
             if (!isLast) {
@@ -274,7 +285,25 @@ public class VcDetailActivity extends BaseActivity {
             labelView.setText(row.label);
         }
         ((TextView) v.findViewById(R.id.claimValue)).setText(row.value);
+        if (row.kind == CredentialClaim.Kind.IMAGE) {
+            bindClaimImage(v, row);
+        }
         return v;
+    }
+
+    private void bindClaimImage(@NonNull View row, @NonNull CredentialClaim claim) {
+        Bitmap bitmap = ClaimImages.decode(this, claim.imageBytes);
+        if (bitmap == null) {
+            return;
+        }
+        AppLog.d(TAG, "claim image " + claim.label
+                + " " + bitmap.getWidth() + "x" + bitmap.getHeight());
+        ImageView image = row.findViewById(R.id.claimImage);
+        image.setImageBitmap(bitmap);
+        image.setMaxWidth(ClaimImages.maxWidthPx(this, CLAIM_IMAGE_INSET_DP));
+        image.setContentDescription(claim.label + " image");
+        image.setVisibility(View.VISIBLE);
+        row.findViewById(R.id.claimValue).setVisibility(View.GONE);
     }
 
     @NonNull

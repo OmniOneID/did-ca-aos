@@ -35,6 +35,10 @@ public class WalletStateRepository {
         this.gateway = gateway;
     }
 
+        public CompletableFuture<Boolean> isWalletCreated() {
+        return gateway.isExistWallet();
+    }
+
         public CompletableFuture<Boolean> ensureWalletCreated() {
         return gateway.isExistWallet().thenCompose(exists -> {
             if (exists) {

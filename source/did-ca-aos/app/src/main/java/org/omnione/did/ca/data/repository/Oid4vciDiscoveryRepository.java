@@ -18,6 +18,7 @@ package org.omnione.did.ca.data.repository;
 
 import androidx.annotation.NonNull;
 
+import java.util.concurrent.ExecutionException;
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.ca.data.model.Oid4vciCredentialChoice;
 import org.omnione.did.ca.data.model.Oid4vciIssuerSection;
@@ -85,7 +86,7 @@ public final class Oid4vciDiscoveryRepository {
 
                             sections.add(new Oid4vciIssuerSection(item.getCredentialIssuer(), choices));
                         }
-                    } catch (Exception metaErr) {
+                    } catch (ExecutionException | InterruptedException | RuntimeException metaErr) {
 
                         AppLog.w("Oid4vciDiscovery",
                                 "metadata failed, skipping issuer=" + item.getCredentialIssuer()
@@ -102,12 +103,12 @@ public final class Oid4vciDiscoveryRepository {
     public CompletableFuture<String> buildUserInitiationUrl(@NonNull String userInitiationUri,
                                                             @NonNull String configurationId) {
         return CompletableFuture.supplyAsync(() -> {
-            String userName = identity.getUserId();
+            String userName = identity.getUserName();
             if (userName == null) userName = "";
             String holderDid;
             try {
                 holderDid = walletGateway.getDIDDocument(Constants.DID_DOC_TYPE_HOLDER).get().getId();
-            } catch (Exception e) {
+            } catch (ExecutionException | InterruptedException | RuntimeException e) {
                 throw new CompletionException(e);
             }
             return userInitiationUri

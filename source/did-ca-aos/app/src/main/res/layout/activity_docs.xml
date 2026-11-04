@@ -85,10 +85,15 @@
             android:padding="32dp">
 
             <FrameLayout
+                android:id="@+id/emptyCircle"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
                 android:background="@drawable/bg_docs_empty_circle"
-                android:elevation="6dp">
+                android:clickable="true"
+                android:contentDescription="@string/add_sheet_title"
+                android:elevation="6dp"
+                android:focusable="true"
+                android:foreground="@drawable/ripple_docs_empty_circle">
 
                 <ImageView
                     android:layout_width="72dp"
@@ -116,7 +121,7 @@
                 android:layout_marginTop="8dp"
                 android:fontFamily="@font/pretendard_regular"
                 android:gravity="center"
-                android:lineSpacingMultiplier="1.6"
+                app:lineHeight="22.4sp"
                 android:maxWidth="260dp"
                 android:textColor="@color/brand_text_secondary"
                 android:textSize="14sp"

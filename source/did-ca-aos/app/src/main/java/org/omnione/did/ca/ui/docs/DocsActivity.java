@@ -91,9 +91,15 @@ public class DocsActivity extends BaseActivity {
 
         binding.addButton.setOnClickListener(v -> showAddSheet());
 
+        binding.emptyCircle.setOnClickListener(v -> showAddSheet());
+
         binding.presentButton.setOnClickListener(v -> showPresentSheet());
 
         viewModel.getState().observe(this, this::render);
+        viewModel.getStatusWarning().observe(this, event -> {
+            Integer messageRes = event.getIfNotHandled();
+            if (messageRes != null) Toast.makeText(this, messageRes, Toast.LENGTH_SHORT).show();
+        });
 
         if (savedInstanceState == null) {
             viewModel.loadWallet();
@@ -202,7 +208,7 @@ public class DocsActivity extends BaseActivity {
     }
 
     public void onPresentProximity() {
-        Toast.makeText(this, R.string.present_proximity_unavailable, Toast.LENGTH_SHORT).show();
+        IntentRouter.startProximity(this);
     }
 
     public void onPresentScanQr() {

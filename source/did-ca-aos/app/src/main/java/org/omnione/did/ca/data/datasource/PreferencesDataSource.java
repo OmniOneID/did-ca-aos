@@ -56,6 +56,17 @@ public final class PreferencesDataSource {
         prefs.edit().remove(key).apply();
     }
 
+    public boolean replacePrefix(String prefix, java.util.Map<String, String> values) {
+        SharedPreferences.Editor e = prefs.edit();
+        for (String k : prefs.getAll().keySet()) {
+            if (k.startsWith(prefix)) e.remove(k);
+        }
+        for (java.util.Map.Entry<String, String> entry : values.entrySet()) {
+            e.putString(prefix + entry.getKey(), entry.getValue());
+        }
+        return e.commit();
+    }
+
     public void removeByPrefix(String prefix) {
         SharedPreferences.Editor e = prefs.edit();
         for (String k : prefs.getAll().keySet()) {

@@ -17,6 +17,7 @@
 package org.omnione.did.ca.data.repository;
 
 import android.content.Context;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,11 +33,24 @@ import org.omnione.did.ca.data.network.protocol.RequestVcSchemaOp;
 import org.omnione.did.ca.data.network.protocol.RequestZkpSchemaOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.data.statuslist.CredentialStatusRef;
+import org.omnione.did.ca.data.statuslist.CredentialStatusRefs;
+import org.omnione.did.ca.data.statuslist.MdocStatusListReader;
 import org.omnione.did.ca.data.statuslist.StatusListReference;
+import org.omnione.did.ca.data.statuslist.StatusListResult;
+import org.omnione.did.ca.protocol.OID4VCIProtocol;
 import org.omnione.did.ca.util.AppLog;
+import org.omnione.did.ca.util.CaUtil;
+import org.omnione.did.ca.util.ClaimImages;
 import org.omnione.did.ca.util.CredentialDateFormatter;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
+import org.omnione.did.sdk.core.oid4vc.model.IssuerMetadataResponse;
 import org.omnione.did.sdk.datamodel.common.enums.ClaimType;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
+import org.omnione.did.sdk.datamodel.oid4vc.Mdoc;
+import org.omnione.did.sdk.datamodel.oid4vc.MdocCredentialItem;
+import org.omnione.did.sdk.datamodel.oid4vc.MdocMso;
+import org.omnione.did.sdk.datamodel.oid4vc.MdocValidityInfo;
+import org.omnione.did.sdk.datamodel.oid4vc.OID4VCCredentialItem;
 import org.omnione.did.sdk.datamodel.oid4vc.SdJwt;
 import org.omnione.did.sdk.datamodel.oid4vc.SdJwtCredentialItem;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
@@ -49,6 +63,7 @@ import org.omnione.did.sdk.datamodel.zkp.AttributeType;
 import org.omnione.did.sdk.datamodel.zkp.AttributeValue;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchema;
 import org.omnione.did.sdk.datamodel.zkp.CredentialSchemaVo;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 
 import java.util.AbstractMap;
@@ -60,6 +75,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -77,41 +93,47 @@ public final class CredentialRepository {
     private final NetworkManager net;
     private final AppConfig config;
     private final UserIdentityRepository identity;
-    private final ProxyEndpointRepository proxyEndpoints;
+    private final Oid4vcIssuerRepository issuers;
+    private final OID4VCIProtocol protocol;
     private final CredentialStatusRepository statusRepo;
     private final Context appCtx;
     private final Executor executor = Executors.newCachedThreadPool();
 
     private volatile Set<String> oid4vcIds = Collections.emptySet();
 
-    private volatile CompletableFuture<List<Credential>> inFlightFetchWallet;
+    private volatile CompletableFuture<WalletLoad> inFlightFetchWallet;
+
+    private final Map<String, String> schemaTitles = new ConcurrentHashMap<>();
+    private final Map<String, CredentialSchema> zkpSchemas = new ConcurrentHashMap<>();
 
     @Inject
     public CredentialRepository(WalletGateway gateway,
                                        NetworkManager net,
                                        AppConfig config,
                                        UserIdentityRepository identity,
-                                       ProxyEndpointRepository proxyEndpoints,
+                                       Oid4vcIssuerRepository issuers,
+                                       OID4VCIProtocol protocol,
                                        CredentialStatusRepository statusRepo,
                                        @ApplicationContext Context appCtx) {
         this.gateway = gateway;
         this.net = net;
         this.config = config;
         this.identity = identity;
-        this.proxyEndpoints = proxyEndpoints;
+        this.issuers = issuers;
+        this.protocol = protocol;
         this.statusRepo = statusRepo;
         this.appCtx = appCtx;
     }
 
     @NonNull
-        public synchronized CompletableFuture<List<Credential>> fetchWallet() {
-        CompletableFuture<List<Credential>> existing = inFlightFetchWallet;
+        public synchronized CompletableFuture<WalletLoad> fetchWallet() {
+        CompletableFuture<WalletLoad> existing = inFlightFetchWallet;
         if (existing != null && !existing.isDone()) {
             AppLog.d(TAG, "fetchWallet: in-flight, returning existing future");
             return existing;
         }
-        CompletableFuture<List<Credential>> f = GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
-                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC)
+        CompletableFuture<WalletLoad> f = gateway.createLocalWalletToken(
+                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, CaUtil.getPackageName(appCtx))
                 .thenCompose(token -> gateway.getAllCredentials(token)
                         .thenCompose(this::mapToCredentials)
 
@@ -131,38 +153,104 @@ public final class CredentialRepository {
 
     @NonNull
         public CompletableFuture<VcDetailResult> fetchDetail(@NonNull String vcId) {
-        if (oid4vcIds.contains(vcId)) {
-
-            return GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
-                            WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC)
-                    .thenCompose(token -> gateway.getOID4VCs(token, List.of(vcId)))
-                    .thenApply(this::mapOid4vciDetail);
-        }
-        return GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
-                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.DETAIL_VC)
-                .thenCompose(token -> gateway.getCredential(token, vcId)
-                        .thenCompose(vc -> mapDetail(vc, vcId, token)));
+        return isOid4vc(vcId).thenCompose(oid4vc -> {
+            if (oid4vc) {
+                return gateway.createLocalWalletToken(
+                                WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, CaUtil.getPackageName(appCtx))
+                        .thenCompose(token -> gateway.getOID4VCs(token, List.of(vcId)))
+                        .thenApply(this::mapOid4vciDetail);
+            }
+            return gateway.createLocalWalletToken(
+                            WalletTokenPurpose.WALLET_TOKEN_PURPOSE.DETAIL_VC, CaUtil.getPackageName(appCtx))
+                    .thenCompose(token -> gateway.getCredential(token, vcId)
+                            .thenCompose(vc -> mapDetail(vc, vcId, token)));
+        });
     }
 
     @NonNull
-        public CompletableFuture<Void> delete(@NonNull String vcId) {
-        if (oid4vcIds.contains(vcId)) {
-            return GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
-                            WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC)
-                    .thenCompose(token -> gateway.deleteOID4VCs(token, List.of(vcId)))
-                    .thenApply(v -> {
-                        Set<String> next = new HashSet<>(oid4vcIds);
-                        next.remove(vcId);
-                        oid4vcIds = next;
-                        return v;
-                    });
-        }
+        public CompletableFuture<Void> deleteOid4vc(@NonNull String vcId) {
         return GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
                         WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC)
-                .thenCompose(token -> gateway.deleteCredentials(token, vcId))
+                .thenCompose(token -> gateway.deleteOID4VCs(token, List.of(vcId)))
                 .thenApply(v -> {
-                    proxyEndpoints.remove(vcId);
+                    Set<String> next = new HashSet<>(oid4vcIds);
+                    next.remove(vcId);
+                    oid4vcIds = next;
+                    issuers.remove(vcId);
                     return v;
+                });
+    }
+
+    @NonNull
+    public CompletableFuture<Oid4vcRevokeTarget> prepareOid4vcRevoke(@NonNull String vcId) {
+        String issuer = issuers.get(vcId);
+        if (issuer == null) {
+            AppLog.d(TAG, "revoke-or-local vcId=" + vcId + " explicitRevoked=false issuer=null");
+            return CaUtil.failedFuture(
+                    new IllegalStateException("no credential_issuer for " + vcId));
+        }
+        CompletableFuture<String> kidFut = gateway.createLocalWalletToken(
+                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, CaUtil.getPackageName(appCtx))
+                .thenCompose(token -> gateway.getOID4VCs(token, List.of(vcId)))
+                .thenApply(items -> {
+                    if (items.isEmpty()) {
+                        throw new CompletionException(new IllegalStateException("OID4VC not found: " + vcId));
+                    }
+                    return items.get(0).getKid();
+                });
+        return protocol.getMetadata(issuer).thenCombine(kidFut, (metadata, kid) -> {
+            String endpoint = metadata.getCredentialRevocationEndpoint();
+            String nonceEndpoint = metadata.getNonceEndpoint();
+            AppLog.d(TAG, "revoke-or-local vcId=" + vcId + " explicitRevoked=false issuer=" + issuer
+                    + " endpoint=" + endpoint + " nonce=" + nonceEndpoint + " kid=" + kid);
+            if (endpoint == null || endpoint.isEmpty() || nonceEndpoint == null || nonceEndpoint.isEmpty()) {
+                throw new CompletionException(
+                        new IllegalStateException("no revocation or nonce endpoint for " + issuer));
+            }
+            return new Oid4vcRevokeTarget(metadata, kid);
+        });
+    }
+
+    @NonNull
+    public CompletableFuture<Void> revokeOid4vcAndDelete(@NonNull String vcId,
+                                                         @NonNull IssuerMetadataResponse metadata,
+                                                         @Nullable String pin) {
+        return GetWalletTokenOp.call(gateway, net, config, appCtx, identity.getUserId(),
+                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.REMOVE_VC)
+                .thenCompose(token -> gateway.requestRevokeOID4VC(token, metadata, vcId, pin != null ? pin : ""))
+                .whenComplete((v, err) -> {
+                    if (err == null) {
+                        AppLog.d(TAG, "revoke oid4vc ok vcId=" + vcId);
+                        return;
+                    }
+                    AppLog.e(TAG, "revoke oid4vc failed vcId=" + vcId, err);
+                    for (Throwable c = err; c != null; c = c.getCause()) {
+                        if (c instanceof CommunicationException) {
+                            CommunicationException ce = (CommunicationException) c;
+                            AppLog.e(TAG, "revoke oid4vc server error code=" + ce.getErrorCode()
+                                    + " msg=" + ce.getErrMsg() + " reason=" + ce.getErrorReason());
+                            break;
+                        }
+                    }
+                })
+                .thenCompose(v -> deleteOid4vc(vcId));
+    }
+
+    @NonNull
+    private CompletableFuture<Boolean> isOid4vc(@NonNull String vcId) {
+        if (oid4vcIds.contains(vcId)) return CompletableFuture.completedFuture(true);
+        return gateway.createLocalWalletToken(
+                        WalletTokenPurpose.WALLET_TOKEN_PURPOSE.LIST_VC, CaUtil.getPackageName(appCtx))
+                .thenCompose(gateway::getAllOID4VCs)
+                .thenApply(items -> {
+                    Set<String> ids = new HashSet<>();
+                    for (OID4VCCredentialItem item : items) ids.add(item.getId());
+                    oid4vcIds = ids;
+                    return ids.contains(vcId);
+                })
+                .exceptionally(e -> {
+                    AppLog.e(TAG, "isOid4vc: OID4VC lookup failed, treating as OpenDID: vcId=" + vcId, e);
+                    return false;
                 });
     }
 
@@ -189,24 +277,30 @@ public final class CredentialRepository {
     @NonNull
     private CompletableFuture<MappedCredential> mapOne(@NonNull VerifiableCredential vc) {
         String schemaUrl = vc.getCredentialSchema().getId();
-        CompletableFuture<VCSchema> schemaFut = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<String> titleFut = CompletableFuture.supplyAsync(() -> {
             try {
                 String body = RequestVcSchemaOp.call(net, schemaUrl);
-                return MessageUtil.deserialize(body, VCSchema.class);
-            } catch (Exception e) {
+                VCSchema schema = MessageUtil.deserialize(body, VCSchema.class);
+                String title = schema != null ? schema.getTitle() : null;
+                if (title != null && !title.isEmpty()) {
+                    schemaTitles.put(schemaUrl, title);
+                    return title;
+                }
+            } catch (CommunicationException | RuntimeException e) {
                 AppLog.e(TAG, "mapOne: schema fetch failed for " + schemaUrl, e);
-                throw new CompletionException(e);
             }
+            String cached = schemaTitles.get(schemaUrl);
+            return cached != null ? cached : nameFromSchemaId(schemaUrl, vc.getId());
         }, executor);
         CompletableFuture<Boolean> zkpFut = gateway.isZkpCredentialsSaved(vc.getId());
 
         Long expSec = CredentialDateFormatter.toEpochSeconds(vc.getValidUntil());
-        CredentialStatusRef statusRef = CredentialStatusRef.openDid(vc.getId(), expSec);
-        return schemaFut.thenCombine(zkpFut, AbstractMap.SimpleImmutableEntry::new)
+        CredentialStatusRef statusRef = CredentialStatusRefs.fromOpenDidVc(vc);
+        return titleFut.thenCombine(zkpFut, AbstractMap.SimpleImmutableEntry::new)
                 .thenApply(entry -> new MappedCredential(
                         new Credential(
                                 vc.getId(),
-                                entry.getKey().getTitle() != null ? entry.getKey().getTitle() : "",
+                                entry.getKey(),
                                 CredentialBadge.VC,
                                 vc.getIssuer() != null ? vc.getIssuer().getName() : "",
                                 CredentialDateFormatter.format(vc.getIssuanceDate()),
@@ -217,21 +311,42 @@ public final class CredentialRepository {
     }
 
     @NonNull
-    private CompletableFuture<List<Credential>> refreshStatuses(@NonNull List<MappedCredential> mapped) {
+    private CompletableFuture<WalletLoad> refreshStatuses(@NonNull List<MappedCredential> mapped) {
         List<CredentialStatusRef> refs = new ArrayList<>(mapped.size());
         for (MappedCredential m : mapped) {
             if (m.statusRef != null) refs.add(m.statusRef);
         }
         return statusRepo.refreshAll(refs).thenApply(statuses -> {
             List<Credential> result = new ArrayList<>(mapped.size());
+            boolean checkFailed = false;
+            long nowSec = System.currentTimeMillis() / 1000L;
             for (MappedCredential m : mapped) {
-                VcStatus resolved = statuses.get(m.credential.id);
-                result.add(resolved == null || resolved == m.credential.status
+                StatusListResult sr = statuses.get(m.credential.id);
+                Long expSec = m.statusRef != null ? m.statusRef.expEpochSec : null;
+                if (sr != null && sr.checkFailed && (expSec == null || expSec > nowSec)) checkFailed = true;
+                result.add(sr == null || sr.status == m.credential.status
                         ? m.credential
-                        : m.credential.withStatus(resolved));
+                        : m.credential.withStatus(sr.status));
             }
-            return result;
+            return new WalletLoad(result, checkFailed);
         });
+    }
+
+    @NonNull
+    private static String nameFromSchemaId(@Nullable String schemaUrl, @NonNull String fallback) {
+        if (schemaUrl == null) return fallback;
+        Uri uri = Uri.parse(schemaUrl);
+        if (!uri.isHierarchical()) return fallback;
+        String name = uri.getQueryParameter("name");
+        if (name == null || name.isEmpty()) name = uri.getLastPathSegment();
+        if (name == null || name.isEmpty()) return fallback;
+        if (name.startsWith("vc.schema.")) name = name.substring("vc.schema.".length());
+        StringBuilder sb = new StringBuilder();
+        for (String word : name.replace('.', ' ').trim().split("\\s+")) {
+            if (word.isEmpty()) continue;
+            sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1)).append(' ');
+        }
+        return sb.length() == 0 ? fallback : sb.append("VC").toString();
     }
 
     @NonNull
@@ -259,24 +374,26 @@ public final class CredentialRepository {
                         new VcDetailResult(c, claims, null, statusRef));
             }
             return gateway.getZkpCredential(walletToken, vcId)
-                    .thenCompose(zkpCred -> {
+                    .thenCompose(zkpCred -> CompletableFuture.supplyAsync(() -> {
                         String zkpSchemaId = zkpCred.getSchemaId();
-                        CompletableFuture<CredentialSchema> zkpSchemaFut = CompletableFuture.supplyAsync(() -> {
-                            try {
-                                String body = RequestZkpSchemaOp.call(net, config.apiGwUrl(), zkpSchemaId);
+                        CredentialSchema schema = null;
+                        try {
+                            String body = RequestZkpSchemaOp.call(net, config.apiGwUrl(), zkpSchemaId);
 
-                                CredentialSchemaVo vo = MessageUtil.deserialize(body, CredentialSchemaVo.class);
-                                String decoded = new String(MultibaseUtils.decode(vo.getCredSchema()));
-                                return MessageUtil.deserialize(decoded, CredentialSchema.class);
-                            } catch (Exception e) {
-                                AppLog.e(TAG, "mapDetail: zkp schema fetch failed for vcId=" + vcId, e);
-                                throw new CompletionException(e);
-                            }
-                        }, executor);
-                        return zkpSchemaFut.thenApply(schema -> {
-                            List<CredentialClaim> zkpClaims = mapZkpClaims(zkpCred, schema);
-                            return new VcDetailResult(c, claims, zkpClaims, statusRef);
-                        });
+                            CredentialSchemaVo vo = MessageUtil.deserialize(body, CredentialSchemaVo.class);
+                            String decoded = new String(MultibaseUtils.decode(vo.getCredSchema()));
+                            schema = MessageUtil.deserialize(decoded, CredentialSchema.class);
+                        } catch (CommunicationException | UtilityException | RuntimeException e) {
+                            AppLog.e(TAG, "mapDetail: zkp schema fetch failed for vcId=" + vcId, e);
+                        }
+                        if (schema != null && zkpSchemaId != null) zkpSchemas.put(zkpSchemaId, schema);
+                        if (schema == null && zkpSchemaId != null) schema = zkpSchemas.get(zkpSchemaId);
+                        return schema != null ? mapZkpClaims(zkpCred, schema) : fallbackZkpClaims(zkpCred);
+                    }, executor))
+                    .thenApply(zkpClaims -> new VcDetailResult(c, claims, zkpClaims, statusRef))
+                    .exceptionally(e -> {
+                        AppLog.e(TAG, "mapDetail: zkp section unavailable for vcId=" + vcId, e);
+                        return new VcDetailResult(c, claims, null, statusRef);
                     });
         });
     }
@@ -316,6 +433,20 @@ public final class CredentialRepository {
                     }
                 }
             }
+        }
+        return result;
+    }
+
+    @NonNull
+    private List<CredentialClaim> fallbackZkpClaims(@NonNull org.omnione.did.sdk.datamodel.zkp.Credential zkpCred) {
+        List<CredentialClaim> result = new ArrayList<>();
+        if (zkpCred.getValues() == null) return result;
+        for (Map.Entry<String, AttributeValue> entry : zkpCred.getValues().entrySet()) {
+            String key = entry.getKey();
+            String word = key.substring(key.lastIndexOf('.') + 1);
+            String label = word.isEmpty() ? key : Character.toUpperCase(word.charAt(0)) + word.substring(1);
+            String raw = entry.getValue() != null ? entry.getValue().getRaw() : null;
+            result.add(CredentialClaim.flat(label, raw != null ? raw : ""));
         }
         return result;
     }
@@ -372,10 +503,43 @@ public final class CredentialRepository {
         AppLog.d(TAG, sb.toString());
     }
 
+    private void logMdoc(int index, int total, @NonNull MdocCredentialItem item) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("issued VC [").append(index).append('/').append(total).append("] (mDoc)")
+                .append(" id=").append(item.getId())
+                .append(", configurationId=").append(item.getConfigurationId());
+        Mdoc mdoc = item.getMdoc();
+        if (mdoc != null) {
+            MdocValidityInfo validity = mdoc.getMso() != null ? mdoc.getMso().getValidityInfo() : null;
+            sb.append(", docType=").append(mdoc.getDocType())
+                    .append(", issuerKid=").append(mdoc.getMso() != null ? mdoc.getMso().getIssuerKid() : null)
+                    .append(", validFrom=").append(validity != null ? validity.getValidFromEpochSec() : null)
+                    .append(", validUntil=").append(validity != null ? validity.getValidUntilEpochSec() : null)
+                    .append(", status=").append(describeStatusRef(item.getRawCredential()))
+                    .append(", nameSpaces={");
+            boolean firstNs = true;
+            for (Map.Entry<String, Map<String, Object>> ns : mdoc.getNameSpaces().entrySet()) {
+                if (!firstNs) sb.append(", ");
+                firstNs = false;
+                sb.append(ns.getKey()).append(':').append(ns.getValue().keySet());
+            }
+            sb.append('}');
+        } else {
+            sb.append(", mdoc=null");
+        }
+        AppLog.d(TAG, sb.toString());
+    }
+
+    @NonNull
+    private static String describeStatusRef(@Nullable String rawCredential) {
+        StatusListReference listRef = MdocStatusListReader.parse(rawCredential);
+        return listRef != null ? listRef.uri + "#" + listRef.idx : "none";
+    }
+
     @NonNull
     private CompletableFuture<List<MappedCredential>> appendOid4vciCredentials(
             @NonNull List<MappedCredential> base,
-            @NonNull List<SdJwtCredentialItem> items) {
+            @NonNull List<OID4VCCredentialItem> items) {
         if (items.isEmpty()) {
             oid4vcIds = Collections.emptySet();
             return CompletableFuture.completedFuture(base);
@@ -383,10 +547,19 @@ public final class CredentialRepository {
         Set<String> ids = new HashSet<>();
         List<MappedCredential> merged = new ArrayList<>(base);
         for (int i = 0; i < items.size(); i++) {
-            SdJwtCredentialItem item = items.get(i);
-            logSdJwtVc(i + 1, items.size(), item);
+            OID4VCCredentialItem item = items.get(i);
             ids.add(item.getId());
-            merged.add(mapOid4vciItem(item));
+            if (item instanceof MdocCredentialItem) {
+                MdocCredentialItem mdocItem = (MdocCredentialItem) item;
+                logMdoc(i + 1, items.size(), mdocItem);
+                merged.add(mapMdocItem(mdocItem));
+            } else if (item instanceof SdJwtCredentialItem) {
+                SdJwtCredentialItem sdJwtItem = (SdJwtCredentialItem) item;
+                logSdJwtVc(i + 1, items.size(), sdJwtItem);
+                merged.add(mapOid4vciItem(sdJwtItem));
+            } else {
+                AppLog.w(TAG, "unsupported OID4VC item type: " + item.getClass().getName());
+            }
         }
         oid4vcIds = ids;
         return CompletableFuture.completedFuture(merged);
@@ -416,22 +589,81 @@ public final class CredentialRepository {
                         valid,
                         lastKnownStatus(item.getId(), expSec),
                         false),
-                CredentialStatusRef.sdJwt(item.getId(), listRef, expSec));
+                CredentialStatusRefs.fromSdJwtItem(item));
     }
 
     @NonNull
-    private VcDetailResult mapOid4vciDetail(@NonNull List<SdJwtCredentialItem> items) {
+    private MappedCredential mapMdocItem(@NonNull MdocCredentialItem item) {
+        Mdoc mdoc = item.getMdoc();
+        MdocMso mso = mdoc != null ? mdoc.getMso() : null;
+        MdocValidityInfo validity = mso != null ? mso.getValidityInfo() : null;
+
+        String issuer = mso != null && mso.getIssuerDid() != null ? mso.getIssuerDid() : "";
+        Long validFromSec = validity != null ? validity.getValidFromEpochSec() : null;
+        Long validUntilSec = validity != null ? validity.getValidUntilEpochSec() : null;
+        StatusListReference listRef = MdocStatusListReader.parse(item.getRawCredential());
+
+        return new MappedCredential(
+                new Credential(
+                        item.getId(),
+                        item.getConfigurationId(),
+                        CredentialBadge.MDOC,
+                        issuer,
+                        formatEpochSeconds(validFromSec),
+                        formatEpochSeconds(validUntilSec),
+                        lastKnownStatus(item.getId(), validUntilSec),
+                        false),
+                CredentialStatusRefs.fromMdocItem(item));
+    }
+
+    @NonNull
+    private VcDetailResult mapOid4vciDetail(@NonNull List<OID4VCCredentialItem> items) {
         if (items.isEmpty()) {
             throw new CompletionException(new IllegalStateException("OID4VCI VC not found"));
         }
-        SdJwtCredentialItem item = items.get(0);
+        OID4VCCredentialItem item = items.get(0);
+        if (item instanceof MdocCredentialItem) {
+            return mapMdocDetail((MdocCredentialItem) item);
+        }
+        if (!(item instanceof SdJwtCredentialItem)) {
+            throw new CompletionException(
+                    new IllegalStateException("unsupported OID4VC item: " + item.getClass().getName()));
+        }
+        SdJwtCredentialItem sdJwtItem = (SdJwtCredentialItem) item;
 
-        MappedCredential header = mapOid4vciItem(item);
+        MappedCredential header = mapOid4vciItem(sdJwtItem);
         List<CredentialClaim> claims = new ArrayList<>();
-        SdJwt sdjwt = item.getSdjwt();
+        SdJwt sdjwt = sdJwtItem.getSdjwt();
         if (sdjwt != null) {
             for (Map.Entry<String, Object> c : sdjwt.getDisclosedClaims().entrySet()) {
                 claims.add(buildOid4vciClaim(c.getKey(), c.getValue()));
+            }
+        }
+        return new VcDetailResult(header.credential, claims, null, header.statusRef);
+    }
+
+    @NonNull
+    private VcDetailResult mapMdocDetail(@NonNull MdocCredentialItem item) {
+        MappedCredential header = mapMdocItem(item);
+        List<CredentialClaim> claims = new ArrayList<>();
+        Mdoc mdoc = item.getMdoc();
+        if (mdoc != null) {
+            Map<String, Map<String, Object>> nameSpaces = mdoc.getNameSpaces();
+            boolean flatten = nameSpaces.size() <= 1;
+            for (Map.Entry<String, Map<String, Object>> ns : nameSpaces.entrySet()) {
+                if (flatten) {
+                    for (Map.Entry<String, Object> element : ns.getValue().entrySet()) {
+                        claims.add(buildOid4vciClaim(element.getKey(), element.getValue()));
+                    }
+                } else {
+                    List<CredentialClaim> grouped = new ArrayList<>();
+                    for (Map.Entry<String, Object> element : ns.getValue().entrySet()) {
+                        grouped.add(buildOid4vciClaim(element.getKey(), element.getValue()));
+                    }
+                    if (!grouped.isEmpty()) {
+                        claims.add(CredentialClaim.group(ns.getKey(), grouped));
+                    }
+                }
             }
         }
         return new VcDetailResult(header.credential, claims, null, header.statusRef);
@@ -442,10 +674,7 @@ public final class CredentialRepository {
         if (value instanceof Map) {
             List<CredentialClaim> subItems = new ArrayList<>();
             for (Map.Entry<?, ?> sub : ((Map<?, ?>) value).entrySet()) {
-                Object subVal = sub.getValue();
-                subItems.add(CredentialClaim.flat(
-                        String.valueOf(sub.getKey()),
-                        subVal == null ? "" : String.valueOf(subVal)));
+                subItems.add(buildOid4vciLeafClaim(String.valueOf(sub.getKey()), sub.getValue()));
             }
             if (!subItems.isEmpty()) {
                 return CredentialClaim.group(label, subItems);
@@ -455,20 +684,38 @@ public final class CredentialRepository {
             for (Object el : (List<?>) value) {
                 if (el instanceof Map) {
                     for (Map.Entry<?, ?> f : ((Map<?, ?>) el).entrySet()) {
-                        Object fv = f.getValue();
-                        subItems.add(CredentialClaim.flat(
-                                String.valueOf(f.getKey()),
-                                fv == null ? "" : String.valueOf(fv)));
+                        subItems.add(buildOid4vciLeafClaim(String.valueOf(f.getKey()), f.getValue()));
                     }
                 } else {
-                    subItems.add(CredentialClaim.flat("", el == null ? "" : String.valueOf(el)));
+                    subItems.add(buildOid4vciLeafClaim("", el));
                 }
             }
             if (!subItems.isEmpty()) {
                 return CredentialClaim.group(label, subItems);
             }
         }
-        return CredentialClaim.flat(label, value == null ? "" : String.valueOf(value));
+        return buildOid4vciLeafClaim(label, value);
+    }
+
+    @NonNull
+    private static CredentialClaim buildOid4vciLeafClaim(@NonNull String label,
+                                                         @Nullable Object value) {
+        String text = leafText(value);
+        if (ClaimImages.isImageElement(label)) {
+            byte[] imageBytes = ClaimImages.toImageBytes(value);
+            if (imageBytes != null) {
+                return CredentialClaim.image(label, imageBytes, text);
+            }
+        }
+        return CredentialClaim.flat(label, text);
+    }
+
+    @NonNull
+    private static String leafText(@Nullable Object value) {
+        if (value instanceof byte[]) {
+            return "(" + ((byte[]) value).length + " bytes)";
+        }
+        return value == null ? "" : String.valueOf(value);
     }
 
     @Nullable
@@ -476,7 +723,7 @@ public final class CredentialRepository {
         try {
             byte[] json = java.util.Base64.getUrlDecoder().decode(segment);
             return new String(json, java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return null;
         }
     }
@@ -485,12 +732,21 @@ public final class CredentialRepository {
     private static String formatEpochSeconds(@NonNull SdJwt parsed, @NonNull String claim) {
         if (!parsed.getJwtPayload().has(claim)) return null;
         try {
-            long sec = parsed.getJwtPayload().get(claim).getAsLong();
+            return formatEpochSeconds(parsed.getJwtPayload().get(claim).getAsLong());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static String formatEpochSeconds(@Nullable Long epochSec) {
+        if (epochSec == null) return null;
+        try {
             java.text.SimpleDateFormat out =
                     new java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.US);
             out.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-            return out.format(new java.util.Date(sec * 1000L));
-        } catch (Exception e) {
+            return out.format(new java.util.Date(epochSec * 1000L));
+        } catch (RuntimeException e) {
             return null;
         }
     }
@@ -500,8 +756,28 @@ public final class CredentialRepository {
         if (!parsed.getJwtPayload().has(claim)) return null;
         try {
             return parsed.getJwtPayload().get(claim).getAsLong();
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return null;
+        }
+    }
+
+    public static final class WalletLoad {
+        @NonNull public final List<Credential> credentials;
+        public final boolean statusCheckFailed;
+
+        WalletLoad(@NonNull List<Credential> credentials, boolean statusCheckFailed) {
+            this.credentials = credentials;
+            this.statusCheckFailed = statusCheckFailed;
+        }
+    }
+
+    public static final class Oid4vcRevokeTarget {
+        @NonNull public final IssuerMetadataResponse metadata;
+        @Nullable public final String kid;
+
+        Oid4vcRevokeTarget(@NonNull IssuerMetadataResponse metadata, @Nullable String kid) {
+            this.metadata = metadata;
+            this.kid = kid;
         }
     }
 

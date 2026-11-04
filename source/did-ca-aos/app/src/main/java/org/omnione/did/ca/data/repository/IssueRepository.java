@@ -21,7 +21,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.omnione.did.ca.BuildConfig;
+import java.util.concurrent.ExecutionException;
 import org.omnione.did.ca.data.config.AppConfig;
 import org.omnione.did.ca.data.model.CredentialBadge;
 import org.omnione.did.ca.data.model.IssuableCredential;
@@ -43,6 +43,7 @@ import org.omnione.did.ca.data.network.protocol.RequestVcSchemaOp;
 import org.omnione.did.ca.data.sdk.WalletGateway;
 import org.omnione.did.ca.util.AppLog;
 import org.omnione.did.ca.util.TokenUtil;
+import org.omnione.did.sdk.communication.exception.CommunicationException;
 import org.omnione.did.sdk.core.api.WalletApi;
 import org.omnione.did.sdk.datamodel.common.enums.ServerTokenPurpose;
 import org.omnione.did.sdk.datamodel.common.enums.WalletTokenPurpose;
@@ -57,9 +58,12 @@ import org.omnione.did.sdk.datamodel.vc.issue.VCPlan;
 import org.omnione.did.sdk.datamodel.vc.issue.VCPlanList;
 import org.omnione.did.sdk.datamodel.vc.issue.VcIssuanceMode;
 import org.omnione.did.sdk.datamodel.vcschema.VCSchema;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 import org.omnione.did.sdk.wallet.walletservice.config.Constants;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -190,7 +194,7 @@ public final class IssueRepository {
                     throw new IllegalArgumentException("Incomplete issue offer payload");
                 }
                 return new IssueOffer(offer.getOfferId(), offer.getVcPlanId(), offer.getIssuer());
-            } catch (Exception e) {
+            } catch (UtilityException | RuntimeException e) {
                 throw new CompletionException(e);
             }
         }, backgroundExecutor);
@@ -315,7 +319,7 @@ public final class IssueRepository {
             VCSchema schema = MessageUtil.deserialize(body, VCSchema.class);
             String t = schema.getTitle();
             return t != null ? t : "";
-        } catch (Exception e) {
+        } catch (CommunicationException | RuntimeException e) {
             return "";
         }
     }
@@ -325,7 +329,7 @@ public final class IssueRepository {
             if (profile.getProfile() == null) return "";
             if (profile.getProfile().credentialSchema == null) return "";
             return profile.getProfile().credentialSchema.id;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return "";
         }
     }
@@ -351,7 +355,7 @@ public final class IssueRepository {
                                 Constants.DID_DOC_TYPE_HOLDER,
                                  null,
                                  true);
-                    } catch (Exception e) {
+                    } catch (ExecutionException | InterruptedException | RuntimeException e) {
                         CompletableFuture<org.omnione.did.sdk.datamodel.common.ProofContainer> f =
                                 new CompletableFuture<>();
                         f.completeExceptionally(e);
@@ -430,17 +434,21 @@ public final class IssueRepository {
         String holderDid;
         try {
             holderDid = walletGateway.getDIDDocument(Constants.DID_DOC_TYPE_HOLDER).get().getId();
-        } catch (Exception e) {
+        } catch (ExecutionException | InterruptedException | RuntimeException e) {
             return null;
         }
 
-        String userId = identity.getUserId();
-        if (userId == null) userId = "";
+        String userName = identity.getUserName();
+        if (userName == null) userName = "";
 
-        return BuildConfig.DEMO_URL
-                + "/addVcInfo?did=" + holderDid
-                + "&userName=" + userId
-                + "&vcSchemaId=" + vcSchemaName;
+        try {
+            return config.demoUrl()
+                    + "/addVcInfo?did=" + holderDid
+                    + "&userName=" + URLEncoder.encode(userName, "UTF-8")
+                    + "&vcSchemaId=" + vcSchemaName;
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static <T> CompletableFuture<T> failedSession() {

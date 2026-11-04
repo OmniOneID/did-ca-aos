@@ -17,6 +17,7 @@
 package org.omnione.did.ca.data.model;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public final class VpRequestedClaim {
 
@@ -28,13 +29,23 @@ public final class VpRequestedClaim {
     @NonNull
     public final String code;
 
-    public final boolean locked;
+    public final boolean required;
+
+    @Nullable
+    public final byte[] imageBytes;
 
     public VpRequestedClaim(@NonNull String label, @NonNull String value,
-                            @NonNull String code, boolean locked) {
+                            @NonNull String code, boolean required) {
+        this(label, value, code, required, null);
+    }
+
+    public VpRequestedClaim(@NonNull String label, @NonNull String value,
+                            @NonNull String code, boolean required,
+                            @Nullable byte[] imageBytes) {
         this.label = label;
         this.value = value;
         this.code = code;
-        this.locked = locked;
+        this.required = required;
+        this.imageBytes = imageBytes;
     }
 }

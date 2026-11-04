@@ -27,6 +27,7 @@ public final class UserIdentityRepository {
 
     private static final String KEY_CA_APP_ID  = "ca_app_id";
     private static final String KEY_USER_ID    = "user_id";
+    private static final String KEY_USER_NAME  = "user_name";
     private static final String KEY_DID        = "did";
     private static final String KEY_INIT       = "init";
 
@@ -49,6 +50,8 @@ public final class UserIdentityRepository {
 
     public String  getUserId()                     { return prefs.getString(KEY_USER_ID, null); }
     public void    setUserId(String userId)        { prefs.putString(KEY_USER_ID, userId); }
+    public String  getUserName()                   { return prefs.getString(KEY_USER_NAME, null); }
+    public void    setUserName(String userName)    { prefs.putString(KEY_USER_NAME, userName); }
     public void    setDid(String did)              { prefs.putString(KEY_DID, did); }
     public boolean isInitialized()                 { return prefs.getBoolean(KEY_INIT, false); }
     public void    setInitialized(boolean init)    { prefs.putBoolean(KEY_INIT, init); }

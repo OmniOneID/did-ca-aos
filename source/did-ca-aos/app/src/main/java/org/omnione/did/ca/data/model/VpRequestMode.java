@@ -19,5 +19,6 @@ package org.omnione.did.ca.data.model;
 public enum VpRequestMode {
     OPENDID_VC,
     ZKP,
-    OID4VP
+    OID4VP,
+    PROXIMITY
 }

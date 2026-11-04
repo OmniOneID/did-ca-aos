@@ -73,7 +73,7 @@ public final class CredentialDateFormatter {
                 Date d = in.parse(trimmed);
                 if (d != null) return d;
             } catch (ParseException ignored) {
-
+                AppLog.d("date pattern mismatch: " + pattern);
             }
         }
         return null;

@@ -68,7 +68,7 @@
             android:layout_marginTop="24dp"
             android:fontFamily="@font/pretendard_semibold"
             android:gravity="center"
-            android:lineSpacingMultiplier="1.4"
+            app:lineHeight="25.2sp"
             android:text="@string/issue_success_title"
             android:textColor="@color/brand_text_primary"
             android:textSize="18sp" />
@@ -105,7 +105,7 @@
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:fontFamily="@font/pretendard_semibold"
-                android:lineSpacingMultiplier="1.4"
+                app:lineHeight="19.6sp"
                 android:textColor="@color/brand_text_primary"
                 android:textSize="14sp"
                 tools:text="National ID Card" />

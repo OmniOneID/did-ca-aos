@@ -94,7 +94,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/pretendard_semibold"
-                    android:lineSpacingMultiplier="1.3"
+                    app:lineHeight="18.2sp"
                     android:textColor="@color/brand_text_primary"
                     android:textSize="14sp"
                     tools:text="Ministry of the Interior and Safety" />
@@ -146,13 +146,29 @@
             android:layout_height="1dp"
             android:background="@color/brand_divider" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/submitButton"
-            style="@style/Widget.DidCa.Button.Primary"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginTop="12dp"
-            android:text="@string/vp_request_submit" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/rejectButton"
+                style="@style/Widget.DidCa.Button.Outline"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/vp_request_reject" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/acceptButton"
+                style="@style/Widget.DidCa.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:text="@string/vp_request_accept" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

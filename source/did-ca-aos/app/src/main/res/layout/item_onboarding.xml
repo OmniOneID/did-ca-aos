@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -18,6 +19,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:fontFamily="@font/pretendard_bold"
             android:textAppearance="@style/TextAppearance.DidCa.StepNumber"
             tools:text="1" />
     </FrameLayout>
@@ -33,7 +35,8 @@
             android:id="@+id/itemTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:lineSpacingMultiplier="1.4"
+            app:lineHeight="19.6sp"
+            android:fontFamily="@font/pretendard_semibold"
             android:textAppearance="@style/TextAppearance.DidCa.ItemTitle"
             tools:text="Register Demo User" />
 
@@ -42,7 +45,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:lineSpacingMultiplier="1.5"
+            app:lineHeight="18sp"
+            android:fontFamily="@font/pretendard_regular"
             android:textAppearance="@style/TextAppearance.DidCa.ItemDesc"
             tools:text="Handled automatically on the backend — no input required." />
     </LinearLayout>

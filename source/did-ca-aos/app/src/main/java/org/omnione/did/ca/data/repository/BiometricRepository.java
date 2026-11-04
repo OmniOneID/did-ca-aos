@@ -100,7 +100,7 @@ public class BiometricRepository {
                 @Override public void onSuccess(String r) { future.complete(new BioResult(BioResult.Status.SUCCESS, r)); }
                 @Override public void onError(String r)   { future.complete(new BioResult(BioResult.Status.ERROR,   r)); }
                 @Override public void onCancel(String r)  { future.complete(new BioResult(BioResult.Status.CANCEL,  r)); }
-                @Override public void onFail(String r)    { future.complete(new BioResult(BioResult.Status.FAIL,    r)); }
+                @Override public void onFail(String r)    { }
             });
             gateway.registerBioKey(ctx);
         });
@@ -135,7 +135,7 @@ public class BiometricRepository {
                     try {
                         commitUpdate(ctx, pin);
                         return new BioResult(BioResult.Status.SUCCESS, "");
-                    } catch (Throwable t) {
+                    } catch (Exception t) {
                         throw new CompletionException(t);
                     }
                 }, executor)
@@ -208,7 +208,7 @@ public class BiometricRepository {
                         createTokenResult, ecdh.rawResponseJson, ecdh.clientNonce, ecdh.dhKeyPair);
 
                 return new UpdateCtx(txId, authNonce, hWalletToken, serverToken);
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 AppLog.e(TAG, "preExecuteUpdate failed", t);
                 throw new CompletionException(t);
             }
@@ -221,7 +221,7 @@ public class BiometricRepository {
             @Override public void onSuccess(String r) { future.complete(new BioResult(BioResult.Status.SUCCESS, r)); }
             @Override public void onError(String r)   { future.complete(new BioResult(BioResult.Status.ERROR,   r)); }
             @Override public void onCancel(String r)  { future.complete(new BioResult(BioResult.Status.CANCEL,  r)); }
-            @Override public void onFail(String r)    { future.complete(new BioResult(BioResult.Status.FAIL,    r)); }
+            @Override public void onFail(String r)    { }
         });
         gateway.registerBioKey(ctx);
         return future;

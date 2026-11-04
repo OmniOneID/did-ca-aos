@@ -22,6 +22,7 @@ import org.omnione.did.ca.data.model.VerifyOfferEnvelope;
 import org.omnione.did.ca.data.network.PayloadData;
 import org.omnione.did.sdk.datamodel.offer.VerifyOfferPayload;
 import org.omnione.did.sdk.datamodel.util.MessageUtil;
+import org.omnione.did.sdk.utility.Errors.UtilityException;
 import org.omnione.did.sdk.utility.MultibaseUtils;
 
 import java.util.concurrent.CompletableFuture;
@@ -63,7 +64,7 @@ public final class VpOfferParser {
                 return (offer.getType() == VerifyOfferPayload.OFFER_TYPE.VerifyProofOffer)
                         ? VerifyOfferEnvelope.zkp(offer.getOfferId(), txId)
                         : VerifyOfferEnvelope.openDidVc(offer.getOfferId(), txId);
-            } catch (Exception e) {
+            } catch (UtilityException | RuntimeException e) {
                 throw new CompletionException(e);
             }
         }, backgroundExecutor);
